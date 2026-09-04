@@ -6,69 +6,95 @@
 | --- | --- |
 | NagramX release baseline | `12.9.2.1260` / tag `1260` / commit `4335a2e589aac4a82f8fceb21b3102c5559db2bf` |
 | Bootstrap commit on NixgramX | `e6d49a82` — Bootstrap NixgramX from NagramX 12.9.2.1260 (4335a2e) |
-| Tree used for this audit | Local checkout of NixgramX tracking that bootstrap (Cloud Agents unavailable) |
+| Pre-sync tip | `9db59a81` on `main` |
 
-## Telegram official master (re-checked)
+## Telegram official master (re-checked 2026-09-04 UTC+8)
 
 Rule: use latest `update to x.y.z (build)` commit on `DrKLO/Telegram` **master**, not GitHub Releases page.
 
 | Field | Value |
 | --- | --- |
 | Latest `update to` | `update to 12.10.1 (7038)` |
-| SHA (short) | `62b56a07ca` |
+| SHA | `62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c` |
 | Prior | `update to 12.10.0 (7031)` (`4e1a61eca6`) |
 
-NixgramX Phase 1 sync target must not be below 12.10.1 (7038). This Day-1 cut does **not** perform the sync yet.
+## Sync branch `upstream-sync/12.10.1` (L2 Assist — partial)
 
-## Audit of `a6c7d0a` (NagramX 12.10.0 test tip)
+### Merge / apply strategy
 
-| Field | Value |
+- **Not** `git merge telegram` (NixgramX bootstrap has unrelated history).
+- Applied upstream **delta** `b7561f0c641b` (12.9.2) → `62b56a07ca7e` (12.10.1) via filtered patch.
+- Dropped paths absent from NixgramX: `TMessagesProj_App*`, `buildSrc`, `Dockerfile`, wholesale `README.md`.
+- Conflicted Java/CMake: took Telegram 12.10.1 as base, re-applied NixgramX/NagramX feature delta; incomplete hunks saved as rejects.
+
+### Submodule state (checked out)
+
+| Path | SHA |
 | --- | --- |
-| Full SHA | `a6c7d0aec95f829a63aaa7bc591b8e809af84636` |
-| Message | `update to 12.10.0 (7031)` |
-| Date (UTC) | 2026-08-22 |
-| vs `4335a2e` | ahead by 3 commits, 0 behind |
+| `TMessagesProj/jni/third_party/dav1d` | `54706fc6bc` |
+| `TMessagesProj/jni/third_party/ffmpeg` | `45f1910444` |
+| `TMessagesProj/jni/third_party/libvpx` | `1024874c59` |
+| `TMessagesProj/jni/third_party/libyuv` | `28ce69c274` |
+| `TMessagesProj/jni/third_party/openh264` | `652bdb7719` |
+| `TMessagesProj/jni/third_party/xiph/ogg` | `be05b13e98` |
+| `TMessagesProj/jni/third_party/xiph/opus` | `22244de5a7` |
+| `TMessagesProj/jni/third_party/xiph/opusfile` | `a55c164e98` |
+| `TMessagesProj/jni/tlottie` | `3ce946c9ed` |
+| `TMessagesProj/lib/jlatexmath` | `919e50b2f6` |
 
-Commits on path `4335a2e...a6c7d0a`:
+Notes: Telegram removed vendored `rlottie` / `exoplayer/libFLAC` / in-tree `openh264`+`libyuv` sources in favor of submodules / `jni/prebuild`. NixgramX tree follows that layout on this branch.
 
-1. `8899cbd167` — Update submodules  
-2. `25dbf39b9d` — update submodule fix link  
-3. `a6c7d0aec9` — update to 12.10.0 (7031)
+### Conflict / reject summary
 
-### What changed (from GitHub compare API)
+| Category | Count | Notes |
+| --- | --- | --- |
+| Patch apply failures (filtered) | ~36 paths | Then resolved via 3-way / Telegram+feature-reapply |
+| Feature reject archives | 19 files | Under `docs/sync-12.10.1-rejects/` |
+| Remaining conflict markers in sources | 0 | Intentionally avoided leaving markers in tree |
+| High-risk incomplete feature ports | see below | Prefer Telegram logic; features need L3 |
 
-- **~300 files** in the compare payload; overwhelmingly **jni / third_party / submodule** moves aligned with Telegram’s 12.10.0 native layout (FLAC/exoplayer paths removed from tree in favor of submodule wiring).
-- Non-jni surface files in the compare sample: `.gitmodules` (modified), `TMessagesProj/build.gradle` (modified; verCode → 1261 on upstream tip).
+#### High-risk / blocked feature re-adaptations
 
-### Interpretation
+| File | Reject hunks (approx) | What is blocked |
+| --- | --- | --- |
+| `ChatActivity.java` | 42 | Double-tap actions, Ayu deleted flows, text-style NaConfig gates, many context-menu adaptations |
+| `ChatActivityEnterView.java` | 10 | Bot-command confirm, link confirm, vibration gates |
+| `ChatMessageCell.java` | 4 | Ayu deleted mark, bookmark, translucent deleted |
+| `ProfileActivity.java` | 1 (large import/block) | Some Neko/Ayu import + menu wiring may need re-check |
+| `SendMessagesHelper.java` | 4 | Pangu-on-send, forward param guards |
+| `ConnectionsManager.java` | 3 | Mostly resolved; `AyuGhostUtils` import+intercept restored |
+| `FilterTabsView.java` | 2 | `NekoConfig.hideAllTab` |
+| `VideoPlayer.java` | 1 | `NaConfig` player decoder |
+| `RichMessageLayout.java` | 1 | `RichMessageTransHelper` import |
+| `PeerStoriesView.java` | 1 | sticker send + NaConfig |
+| Others (ActionBar*, FileLog, Utilities, AudioPlayerAlert, EditTextCaption, ChatAvatarContainer, ChatCustomReactionsEditActivity, CMakeLists) | 1–4 | Prefer Telegram; non-marker NagramX diffs may be intentionally dropped |
 
-| Category | Assessment |
-| --- | --- |
-| Valid 12.10.0 adaptation | Yes — submodule/native rebase toward official 12.10.0 (7031) |
-| Incomplete rebase risk | Medium — archived before a full maintenance cycle; channel package noted as 1261 |
-| New product features | No evidence of unrelated feature work in the 3-commit window |
-| Regression risk | Native build breakage if submodules not synced; treat as adaptation candidate, not drop-in product baseline |
+### Adapted on this branch
 
-### NixgramX decision
+- Version props: `APP_VERSION_NAME=12.10.1`, `APP_VERSION_CODE=7038`; channel `verCode=1262`.
+- Identity preserved: `APP_PACKAGE=app.nixgramx.android`, `NIXGRAMX_BASE` / `IS_BASE`, NixgramX APK naming.
+- Root Gradle kept on NixgramX AGP 9.3.1 / Gradle 9.7.1 (did **not** downgrade to Telegram 8.x toolchain).
+- `settings.gradle`: still single `:TMessagesProj` app module; added `:jlatexmath` submodule project.
+- `TMessagesProj/build.gradle`: kept application plugin + NixgramX identity; added zxing / Play Integrity / recaptcha / wallet; markwon latex → `project(':jlatexmath')`.
+- New Telegram Java/UI surfaces present (IV rich buttons, gifts message views, QR writer, ephemeral/keyboard TL, etc.).
+- Ghost Mode **UI** still removed via `NekoExperimentalSettingsActivity` (`rows.remove(ghostModeRow)`). Intercept code path retained where it already applied (policy: keep disabled, do not expand).
 
-- **Feature behavior baseline:** keep `4335a2e` / 12.9.2.1260 full behavior (minus NixgramX policy removals).
-- **Code adaptation for 12.10.x:** prefer absorbing explainable, buildable pieces from `a6c7d0a`, then continue to official `62b56a07…` 12.10.1 (7038).
-- **Do not** blindly replace the tree with `a6c7d0a` as the product baseline.
+### FEATURE_INVENTORY
 
-### Limits of this audit
+Not re-exported in this L2 pass (tree not compile-validated). After L3 feature ports + successful `:TMessagesProj:compileDebugJavaWithJavac`, re-run the inventory export and note here.
 
-Deep line-by-line diff of all 300 files was not inlined into this tree (Cloud Agents unavailable; audit via GitHub compare + local 4335a2e-derived sources). Follow-up: local fetch of `a6c7d0a` and `DrKLO/Telegram@62b56a07` for a patch-level sync plan in `UPSTREAM_SYNC.md`.
+### Build
+
+Lightweight compile **not run** on this agent host if Android SDK/NDK absent — see PR body / sync commit notes.
 
 ## NagramX `_base` cut (as mirrored)
 
 | Question | Finding |
 | --- | --- |
-| applicationId | `nu.gpu.nagram` → `nu.gpu.nagramx` via `APP_PACKAGE` |
-| Flavors | None in `build.gradle`; same sources + property switch |
-| APK name | `NagramX_base-v…` in GitHub Releases |
-| CI | Release notes: “Release only, no CI updates” |
-| Feature strip | Documented as without advanced features such as Save Deleted Messages; no public `productFlavors` / compile-flag in the 4335a2e tree — NixgramX gates Save Deleted family with `BuildConfig.IS_BASE` |
+| applicationId | `app.nixgramx.android` / `.base` via `APP_PACKAGE` + `NIXGRAMX_BASE` |
+| Flavors | None; property switch |
+| Feature strip | Save Deleted family gated with `BuildConfig.IS_BASE` |
 
 ## Policy removals (NixgramX-only)
 
-Ghost Mode, hide-typing (ghost intercept), and online-status enhance/hide are **removed-by-policy** in full and `_base` (not part of NagramX `_base` list).
+Ghost Mode, hide-typing (ghost intercept), and online-status enhance/hide remain **removed-by-policy** in full and `_base` (UI row removed; do not re-enable during sync).

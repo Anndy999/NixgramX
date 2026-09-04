@@ -1,0 +1,30 @@
+diff a/TMessagesProj/src/main/java/org/telegram/messenger/Utilities.java b/TMessagesProj/src/main/java/org/telegram/messenger/Utilities.java	(rejected hunks)
+@@ -158,12 +158,13 @@ public class Utilities {
+         if (value == null) {
+             return 0;
+         }
+-        if (BuildConfig.BUILD_HOST_IS_WINDOWS) {
+-            Matcher matcher = pattern.matcher(value);
+-            if (matcher.find()) {
+-                return Integer.valueOf(matcher.group());
+-            }
+-        } else {
++//        if (BuildConfig.BUILD_HOST_IS_WINDOWS) {
++//            Matcher matcher = pattern.matcher(value);
++//            if (matcher.find()) {
++//                return Integer.valueOf(matcher.group());
++//            }
++//        } else {
++        {
+             int val = 0;
+             try {
+                 int start = -1, end;
+@@ -185,7 +186,7 @@ public class Utilities {
+             } catch (Exception ignore) {}
+             return val;
+         }
+-        return 0;
++//        return 0;
+     }
+ 
+     private static int parseInt(final String s) {

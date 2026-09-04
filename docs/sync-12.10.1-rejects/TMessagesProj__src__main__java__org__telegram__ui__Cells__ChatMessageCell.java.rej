@@ -1,0 +1,63 @@
+diff a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java	(rejected hunks)
+@@ -681,7 +696,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
+         default void didPressBotButton(ChatMessageCell cell, TLRPC.KeyboardButton button) {
+         }
+ 
+-        default void didLongPressBotButton(ChatMessageCell cell, TLRPC.KeyboardButton button) {
++        default boolean didLongPressBotButton(ChatMessageCell cell, TLRPC.KeyboardButton button) {
++            return false;
+         }
+ 
+         default void didPressCustomBotButton(ChatMessageCell cell, BotInlineKeyboard.ButtonCustom button) {
+@@ -18403,6 +18547,31 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
+                 }
+             }
+         }
++        boolean showAyuDeletedMark = ayuDeleted && shouldShowAyuDeletedMark(currentMessageObject);
++        // bookmark start
++        boolean showBookmarkInTime = false;
++        int senderNameColor = 0;
++        if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
++            boolean groupHasBookmark = false;
++            if (currentMessagesGroup != null && currentMessagesGroup.messages != null && currentMessagesGroup.messages.size() > 1) {
++                final long dialogId = messageObject.getDialogId();
++                for (int a = 0, size = currentMessagesGroup.messages.size(); a < size; a++) {
++                    MessageObject object = currentMessagesGroup.messages.get(a);
++                    if (BookmarksHelper.isBookmarked(currentAccount, dialogId, object.getId())) {
++                        groupHasBookmark = true;
++                        break;
++                    }
++                }
++            }
++            boolean isBookmarked = BookmarksHelper.isBookmarked(currentAccount, messageObject.getDialogId(), messageObject.getId());
++            showBookmarkInTime = groupHasBookmark || (isBookmarked && (!shouldDrawNameLayoutForMessage(messageObject) || isSideMenuEnabled));
++            if (showBookmarkInTime) {
++                senderNameColor = getSenderNameColor(isBookmarked);
++            }
++            drawBookmarkInTime = showBookmarkInTime;
++        }
++        // bookmark end
++        final int editedDate = edited && currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date;
+         if (currentMessageObject.notime || currentMessageObject.isSponsored() || currentMessageObject.isQuickReply()) {
+             timeString = "";
+         } else if (currentMessageObject.scheduled && currentMessageObject.messageOwner.date == 0x7FFFFFFE) {
+@@ -18864,7 +19108,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
+                 }*/
+ 
+                 nameStringFinal = stringBuilder;
+-                nameStringFinal = TextUtils.ellipsize(nameStringFinal, Theme.chat_namePaint, nameWidth + additionalWidth, TextUtils.TruncateAt.END);
++                nameStringFinal = TextUtils.ellipsize(nameStringFinal, Theme.chat_namePaint, nameWidthForLayout + additionalWidth, TextUtils.TruncateAt.END);
+             } else if (viaBot) {
+                 viaNameWidth = (int) Math.ceil(Theme.chat_namePaint.measureText(nameStringFinal, 0, nameStringFinal.length()));
+                 if (viaNameWidth != 0) {
+@@ -20273,6 +20542,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
+         }
+ 
+         canvas.restoreToCount(restore);
++
++        if (shouldTranslucentDeleted() && ayuDeleted) {
++            canvas.restore();
++        }
+     }
+ 
+     @SuppressLint("WrongCall")

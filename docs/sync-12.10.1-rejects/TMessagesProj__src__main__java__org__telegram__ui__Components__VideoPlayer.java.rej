@@ -1,0 +1,16 @@
+diff a/TMessagesProj/src/main/java/org/telegram/ui/Components/VideoPlayer.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/VideoPlayer.java	(rejected hunks)
+@@ -231,6 +233,14 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
+         eglParentContext = ctx;
+     }
+ 
++    private int getPlayerExtensionRendererMode() {
++        return switch (NaConfig.INSTANCE.getPlayerDecoder().Int()) {
++            case 0 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF;
++            case 1 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON;
++            default -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER;
++        };
++    }
++
+     private void ensurePlayerCreated() {
+         DefaultLoadControl loadControl;
+         if (isStory) {

@@ -1,0 +1,17 @@
+diff a/TMessagesProj/src/main/java/org/telegram/messenger/FileLog.java b/TMessagesProj/src/main/java/org/telegram/messenger/FileLog.java	(rejected hunks)
+@@ -296,13 +297,12 @@ public class FileLog {
+         }
+     }
+ 
+-
+     public void init() {
+         if (initied) {
+             return;
+         }
+-        dateFormat = FastDateFormat.getInstance("dd_MM_yyyy_HH_mm_ss.SSS", Locale.US);
+-        fileDateFormat = FastDateFormat.getInstance("dd_MM_yyyy_HH_mm_ss", Locale.US);
++        dateFormat = FastDateFormat.getInstance("yyyy_MM_dd-HH_mm_ss.SSS", Locale.US);
++        fileDateFormat = FastDateFormat.getInstance("yyyy_MM_dd-HH_mm_ss", Locale.US);
+         String date = fileDateFormat.format(System.currentTimeMillis());
+         try {
+             File dir = AndroidUtilities.getLogsDir();

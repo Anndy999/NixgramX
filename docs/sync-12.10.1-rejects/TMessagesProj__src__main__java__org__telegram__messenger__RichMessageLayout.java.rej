@@ -1,0 +1,9 @@
+diff a/TMessagesProj/src/main/java/org/telegram/messenger/RichMessageLayout.java b/TMessagesProj/src/main/java/org/telegram/messenger/RichMessageLayout.java	(rejected hunks)
+@@ -123,6 +123,7 @@ import java.util.Stack;
+ import java.util.concurrent.atomic.AtomicReference;
+ 
+ import ru.noties.jlatexmath.JLatexMathDrawable;
++import tw.nekomimi.nekogram.parts.RichMessageTransHelper;
+ 
+ public class RichMessageLayout {
+ 
