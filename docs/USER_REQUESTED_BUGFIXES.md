@@ -25,6 +25,8 @@ by the script above.
   CJK uses `BREAK_STRATEGY_SIMPLE`, bubble width shrinks to visual glyph width
   (`MessageObject.makeStaticLayout` / `shrinkWidthToVisualContent`).
   Also covers captions via `TextLayoutBlocks`.
+  Toggle chat-bar 翻译→原文 keeps last-line+timestamp space (`getLastLineWidthForTime`)
+  so English is not clipped under `01:43`.
 - **UB-4 attach-image pinch-zoom jank**:
   skip `invalidateBlur()` during pinch / zoomed pan in `PhotoViewer`; restore
   blur on gesture end.

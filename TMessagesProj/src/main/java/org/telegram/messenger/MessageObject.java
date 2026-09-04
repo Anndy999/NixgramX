@@ -1841,6 +1841,24 @@ public class MessageObject {
         return lastLineWidth;
     }
 
+    public int getLastLineWidthForTime() {
+        int w = getLastLineWidth();
+        if (textLayoutBlocks != null && !textLayoutBlocks.isEmpty()) {
+            TextLayoutBlock block = textLayoutBlocks.get(textLayoutBlocks.size() - 1);
+            if (block != null && block.textLayout != null && block.textLayout.getLineCount() > 0) {
+                int li = block.textLayout.getLineCount() - 1;
+                int visual = (int) Math.ceil(block.textLayout.getLineRight(li) - block.textLayout.getLineLeft(li));
+                if (block.quote) {
+                    visual += dp(32);
+                } else if (block.code) {
+                    visual += dp(15);
+                }
+                w = Math.max(w, visual);
+            }
+        }
+        return w;
+    }
+
     public int lastLineWidth;
     public int textWidth;
     public boolean hasRtl;
@@ -3753,6 +3771,9 @@ public class MessageObject {
             }
             translated = true;
             summarized = false;
+            if (messageOwner != null) {
+                messageOwner.translated = true;
+            }
             if (type == TYPE_ARTICLE) {
                 generateLayout(null);
             } else if (translatedText != null) {
@@ -3763,10 +3784,10 @@ public class MessageObject {
         } else if (messageOwner != null && (force || translated || summarized)) {
             translated = false;
             summarized = false;
+            messageOwner.translated = false;
             if (type == TYPE_ARTICLE) {
                 generateLayout(null);
             } else {
-                messageOwner.translated = translated;
                 applyNewText(messageOwner.message);
                 generateCaption();
             }
@@ -9222,9 +9243,7 @@ public class MessageObject {
         }
 
         textWidth = shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
-        if (lastLineWidth > textWidth) {
-            lastLineWidth = textWidth;
-        }
+        // lastLineWidth stays the real last-line width so the timestamp never sits on glyphs.
 
         hasWideCode = hasCode && textWidth > generatedWithMinSize - dp(80 + (needDrawAvatarInternal() && !isOutOwner() && !messageOwner.isThreadMessage ? 52 : 0));
         factCheckText = null;
@@ -9675,9 +9694,6 @@ public class MessageObject {
                 }
             }
             textWidth = MessageObject.shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
-            if (lastLineWidth > textWidth) {
-                lastLineWidth = textWidth;
-            }
         }
 
     }
