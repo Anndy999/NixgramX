@@ -39,6 +39,7 @@ import org.telegram.messenger.DispatchQueue;
 import org.telegram.messenger.DispatchQueuePoolBackground;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ImageReceiver;
+import org.telegram.messenger.MonoColorLottieList;
 import org.telegram.messenger.ResLottieMeta;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.utils.BitmapsCache;
@@ -602,7 +603,7 @@ public class RLottieDrawable extends BitmapDrawable implements Animatable, Bitma
             pendingNativeInit = true;
             args.resId = rawRes;
 
-            isSingleChannel = ResLottieMeta.isMonoColorOf(found);
+            isSingleChannel = ResLottieMeta.isMonoColorOf(found) || MonoColorLottieList.isMonoColorLottie(rawRes);
             metaData[0] = ResLottieMeta.frameCountOf(found);
             metaData[1] = ResLottieMeta.fpsOf(found);
         } else {

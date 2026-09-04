@@ -42170,8 +42170,8 @@ public class ChatActivity extends BaseFragment implements
         }
 
         @Override
-        public void didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
-            if (isQuickRepliesOrWelcomeMessagesMode()) return;
+        public boolean didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
+            if (isQuickRepliesOrWelcomeMessagesMode()) return false;
 
             final TL_keyboard.TL_inlineButtonTypeUrl buttonTypeUrl = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUrl.class);
             final TL_keyboard.TL_inlineButtonTypeCopy buttonTypeCopy = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeCopy.class);
@@ -42187,12 +42187,12 @@ public class ChatActivity extends BaseFragment implements
                     !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeBuy.class) &&
                     !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeUrlAuth.class) &&
                     !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeUserProfile.class)) {
-                return;
+                return false;
             }
 
             if (buttonTypeCopy != null) {
                 didLongPressCopyButton(buttonTypeCopy.copy_text);
-                return;
+                return true;
             }
             if (buttonTypeUrl != null) {
                 openClickableLink(null, buttonTypeUrl.url, true, cell, cell.getMessageObject(), false);
@@ -42227,6 +42227,7 @@ public class ChatActivity extends BaseFragment implements
             try {
                 if (!NekoConfig.disableVibration.Bool()) cell.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS, HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
             } catch (Exception ignore) {}
+            return true;
         }
 
         @Override
