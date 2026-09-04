@@ -22,8 +22,20 @@ def pwd = null
 Properties properties
 def base64 = System.getenv('LOCAL_PROPERTIES')
 if (base64 != null && !base64.isBlank()) {
-    properties = new Properties()
-    properties.load(new ByteArrayInputStream(Base64.decoder.decode(base64)))
+    try {
+        // Accept standard or URL-safe base64; ignore malformed secrets so APP_ID/env keystore still work.
+        byte[] decoded
+        try {
+            decoded = Base64.decoder.decode(base64.trim())
+        } catch (IllegalArgumentException ignored) {
+            decoded = Base64.getUrlDecoder().decode(base64.trim())
+        }
+        properties = new Properties()
+        properties.load(new ByteArrayInputStream(decoded))
+    } catch (Throwable e) {
+        logger.warn("LOCAL_PROPERTIES env is not valid base64 properties; falling back to env/local.properties: ${e.message}")
+        properties = null
+    }
 } else if (project.rootProject.file('local.properties').exists()) {
     properties = new Properties()
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
