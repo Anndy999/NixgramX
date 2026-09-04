@@ -10853,11 +10853,6 @@ public class ChatActivityEnterView extends FrameLayout implements
             } else {
                 sendCommand(command, effectId, messageObject, username, botCount);
             }
-            sendMessageParams.sendMessageChatArguments = parentFragment != null ? parentFragment.getMessageChatSendParams() : null;
-            sendMessageParams.effect_id = effectId;
-            sendButton.setEffect(effectId = 0);
-            applyStoryToSendMessageParams(sendMessageParams);
-            SendMessagesHelper.getInstance(currentAccount).sendMessage(sendMessageParams);
         }
     }
 
@@ -10875,8 +10870,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         } else {
             sendMessageParams = SendMessagesHelper.SendMessageParams.of(command, dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
         }
-        sendMessageParams.quick_reply_shortcut = parentFragment != null ? parentFragment.quickReplyShortcut : null;
-        sendMessageParams.quick_reply_shortcut_id = parentFragment != null ? parentFragment.getQuickReplyId() : 0;
+        sendMessageParams.sendMessageChatArguments = parentFragment != null ? parentFragment.getMessageChatSendParams() : null;
         sendMessageParams.effect_id = effectId;
         sendButton.setEffect(effectId = 0);
         applyStoryToSendMessageParams(sendMessageParams);
