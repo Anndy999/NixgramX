@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "nixgramx-placeholder",
-    "storage_bucket": "nixgramx-placeholder.appspot.com"
+    "project_number": "46795722047",
+    "project_id": "nixgramx",
+    "storage_bucket": "nixgramx.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:46795722047:android:4af38e1118b8d0c176d78a",
         "android_client_info": {
           "package_name": "app.nixgramx.android"
         }
@@ -15,26 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "YOUR_FIREBASE_API_KEY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000001",
-        "android_client_info": {
-          "package_name": "app.nixgramx.android.base"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "YOUR_FIREBASE_API_KEY"
+          "current_key": "AIzaSyAAaSydj70NgYNJgR9iHjp3kjn30QAgNGA"
         }
       ],
       "services": {
