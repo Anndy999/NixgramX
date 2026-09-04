@@ -208,6 +208,8 @@ configurations.configureEach {
     exclude group: 'androidx.recyclerview', module: 'recyclerview'
     exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
     exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+    // credentials / play-services pull both tink and legacy tink-android
+    exclude group: 'com.google.crypto.tink', module: 'tink-android'
 }
 
 dependencies {

@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Gradle Build (self-hosted)
-    runs-on: [self-hosted, linux, nixgramx]
+    runs-on: [self-hosted, nixgramx]
     env:
       NATIVE_TARGET: "arm64-v8a"
     steps:
@@ -21,19 +21,26 @@ jobs:
           submodules: recursive
       - name: Ensure local.properties
         run: |
+          set -euo pipefail
           if [ -n "${ANDROID_HOME:-}" ]; then
-            echo "sdk.dir=${ANDROID_HOME}" > local.properties
+            SDK="$ANDROID_HOME"
           elif [ -n "${ANDROID_SDK_ROOT:-}" ]; then
-            echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+            SDK="$ANDROID_SDK_ROOT"
           elif [ -d "$HOME/Android/Sdk" ]; then
-            echo "sdk.dir=$HOME/Android/Sdk" > local.properties
+            SDK="$HOME/Android/Sdk"
+          elif [ -d "/opt/android-sdk" ]; then
+            SDK="/opt/android-sdk"
           else
-            echo "ANDROID_HOME / ANDROID_SDK_ROOT / ~/Android/Sdk not found" >&2
+            echo "Android SDK not found. Install then export ANDROID_HOME." >&2
+            echo "Suggested: /opt/android-sdk or ~/Android/Sdk" >&2
             exit 1
           fi
+          echo "sdk.dir=${SDK}" > local.properties
+          echo "Using SDK: ${SDK}"
           cat local.properties
       - name: Debug Build
         run: |
+          set -euo pipefail
           export DEBUG_BUILD=true
           sed -i 's/signingConfig = signingConfigs.release//' TMessagesProj/build.gradle || true
           ./gradlew TMessagesProj:assembleDebug --no-daemon
