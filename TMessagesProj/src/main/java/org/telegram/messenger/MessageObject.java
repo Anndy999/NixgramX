@@ -8672,16 +8672,66 @@ public class MessageObject {
         return makeStaticLayout(text_, paint, width, lineSpacingMult, lineSpacingAdd, dontIncludePad, Layout.Alignment.ALIGN_NORMAL);
     }
 
+    public static int getLayoutContentWidth(Layout layout) {
+        if (layout == null) {
+            return 0;
+        }
+        int w = 0;
+        for (int i = 0, n = layout.getLineCount(); i < n; i++) {
+            w = Math.max(w, (int) Math.ceil(layout.getLineRight(i) - layout.getLineLeft(i)));
+        }
+        return w;
+    }
+
+    public static boolean containsCjk(CharSequence text) {
+        if (text == null) {
+            return false;
+        }
+        for (int i = 0, len = text.length(); i < len; ) {
+            int cp = Character.codePointAt(text, i);
+            if (cp >= 0x4E00 && cp <= 0x9FFF || cp >= 0x3400 && cp <= 0x4DBF
+                    || cp >= 0x3040 && cp <= 0x30FF || cp >= 0xAC00 && cp <= 0xD7AF
+                    || cp >= 0xF900 && cp <= 0xFAFF) {
+                return true;
+            }
+            i += Character.charCount(cp);
+        }
+        return false;
+    }
+
+    public static int shrinkWidthToVisualContent(ArrayList<TextLayoutBlock> blocks, int currentWidth) {
+        if (blocks == null || blocks.isEmpty()) {
+            return currentWidth;
+        }
+        int visualWidth = 0;
+        for (int i = 0; i < blocks.size(); i++) {
+            TextLayoutBlock block = blocks.get(i);
+            if (block == null) {
+                continue;
+            }
+            int extra = block.quote ? AndroidUtilities.dp(32) : (block.code ? AndroidUtilities.dp(15) : 0);
+            visualWidth = Math.max(visualWidth, getLayoutContentWidth(block.textLayout) + extra);
+        }
+        if (visualWidth <= 0) {
+            return currentWidth;
+        }
+        return Math.min(currentWidth, visualWidth);
+    }
+
     public static StaticLayout makeStaticLayout(CharSequence text_, TextPaint paint, int width, float lineSpacingMult, float lineSpacingAdd, boolean dontIncludePad, Layout.Alignment alignment) {
         if (width <= 0) width = 1;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             final CharSequence text = /* Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ?
                 PrecomputedText.create(text_, new PrecomputedText.Params.Builder(paint).build()) :*/ text_;
 
+            final int breakStrategy = containsCjk(text)
+                    ? StaticLayout.BREAK_STRATEGY_SIMPLE
+                    : StaticLayout.BREAK_STRATEGY_HIGH_QUALITY;
+
             StaticLayout.Builder builder =
                     StaticLayout.Builder.obtain(text, 0, text.length(), paint, width)
                             .setLineSpacing(lineSpacingAdd, lineSpacingMult)
-                            .setBreakStrategy(StaticLayout.BREAK_STRATEGY_HIGH_QUALITY)
+                            .setBreakStrategy(breakStrategy)
                             .setHyphenationFrequency(StaticLayout.HYPHENATION_FREQUENCY_NONE)
                             .setAlignment(alignment);
             if (dontIncludePad) {
@@ -9171,6 +9221,11 @@ public class MessageObject {
             }
         }
 
+        textWidth = shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
+        if (lastLineWidth > textWidth) {
+            lastLineWidth = textWidth;
+        }
+
         hasWideCode = hasCode && textWidth > generatedWithMinSize - dp(80 + (needDrawAvatarInternal() && !isOutOwner() && !messageOwner.isThreadMessage ? 52 : 0));
         factCheckText = null;
     }
@@ -9618,6 +9673,10 @@ public class MessageObject {
                     }
                     SpoilerEffect.addSpoilers(null, block.textLayout, -1, right, null, block.spoilers);
                 }
+            }
+            textWidth = MessageObject.shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
+            if (lastLineWidth > textWidth) {
+                lastLineWidth = textWidth;
             }
         }
 

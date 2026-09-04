@@ -13,3 +13,4 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 | Date | Upstream SHA | Summary | NixgramX commit |
 | --- | --- | --- | --- |
 | 2026-09-04 | `4335a2e` | Bootstrap baseline | `e6d49a82` |
+| 2026-09-04 | — | UB-1 translation bubble + UB-4 pinch jank | `fix/user-requested-bugs` |

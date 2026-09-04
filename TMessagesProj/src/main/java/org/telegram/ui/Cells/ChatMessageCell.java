@@ -28905,7 +28905,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             animateMessageText = false;
             if (currentMessageObject.textLayoutBlocks != lastDrawingTextBlocks) {
                 boolean sameText = true;
-                if (currentMessageObject.textWidth != lastDrawingTextWidth && lastDrawingSideMenuEnabled != isSideMenuEnabled) {
+                if (currentMessageObject.textWidth != lastDrawingTextWidth) {
                     sameText = false;
                 }
                 if (currentMessageObject.textLayoutBlocks != null && lastDrawingTextBlocks != null && currentMessageObject.textLayoutBlocks.size() == lastDrawingTextBlocks.size()) {
