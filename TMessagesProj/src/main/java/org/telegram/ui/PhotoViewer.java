@@ -19559,7 +19559,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 translationX = (pinchCenterX - getContainerViewWidth() / 2) - ((pinchCenterX - getContainerViewWidth() / 2) - pinchStartX) * (scale / pinchStartScale);
                 translationY = (pinchCenterY - getContainerViewHeight() / 2) - ((pinchCenterY - getContainerViewHeight() / 2) - pinchStartY) * (scale / pinchStartScale);
                 updateMinMax(scale);
-                invalidateBlur();
                 containerView.invalidate();
             } else if (ev.getPointerCount() == 1) {
                 if (paintViewTouched == 1 && photoPaintView != null) {
@@ -19642,7 +19641,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         if (scale != 1 || currentEditMode != EDIT_MODE_NONE || sendPhotoType == SELECT_TYPE_STICKER) {
                             translationY -= moveDy;
                         }
-                        invalidateBlur();
+                        if (scale == 1) {
+                            invalidateBlur();
+                        }
                         containerView.invalidate();
                     }
                 } else {
@@ -19721,6 +19722,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
                 zooming = false;
                 moving = false;
+                invalidateBlur();
             } else if (draggingDown) {
                 if (Math.abs(dragY - ev.getY()) > getContainerViewHeight() / 6.0f) {
                     if (enableSwipeToPiP() && (dragY - ev.getY() > 0)) {
@@ -19742,6 +19744,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 updateMinMax(scale);
                 moving = false;
                 canDragDown = true;
+                if (scale != 1) {
+                    invalidateBlur();
+                }
                 float velocity = 0;
                 if (velocityTracker != null && scale == 1) {
                     velocityTracker.computeCurrentVelocity(1000);

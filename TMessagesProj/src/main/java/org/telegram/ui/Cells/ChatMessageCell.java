@@ -6918,9 +6918,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             messageChanged = true;
         }
         boolean transChanged = false;
-        if (lastTranslated != messageObject.messageOwner.translated) {
-            lastTranslated = messageObject.messageOwner.translated;
+        final boolean nowTranslated = messageObject.isTranslated();
+        if (lastTranslated != nowTranslated) {
+            lastTranslated = nowTranslated;
             transChanged = true;
+            if (transitionParams != null) {
+                transitionParams.deltaLeft = 0;
+                transitionParams.deltaRight = 0;
+                transitionParams.animateBackgroundBoundsInner = false;
+                transitionParams.animateBackgroundWidth = false;
+            }
         }
 
         ayuDeleted = messageObject.isAyuDeleted();
@@ -13016,7 +13023,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             return;
         }
         boolean newLineForTime;
-        int lastLineWidth = (reactionsLayoutInBubble.isEmpty || reactionsLayoutInBubble.isSmall) ? currentMessageObject.getLastLineWidth() : reactionsLayoutInBubble.lastLineX;
+        int lastLineWidth = (reactionsLayoutInBubble.isEmpty || reactionsLayoutInBubble.isSmall)
+                ? currentMessageObject.getLastLineWidthForTime()
+                : reactionsLayoutInBubble.lastLineX;
         if (!reactionsLayoutInBubble.isEmpty && !reactionsLayoutInBubble.isSmall) {
             newLineForTime = maxWidth - lastLineWidth < timeMore || currentMessageObject.hasRtl;
             if (hasInvoicePreview) {
@@ -28905,7 +28914,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             animateMessageText = false;
             if (currentMessageObject.textLayoutBlocks != lastDrawingTextBlocks) {
                 boolean sameText = true;
-                if (currentMessageObject.textWidth != lastDrawingTextWidth && lastDrawingSideMenuEnabled != isSideMenuEnabled) {
+                if (currentMessageObject.textWidth != lastDrawingTextWidth) {
                     sameText = false;
                 }
                 if (currentMessageObject.textLayoutBlocks != null && lastDrawingTextBlocks != null && currentMessageObject.textLayoutBlocks.size() == lastDrawingTextBlocks.size()) {

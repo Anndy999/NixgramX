@@ -6081,6 +6081,21 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
        if (!force && !BuildVars.CHECK_UPDATES) {
            return;
        }*/
+        if (!force && !UpdateHelper.isAutoCheckEnabled()) {
+            return;
+        }
+        if (!UpdateHelper.isChannelConfigured()) {
+            if (force && progress != null) {
+                progress.end();
+            }
+            if (force) {
+                BaseFragment fragment = getLastFragment();
+                if (fragment != null) {
+                    BulletinFactory.of(fragment).createSimpleBulletin(R.raw.error, LocaleController.getString(R.string.ErrorOccurred)).show();
+                }
+            }
+            return;
+        }
         if (ApplicationLoader.applicationLoaderInstance.isCustomUpdate()) {
             final BetaUpdate prevUpdate = ApplicationLoader.applicationLoaderInstance.getUpdate();
             final boolean first = firstAppUpdateCheck;

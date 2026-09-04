@@ -80,6 +80,10 @@ public abstract class BaseRemoteHelper {
         onLoadSuccess(responses, delegate);
     }
 
+    public static boolean isMetadataChannelConfigured() {
+        return CHANNEL_METADATA_ID != 0L;
+    }
+
     public void load() {
         load(false, null);
     }
@@ -89,6 +93,12 @@ public abstract class BaseRemoteHelper {
     }
 
     private void load(boolean forceRefreshAccessHash, Delegate delegate) {
+        if (!isMetadataChannelConfigured()) {
+            if (delegate != null) {
+                onError("updater_not_configured", delegate);
+            }
+            return;
+        }
         var tag = "#" + getTag();
         TLRPC.TL_messages_search req = new TLRPC.TL_messages_search();
         req.limit = 10;

@@ -22,7 +22,7 @@ public class BuildVars {
     public static boolean LOGS_ENABLED = false;
     public static boolean DEBUG_PRIVATE_VERSION = false;
     public static boolean USE_CLOUD_STRINGS = true;
-    public static boolean CHECK_UPDATES = true;
+    public static boolean CHECK_UPDATES = false; // NixgramX: no Play/official TG updater; in-app channel is opt-in
     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
     public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
 

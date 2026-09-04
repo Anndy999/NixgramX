@@ -53,10 +53,12 @@ Different `applicationId` **and** different signing certificate → Android trea
 
 ## Signing fingerprints
 
-Placeholder until first official NixgramX release signing:
+NixgramX release keystore (`TMessagesProj/release.keystore`, alias `nixgramx`, PKCS12, generated 2026-09-04). Passwords are **not** in git.
 
-- SHA-256: `TBD after first NixgramX release keystore`
-- Do not reuse NagramX SHA-256 `0D:51:91:56:…`
+- SHA-1: `20:EB:E0:E4:4A:9B:A7:AC:B8:6D:17:E1:81:DD:70:34:04:B5:A8:12`
+- SHA-256: `FC:B2:58:4B:2A:CA:0A:20:F7:7D:7E:72:74:AF:70:C7:17:58:D0:E3:9C:86:BC:08:63:4D:CB:70:64:91:77:90`
+- Valid until 2054-01-20
+- Do **not** reuse NagramX SHA-256 `0D:51:91:56:…`
 
 ## Policy removals (not part of `_base` cut)
 
