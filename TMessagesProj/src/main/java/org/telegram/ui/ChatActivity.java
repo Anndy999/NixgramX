@@ -2146,8 +2146,9 @@ public class ChatActivity extends BaseFragment implements
                     return;
                 }
                 if (!(currentChat == null || ChatObject.isChannelAndNotMegaGroup(currentChat) || ChatObject.canUserDoAction(currentChat, ChatObject.ACTION_SEND_REACTIONS))) {
-                return;
-            }ReactionsEffectOverlay.removeCurrent(false);
+                    return;
+                }
+                ReactionsEffectOverlay.removeCurrent(false);
                 String reactionString = getMediaDataController().getDoubleTapReaction();
                 if (reactionString.startsWith("animated_")) {
                     boolean available = dialog_id >= 0;

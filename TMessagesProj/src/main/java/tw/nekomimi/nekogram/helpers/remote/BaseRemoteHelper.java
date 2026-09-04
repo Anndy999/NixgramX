@@ -19,10 +19,14 @@ import org.telegram.tgnet.TLRPC;
 import java.util.ArrayList;
 
 public abstract class BaseRemoteHelper {
-    // NixgramX placeholders — do not use NagramX author endpoints.
-    // Replace with your own private metadata channel before enabling remote-config / updater.
+    // Publish target: public channel @NixgramX (https://t.me/NixgramX).
+    // Do not point these at NagramX author endpoints.
+    // CHANNEL_METADATA_ID stays 0 until first successful CI upload: Tools/scripts/upload.py
+    // prints "CHANNEL_METADATA_ID candidate=…" (resolved chat.id → positive id). Set it in a
+    // follow-up commit after confirming the bot can post and getChat succeeds. Until then,
+    // isMetadataChannelConfigured()/UpdateHelper.isChannelConfigured() stay false (ID != 0).
     public static final long CHANNEL_METADATA_ID = 0L;
-    public static final String CHANNEL_METADATA_NAME = "nixgramx_remote_metadata";
+    public static final String CHANNEL_METADATA_NAME = "NixgramX";
 
     protected static final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoremoteconfig", Activity.MODE_PRIVATE);
 
