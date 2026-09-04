@@ -1,0 +1,61 @@
+name: Upstream Watch (L1)
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    name: Check DrKLO/Telegram master update-to
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect latest update-to commit
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          json=$(gh api 'repos/DrKLO/Telegram/commits?per_page=50')
+          sha=$(echo "$json" | python3 -c "import json,sys,re
+commits=json.load(sys.stdin)
+for c in commits:
+  msg=c['commit']['message'].split('\n',1)[0]
+  if re.search(r'^update to ', msg, re.I):
+    print(c['sha']); print(msg, file=sys.stderr); break
+else:
+  raise SystemExit('no update-to commit found')")
+          msg=$(gh api "repos/DrKLO/Telegram/commits/$sha" --jq '.commit.message|split("\n")[0]')
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "msg=$msg" >> "$GITHUB_OUTPUT"
+          echo "Detected: $sha $msg"
+      - name: Report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TITLE="[upstream-watch] ${{ steps.detect.outputs.msg }}"
+          BODY=$(cat <<EOF
+          ## L1 Upstream Watch
+
+          Telegram master latest \`update to\` commit:
+
+          - SHA: \`${{ steps.detect.outputs.sha }}\`
+          - Message: \`${{ steps.detect.outputs.msg }}\`
+
+          This workflow only **reports**. It does not open sync PRs or merge to main.
+          See docs/UPSTREAM_SYNC.md.
+          EOF
+          )
+          # Open or update an issue labeled upstream-watch
+          existing=$(gh issue list --label upstream-watch --state open --limit 1 --json number --jq '.[0].number // empty' || true)
+          if [ -n "${existing}" ]; then
+            gh issue comment "$existing" --body "$BODY"
+          else
+            gh label create upstream-watch --force 2>/dev/null || true
+            gh issue create --title "$TITLE" --label upstream-watch --body "$BODY"
+          fi
