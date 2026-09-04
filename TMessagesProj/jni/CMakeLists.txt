@@ -205,5 +205,6 @@ target_link_libraries(${NATIVE_LIB}
 #            c)
 #endif()
 
-include(AndroidNdkModules)
-android_ndk_import_module_cpufeatures()
+# Manual cpufeatures target above; NDK import would duplicate the target name.
+#include(AndroidNdkModules)
+#android_ndk_import_module_cpufeatures()

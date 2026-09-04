@@ -2,10 +2,6 @@ name: Self-hosted debug build
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    paths-ignore:
-      - '**.md'
 
 jobs:
   build:
