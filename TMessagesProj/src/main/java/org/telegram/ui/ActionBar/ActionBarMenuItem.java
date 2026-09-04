@@ -780,6 +780,26 @@ public class ActionBarMenuItem extends FrameLayout {
         yOffset = offset;
     }
 
+    private View anchor;
+
+    public View getAnchor() {
+        return anchor;
+    }
+
+    public void setAnchor(View anchor) {
+        this.anchor = anchor;
+    }
+
+    public boolean isShowOnTop() {
+        return showOnTop;
+    }
+
+    public void setShowOnTop(boolean showOnTop) {
+        this.showOnTop = showOnTop;
+    }
+
+    private boolean showOnTop;
+
     public void setMenuXOffset(int offset) {
         xOffset = offset;
     }
@@ -799,6 +819,10 @@ public class ActionBarMenuItem extends FrameLayout {
     }
 
     public void toggleSubMenu(View topView, View fromView) {
+        toggleSubMenu(topView, fromView, false);
+    }
+
+    public void toggleSubMenu(View topView, View fromView, boolean fromStickersAlert) {
         if (popupWindow == null || !popupWindow.isShowing()) {
             layoutLazyItems();
         }

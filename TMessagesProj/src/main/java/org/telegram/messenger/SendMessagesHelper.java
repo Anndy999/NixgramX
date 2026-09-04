@@ -2357,9 +2357,18 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 if (newMsg.message == null) {
                     newMsg.message = "";
                 }
+
+                if (!((newMsg.params.containsKey("fwd_id") || newMsg.params.containsKey("fwd_peer")) || msgObj.isForwarded() || MessageObject.isForwardedMessage(newMsg)) && NaConfig.INSTANCE.getEnablePanguOnSending().Bool()) {
+                    var pair = StringUtils.spacingText(newMsg.message, msgObj.messageOwner.entities);
+                    newMsg.message = pair.getFirst();
+                    newMsg.entities = pair.getSecond();
+                } else {
+                    newMsg.entities = msgObj.messageOwner.entities;
+                }
+
                 newMsg.fwd_msg_id = msgObj.getId();
                 newMsg.attachPath = msgObj.messageOwner.attachPath;
-                newMsg.entities = msgObj.messageOwner.entities;
+//                newMsg.entities = msgObj.messageOwner.entities;
                 if (msgObj.messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup) {
                     final TLRPC.TL_replyInlineMarkup messageInlineReplyMarkup = (TLRPC.TL_replyInlineMarkup) msgObj.messageOwner.reply_markup;
                     final TLRPC.TL_replyInlineMarkup newMsgInlineReplyMarkup = new TLRPC.TL_replyInlineMarkup();
@@ -4277,6 +4286,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         });
     }
 
+    public void sendMessage(String message, long peer, MessageObject replyToMsg, MessageObject replyToTopMsg, TLRPC.WebPage webPage, boolean searchLinks, ArrayList<TLRPC.MessageEntity> entities, TLRPC.ReplyMarkup replyMarkup, HashMap<String, String> params, boolean notify, int scheduleDate, int scheduleRepeatPeriod, MessageObject.SendAnimationData sendAnimationData, boolean updateStickersOrder) {
+        sendMessage(SendMessageParams.of(message, null, null, null, null, null, null, null, null, null, peer, null, replyToMsg, replyToTopMsg, webPage, searchLinks, null, entities, replyMarkup, params, notify, scheduleDate, scheduleRepeatPeriod, 0, null, sendAnimationData, updateStickersOrder, false));
+    }
+
     public void sendMessage(SendMessageParams sendMessageParams) {
         final SendMessageChatArguments sendMessageChatArguments = sendMessageParams.sendMessageChatArguments != null ?
                 sendMessageParams.sendMessageChatArguments : SendMessageChatArguments.EMPTY;
@@ -4327,6 +4340,8 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         PollSendParams pollSendParams = sendMessageParams.pollSendParams;
         TL_iv.RichMessage richMessage = sendMessageParams.richMessage;
 
+        boolean canSendGames = sendMessageParams.canSendGames;
+        boolean canUsePangu = sendMessageParams.canUsePangu == null ? NaConfig.INSTANCE.getEnablePanguOnSending().Bool() : sendMessageParams.canUsePangu;
         if (sendMessageChatArguments.welcomeMessageChatId != 0) {
             peer = -sendMessageChatArguments.welcomeMessageChatId;
             user = null;
@@ -10053,6 +10068,29 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 }
             });
         }
+    }
+
+    @UiThread
+    public static void prepareSendingLocation(AccountInstance accountInstance, final Location location, final long dialog_id) {
+        accountInstance.getMessagesStorage().getStorageQueue().postRunnable(() -> Utilities.stageQueue.postRunnable(() -> AndroidUtilities.runOnUIThread(() -> {
+            CharSequence venueTitle = location.getExtras().getCharSequence("venueTitle");
+            CharSequence venueAddress = location.getExtras().getCharSequence("venueAddress");
+            TLRPC.MessageMedia sendingMedia;
+            if(venueTitle != null || venueAddress != null) {
+                sendingMedia = new TLRPC.TL_messageMediaVenue();
+                sendingMedia.address = venueAddress == null ? "" : venueAddress.toString();
+                sendingMedia.title = venueTitle == null ? "" : venueTitle.toString();
+                sendingMedia.provider = "";
+                sendingMedia.venue_id = "";
+            }
+            else {
+                sendingMedia = new TLRPC.TL_messageMediaGeo();
+            }
+            sendingMedia.geo = new TLRPC.TL_geoPoint();
+            sendingMedia.geo.lat = location.getLatitude();
+            sendingMedia.geo._long = location.getLongitude();
+            accountInstance.getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of(sendingMedia, dialog_id, null, null, null, null, true, 0, 0));
+        })));
     }
 
     @UiThread

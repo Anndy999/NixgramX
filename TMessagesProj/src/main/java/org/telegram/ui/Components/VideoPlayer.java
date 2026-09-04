@@ -232,6 +232,19 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
         this.looper = looper;
     }
 
+    private EGLContext eglParentContext;
+    public void setEGLContext(EGLContext ctx) {
+        eglParentContext = ctx;
+    }
+
+    private int getPlayerExtensionRendererMode() {
+        return switch (NaConfig.INSTANCE.getPlayerDecoder().Int()) {
+            case 0 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF;
+            case 1 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON;
+            default -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER;
+        };
+    }
+
     private void ensurePlayerCreated() {
         DefaultLoadControl loadControl;
         if (isStory) {

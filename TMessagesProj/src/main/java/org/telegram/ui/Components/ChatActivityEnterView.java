@@ -69,10 +69,12 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.style.ImageSpan;
+import android.text.style.RelativeSizeSpan;
 import android.util.Log;
 import android.util.Property;
 import android.util.TypedValue;
 import android.view.ActionMode;
+import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
@@ -98,6 +100,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
@@ -120,6 +123,7 @@ import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 import org.telegram.ui.recyclerview.ChatListItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import org.jetbrains.annotations.NotNull;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
@@ -6159,9 +6163,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                     info.ttl = photoEntry.ttl;
                     info.videoEditedInfo = videoEditedInfo;
                     info.canDeleteAfter = true;
+                    info.hasMediaSpoilers = photoEntry.hasSpoiler;
                     photos.add(info);
                     photoEntry.reset();
                     sending = true;
+                    if (delegate != null) {
+                        delegate.beforeMessageSend(null, notify, scheduleDate, 0);
+                    }
                     boolean updateStickersOrder = SendMessagesHelper.checkUpdateStickersOrder(info.caption);
                     SendMessagesHelper.prepareSendingMedia(accountInstance, photos, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, false, false, editingMessageObject, notify, scheduleDate, scheduleRepeatPeriod, parentFragment == null ? 0 : parentFragment.getChatMode(), updateStickersOrder, null, parentFragment != null ? parentFragment.getMessageChatSendParams() : null, 0, false, 0, getSendMonoForumPeerId(), parentFragment != null ? parentFragment.messageSuggestionParams : null);
                     if (delegate != null) {
@@ -8262,6 +8270,10 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                 }
                 SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(audioToSend, null, audioToSendPath, dialog_id, replyingMessageObject, getThreadMessage(), null, null, null, null, notify, scheduleDate, 0, voiceOnce ? 0x7FFFFFFF : 0, null, null, false);
+                params.caption = voiceCaption;
+                voiceCaption = null;
+                params.quick_reply_shortcut = parentFragment != null ? parentFragment.quickReplyShortcut : null;
+                params.quick_reply_shortcut_id = parentFragment != null ? parentFragment.getQuickReplyId() : 0;
                 params.sendMessageChatArguments = parentFragment != null ? parentFragment.getMessageChatSendParams() : null;
                 params.effect_id = effectId;
                 params.payStars = payStars;
@@ -8810,6 +8822,10 @@ public class ChatActivityEnterView extends FrameLayout implements
                     replyToTopMsg = replyingTopMessage;
                 }
                 SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(message[0].toString(), dialog_id, replyingMessageObject, replyToTopMsg, messageWebPage, messageWebPageSearch, entities, null, null, notify, scheduleDate, scheduleRepeatPeriod, sendAnimationData, updateStickersOrder);
+                params.canSendGames = withGame;
+                params.canUsePangu = canUsePangu;
+                params.quick_reply_shortcut = parentFragment != null ? parentFragment.quickReplyShortcut : null;
+                params.quick_reply_shortcut_id = parentFragment != null ? parentFragment.getQuickReplyId() : 0;
                 params.sendMessageChatArguments = parentFragment != null ? parentFragment.getMessageChatSendParams() : null;
                 params.effect_id = effectId;
                 params.payStars = payStars;
@@ -10823,18 +10839,19 @@ public class ChatActivityEnterView extends FrameLayout implements
                 openKeyboard();
             }
         } else {
-            if (slowModeTimer > 0 && !isInScheduleMode()) {
-                if (delegate != null) {
-                    delegate.onUpdateSlowModeButton(slowModeButton, true, slowModeButton.getText());
-                }
-                return;
-            }
-            TLRPC.User user = messageObject != null && DialogObject.isChatDialog(dialog_id) ? accountInstance.getMessagesController().getUser(messageObject.messageOwner.from_id.user_id) : null;
-            SendMessagesHelper.SendMessageParams sendMessageParams;
-            if ((botCount != 1 || username) && user != null && user.bot && !command.contains("@")) {
-                sendMessageParams = SendMessagesHelper.SendMessageParams.of(String.format(Locale.US, "%s@%s", command, UserObject.getPublicUsername(user)), dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
+            // NagramX: Ask before sending bot command
+            if (NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(parentActivity);
+                builder.setTitle(LocaleController.getString(R.string.botCommandConfirmTitle));
+                String message = String.format(LocaleController.getString(R.string.botCommandConfirmText), command);
+                builder.setMessage(message);
+                builder.setPositiveButton(LocaleController.getString(R.string.OK), (dialogInterface, i) -> {
+                    sendCommand(command, effectId, messageObject, username, botCount);
+                });
+                builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                parentFragment.showDialog(builder.create());
             } else {
-                sendMessageParams = SendMessagesHelper.SendMessageParams.of(command, dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
+                sendCommand(command, effectId, messageObject, username, botCount);
             }
             sendMessageParams.sendMessageChatArguments = parentFragment != null ? parentFragment.getMessageChatSendParams() : null;
             sendMessageParams.effect_id = effectId;
@@ -10842,6 +10859,28 @@ public class ChatActivityEnterView extends FrameLayout implements
             applyStoryToSendMessageParams(sendMessageParams);
             SendMessagesHelper.getInstance(currentAccount).sendMessage(sendMessageParams);
         }
+    }
+
+    private void sendCommand(String command, long effectId, MessageObject messageObject, boolean username, int botCount) {
+        if (slowModeTimer > 0 && !isInScheduleMode()) {
+            if (delegate != null) {
+                delegate.onUpdateSlowModeButton(slowModeButton, true, slowModeButton.getText());
+            }
+            return;
+        }
+        TLRPC.User user = messageObject != null && DialogObject.isChatDialog(dialog_id) ? accountInstance.getMessagesController().getUser(messageObject.messageOwner.from_id.user_id) : null;
+        SendMessagesHelper.SendMessageParams sendMessageParams;
+        if ((botCount != 1 || username) && user != null && user.bot && !command.contains("@")) {
+            sendMessageParams = SendMessagesHelper.SendMessageParams.of(String.format(Locale.US, "%s@%s", command, UserObject.getPublicUsername(user)), dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
+        } else {
+            sendMessageParams = SendMessagesHelper.SendMessageParams.of(command, dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
+        }
+        sendMessageParams.quick_reply_shortcut = parentFragment != null ? parentFragment.quickReplyShortcut : null;
+        sendMessageParams.quick_reply_shortcut_id = parentFragment != null ? parentFragment.getQuickReplyId() : 0;
+        sendMessageParams.effect_id = effectId;
+        sendButton.setEffect(effectId = 0);
+        applyStoryToSendMessageParams(sendMessageParams);
+        SendMessagesHelper.getInstance(currentAccount).sendMessage(sendMessageParams);
     }
 
     public void setEditingBusinessLink(TL_account.TL_businessChatLink businessLink) {
@@ -12564,10 +12603,11 @@ public class ChatActivityEnterView extends FrameLayout implements
             SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(keyboardButton.text, dialog_id, replyMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
             params.sendMessageChatArguments = parentFragment != null ? parentFragment.getMessageChatSendParams() : null;
             params.effect_id = effectId;
+            params.canUsePangu = false;  // Na: Always Do not use pangu for bot button text
             sendButton.setEffect(effectId = 0);
             SendMessagesHelper.getInstance(currentAccount).sendMessage(params);
         } else if (buttonTypeUrl != null) {
-            if (Browser.urlMustNotHaveConfirmation(buttonTypeUrl.url)) {
+            if (Browser.urlMustNotHaveConfirmation(buttonTypeUrl.url) && !NaConfig.INSTANCE.getConfirmAllLinks().Bool()) {
                 Browser.openUrl(parentActivity, Uri.parse(buttonTypeUrl.url), true, true, progress);
             } else {
                 AlertsCreator.showOpenUrlAlert(parentFragment, buttonTypeUrl.url, false, true, true, progress, resourcesProvider);
@@ -13652,6 +13692,9 @@ public class ChatActivityEnterView extends FrameLayout implements
                         setSearchingTypeInternal(0, true);
                         emojiView.closeSearch(true);
                         emojiView.hideSearchKeyboard();
+                    }
+                    if (delegate != null) {
+                        delegate.beforeMessageSend(null, notify, scheduleDate, stars);
                     }
                     setStickersExpanded(false, true, false);
                     final TL_stories.StoryItem storyItem = delegate != null ? delegate.getReplyToStory() : null;
@@ -16734,6 +16777,127 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         updateFieldRight(lastAttachVisible);
         checkSendButton(false);
+    }
+
+    private void proceedWithVideoRecording() {
+        if (delegate == null || parentActivity == null) {
+            pendingCameraFront = null;
+            return;
+        }
+        if (!checkMenuPermissions(true)) {
+            pendingCameraFront = null;
+            return;
+        }
+        isInVideoMode = true;
+        // initialize state that would have been set in recordAudioVideoRunnable
+        delegate.onPreAudioVideoRecord();
+        calledRecordRunnable = true;
+        recordAudioVideoRunnableStarted = false;
+        if (slideText != null) {
+            slideText.setAlpha(1.0f);
+            slideText.setTranslationY(0);
+        }
+        audioToSendPath = null;
+        audioToSend = null;
+        // initialize camera and start recording
+        if (!CameraController.getInstance().isCameraInitied()) {
+            CameraController.getInstance().initCamera(onFinishInitCameraRunnable);
+        } else {
+            onFinishInitCameraRunnable.run();
+        }
+        if (!recordingAudioVideo) {
+            recordingAudioVideo = true;
+            updateRecordInterface(RECORD_STATE_ENTER, true);
+            if (recordCircle != null) {
+                recordCircle.showWaves(false, false);
+            }
+            if (recordTimerView != null) {
+                recordTimerView.reset();
+            }
+        }
+        // setup recording mode
+        delegate.onSwitchRecordMode(isInVideoMode());
+        setRecordVideoButtonVisible(isInVideoMode(), true);
+        if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        sendButtonVisible = true;
+        startLockTransition();
+    }
+
+    private void showCameraSelectionPopup(View anchorView, Runnable onFrontSelected, Runnable onRearSelected) {
+        if (parentActivity == null) {
+            return;
+        }
+
+        final boolean[] cameraSelected = {false};
+
+        ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(parentActivity, R.drawable.popup_fixed_alert4, resourcesProvider);
+        popupLayout.setAnimationEnabled(false);
+
+        // front camera option
+        ActionBarMenuSubItem frontItem = new ActionBarMenuSubItem(getContext(), true, false);
+        frontItem.setTextAndIcon(getString(R.string.CameraInVideoMessagesFront), R.drawable.msg_openprofile_solar);
+        frontItem.setOnClickListener(v -> {
+            cameraSelected[0] = true;
+            if (cameraSelectionPopup != null && cameraSelectionPopup.isShowing()) {
+                cameraSelectionPopup.dismiss();
+            }
+            onFrontSelected.run();
+        });
+        frontItem.setMinimumWidth(dp(196));
+        popupLayout.addView(frontItem, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT, 0, 0, 0, 0));
+        // rear camera option
+        ActionBarMenuSubItem rearItem = new ActionBarMenuSubItem(getContext(), false, true);
+        rearItem.setTextAndIcon(getString(R.string.CameraInVideoMessagesRear), R.drawable.msg_rear_camera_solar);
+        rearItem.setOnClickListener(v -> {
+            cameraSelected[0] = true;
+            if (cameraSelectionPopup != null && cameraSelectionPopup.isShowing()) {
+                cameraSelectionPopup.dismiss();
+            }
+            onRearSelected.run();
+        });
+        rearItem.setMinimumWidth(dp(196));
+        popupLayout.addView(rearItem, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT, 0, 48, 0, 0));
+        popupLayout.updateRadialSelectors();
+
+        cameraSelectionPopup = new ActionBarPopupWindow(popupLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT);
+        cameraSelectionPopup.setAnimationEnabled(false);
+        cameraSelectionPopup.setAnimationStyle(R.style.PopupContextAnimation2);
+        cameraSelectionPopup.setOutsideTouchable(true);
+        cameraSelectionPopup.setClippingEnabled(true);
+        cameraSelectionPopup.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
+        cameraSelectionPopup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
+        cameraSelectionPopup.getContentView().setFocusableInTouchMode(true);
+        cameraSelectionPopup.setOnDismissListener(() -> {
+            if (!cameraSelected[0]) {
+                // reset state only when popup is dismissed without selection
+                calledRecordRunnable = false;
+                pendingCameraFront = null;
+            }
+            cameraSelectionPopup = null;
+        });
+
+        popupLayout.measure(MeasureSpec.makeMeasureSpec(dp(1000), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(1000), MeasureSpec.AT_MOST));
+        cameraSelectionPopup.setFocusable(true);
+        int[] location = new int[2];
+        anchorView.getLocationInWindow(location);
+        int popupWidth = popupLayout.getMeasuredWidth();
+        int popupHeight = popupLayout.getMeasuredHeight();
+
+        int y = location[1] - popupHeight - dp(2);
+        if (y < 0) {
+            y = location[1] + anchorView.getMeasuredHeight() + dp(2);
+        }
+        int x = location[0] + anchorView.getMeasuredWidth() - popupWidth + dp(8);
+
+        if (AndroidUtilities.displaySize.x > 0) {
+            x = Math.max(0, Math.min(x, AndroidUtilities.displaySize.x - popupWidth));
+        }
+        if (AndroidUtilities.displaySize.y > 0) {
+            y = Math.max(0, Math.min(y, AndroidUtilities.displaySize.y - popupHeight));
+        }
+        cameraSelectionPopup.showAtLocation(anchorView, Gravity.LEFT | Gravity.TOP, x, y);
+        cameraSelectionPopup.dimBehind();
+        if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
     }
 
     public static void disableNewLines(EditText editText) {

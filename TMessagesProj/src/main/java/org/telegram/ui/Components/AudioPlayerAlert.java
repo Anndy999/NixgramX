@@ -1049,10 +1049,12 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         prevButton.setLayerColor("Triangle 4", iconColor);
         prevButton.setLayerColor("Rectangle 4", iconColor);
         prevButton.setBackgroundDrawable(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(22)));
-        bottomView.addView(prevButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
+        if (messageObject != null && !messageObject.isVoice()) {
+            bottomView.addView(prevButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
+        }
         prevButton.setContentDescription(LocaleController.getString(R.string.AccDescrPrevious));
 
-        buttons[2] = playButton = new ImageView(context);
+        buttons[3] = playButton = new ImageView(context);
         playButton.setScaleType(ImageView.ScaleType.CENTER);
         playButton.setImageDrawable(playPauseDrawable = new PlayPauseDrawable(28));
         playPauseDrawable.setPause(!MediaController.getInstance().isMessagePaused(), false);
@@ -1169,10 +1171,14 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         nextButton.setLayerColor("Rectangle 4", iconColor);
         nextButton.setRotation(180f);
         nextButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(22)));
-        bottomView.addView(nextButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
+        if (messageObject != null && !messageObject.isVoice()) {
+            bottomView.addView(nextButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
+        }
         nextButton.setContentDescription(LocaleController.getString(R.string.Next));
 
-        buttons[4] = optionsButton = new ActionBarMenuItem(context, null, 0, iconColor, false, resourcesProvider);
+        buttons[5] = forwardButton;
+
+        buttons[6] = optionsButton = new ActionBarMenuItem(context, null, 0, iconColor, false, resourcesProvider);
         optionsButton.setIcon(optionsIcon = new ChooseQualityLayout.QualityIcon(context, R.drawable.ic_ab_other, resourcesProvider));
         optionsButton.setLongClickEnabled(false);
         optionsButton.setAdditionalYOffset(-dp(157 + 40));
@@ -1180,7 +1186,6 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         optionsButton.setOnClickListener(this::showMenuOptions);
 
         bottomView.addView(optionsButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
-
 
         castItemButton = new CastMediaRouteButton(context) {
             @Override
@@ -2383,15 +2388,17 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             }
             if (noforwards) {
                 optionsButton.hideSubItem(1);
-                optionsButton.hideSubItem(2);
+                optionsButton.hideSubItem(100);
+                /*optionsButton.hideSubItem(2);
                 optionsButton.hideSubItem(5);
-                optionsButton.hideSubItem(6);
-                optionsButton.setAdditionalYOffset(-dp(16));
+                optionsButton.hideSubItem(6);*/
+                optionsButton.setAdditionalYOffset(-dp(16 + 48 * 3));
             } else {
                 optionsButton.showSubItem(1);
+                optionsButton.showSubItem(100);
                 optionsButton.showSubItem(2);
                 optionsButton.showSubItem(5);
-                optionsButton.setAdditionalYOffset(-dp(157 + 40));
+                optionsButton.setAdditionalYOffset(-dp(157 + 40 + 48));
             }
 
             checkIfMusicDownloaded(messageObject);

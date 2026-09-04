@@ -16,7 +16,7 @@
 | L3 | Human adapt | Resolve conflicts, re-apply NixgramX identity + policy |
 | L4 | Gate | CI + manual checklist before Stable |
 
-## Current sync attempt: 12.10.1 (L2 Assist)
+## Current sync attempt: 12.10.1 (L3 Adapt in progress)
 
 | Field | Value |
 | --- | --- |
@@ -24,9 +24,9 @@
 | Telegram target | `update to 12.10.1 (7038)` / `62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c` |
 | Baseline for delta | Telegram `update to 12.9.2 (6991)` / `b7561f0c641b` (matches NagramX 12.9.2 era) |
 | NixgramX start | `main` @ `9db59a81` (bootstrap from NagramX `4335a2e` + identity cut) |
-| Strategy | **Upstream delta patch** (not git merge): histories are unrelated after Day-1 bootstrap. Applied `git diff b7561f0..62b56a07` onto working tree; excluded `TMessagesProj_App*`, `buildSrc`, `Dockerfile`, `README.md`. |
+| Strategy | **Upstream delta patch** then **3-way merge** (telegram-12.9.2 base → NixgramX features → telegram-12.10.1) for reject files. Prefer Telegram new APIs; re-weave NaConfig/Neko/Ayu hooks. |
 | Submodules | Synced to Telegram 12.10.1 gitlinks (see UPSTREAM_AUDIT.md) |
-| Status | **Partial sync — NOT ready for main.** Feature re-adaptation incomplete on high-churn UI files. |
+| Status | **L3 Adapt advanced — still NOT ready for main.** High-risk UI rejects re-merged; no SDK compile verification yet. |
 
 ### Procedure used
 
@@ -38,14 +38,27 @@
 6. Registered + `git submodule update --init` for new third_party / tlottie / jlatexmath submodules.
 7. Draft PR only — do not merge.
 
+### L3 Adapt progress (2026-09-04)
+
+**Fully re-merged via 3-way (feature hooks on Telegram 12.10.1):**
+
+- `ChatActivity` (23 conflicts resolved) — double-tap actions, Ayu deleted guards, NaConfig text-style order, message menu (translate/LLM/repeat/bookmark/report/details), TLKeyboardHelper bot long-press, welcome-message mode, reactions hide/show
+- `ChatActivityEnterView` — send params + `sendMessageChatArguments`, confirm-all-links, video-record camera popup, `disableNewLines`
+- `ChatMessageCell` — KeyboardButtonProto long-press delegate, Ayu deleted / bookmark time strings + welcome empty time
+- `SendMessagesHelper` — Pangu/canSendGames + welcomeMessageChatId, `prepareSendingLocation`
+- `ProfileActivity`, `FilterTabsView`, `VideoPlayer`, `RichMessageLayout`
+- Also: `ActionBar`, `ActionBarMenuItem`, `AudioPlayerAlert`, `ChatAvatarContainer`, `EditTextCaption`, `ChatCustomReactionsEditActivity`, `PeerStoriesView`, `FileLog`, `Utilities`, `ConnectionsManager` (kept DnsTxt/Firebase task classes still referenced)
+
+**Reject archive:** `docs/sync-12.10.1-rejects/` cleared for the above (empty / CMake already on TG linker flags).
+
 ### Manual sync checklist (remaining L3)
 
-1. Port rejected feature hunks from `docs/sync-12.10.1-rejects/` (esp. `ChatActivity`, `ChatActivityEnterView`, `ChatMessageCell`, `ProfileActivity`, `SendMessagesHelper`, `FilterTabsView`, `VideoPlayer`, `RichMessageLayout`).
+1. Spot-check any remaining non-reject compile breaks from signature drift (esp. `sendSticker` / `SendMessageChatArguments` call sites outside adapted files).
 2. Re-verify identity files (`APP_PACKAGE`, `BaseRemoteHelper`, `google-services.json`, Maps key, About URLs).
 3. Re-verify policy removals still disabled (Ghost Mode UI row removed; hide-typing / online enhance).
-4. Build full + `_base` (at least arm64-v8a).
+4. Build full + `_base` (at least arm64-v8a) — **not done** (no Android SDK in this agent environment).
 5. Re-export `FEATURE_INVENTORY.md` after adaptations compile.
-6. Update this file + `UPSTREAM_AUDIT.md` when L3 closes.
+6. Update this file + `UPSTREAM_AUDIT.md` when L3 closes / before merge to main.
 
 ## References
 

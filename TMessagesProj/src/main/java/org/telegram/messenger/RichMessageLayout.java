@@ -138,6 +138,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicReference;
+
+import ru.noties.jlatexmath.JLatexMathDrawable;
+import tw.nekomimi.nekogram.parts.RichMessageTransHelper;
 import me.vkryl.android.util.ClickHelper;
 import me.vkryl.core.BitwiseUtils;
 

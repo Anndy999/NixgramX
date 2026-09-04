@@ -790,6 +790,28 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
 
         builder.setView(container);
 
+        final int start;
+        final int end;
+        if (selectionStart >= 0 && selectionEnd >= 0) {
+            start = selectionStart;
+            end = selectionEnd;
+            selectionStart = selectionEnd = -1;
+        } else {
+            start = getSelectionStart();
+            end = getSelectionEnd();
+        }
+
+        var urlSpans = getText().getSpans(start, end, URLSpanReplacement.class);
+        if (urlSpans != null) {
+            for (var span : urlSpans) {
+                var url = span.getURL();
+                if (!TextUtils.isEmpty(url)) {
+                    editText.setText(url);
+                    break;
+                }
+            }
+        }
+
         builder.setPositiveButton(LocaleController.getString(R.string.OK), (dialogInterface, i) -> {
             callback.run(editText.getText().toString().trim());
         });

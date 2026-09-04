@@ -18594,6 +18594,31 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             }
         }
+        boolean showAyuDeletedMark = ayuDeleted && shouldShowAyuDeletedMark(currentMessageObject);
+        // bookmark start
+        boolean showBookmarkInTime = false;
+        int senderNameColor = 0;
+        if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
+            boolean groupHasBookmark = false;
+            if (currentMessagesGroup != null && currentMessagesGroup.messages != null && currentMessagesGroup.messages.size() > 1) {
+                final long dialogId = messageObject.getDialogId();
+                for (int a = 0, size = currentMessagesGroup.messages.size(); a < size; a++) {
+                    MessageObject object = currentMessagesGroup.messages.get(a);
+                    if (BookmarksHelper.isBookmarked(currentAccount, dialogId, object.getId())) {
+                        groupHasBookmark = true;
+                        break;
+                    }
+                }
+            }
+            boolean isBookmarked = BookmarksHelper.isBookmarked(currentAccount, messageObject.getDialogId(), messageObject.getId());
+            showBookmarkInTime = groupHasBookmark || (isBookmarked && (!shouldDrawNameLayoutForMessage(messageObject) || isSideMenuEnabled));
+            if (showBookmarkInTime) {
+                senderNameColor = getSenderNameColor(isBookmarked);
+            }
+            drawBookmarkInTime = showBookmarkInTime;
+        }
+        // bookmark end
+        final int editedDate = edited && currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date;
         if (currentMessageObject.isWelcomeMessage()) {
             timeString = ""; // Long.toString(currentMessageObject.getId());
         } else if (currentMessageObject.notime || currentMessageObject.isSponsored() || currentMessageObject.isQuickReply() || currentMessageObject.isWelcomeMessage()) {
@@ -19154,7 +19179,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 stringBuilder.setSpan(new ForegroundColorSpanThemable(colorKey), 0, stringBuilder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 
                 nameStringFinal = stringBuilder;
-                nameStringFinal = TextUtils.ellipsize(nameStringFinal, Theme.chat_namePaint, nameWidth + additionalWidth, TextUtils.TruncateAt.END);
+                nameStringFinal = TextUtils.ellipsize(nameStringFinal, Theme.chat_namePaint, nameWidthForLayout + additionalWidth, TextUtils.TruncateAt.END);
             } else if (viaBot) {
                 viaNameWidth = (int) Math.ceil(Theme.chat_namePaint.measureText(nameStringFinal, 0, nameStringFinal.length()));
                 if (viaNameWidth != 0) {
@@ -20598,6 +20623,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
 
         canvas.restoreToCount(restore);
+
+        if (shouldTranslucentDeleted() && ayuDeleted) {
+            canvas.restore();
+        }
     }
 
     public void drawBackgroundInternal(Canvas canvas, boolean fromParent) {
