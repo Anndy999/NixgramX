@@ -28,6 +28,10 @@ by the script above.
 - **UB-4 attach-image pinch-zoom jank**:
   skip `invalidateBlur()` during pinch / zoomed pan in `PhotoViewer`; restore
   blur on gesture end.
+- **Auto-update framework**: `UpdateHelper` / settings switch, **default OFF**.
+  Channel ID still `0` until you own metadata. See `docs/AUTO_UPDATE.md`.
+- **Signing**: NixgramX `release.keystore` (alias `nixgramx`). Passwords not in git.
+  Compile steps: `docs/COMPILE_RELEASE.md`.
 
 ## Still needs APK
 

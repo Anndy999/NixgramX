@@ -1,13 +1,13 @@
 # Copy to local.properties (gitignored). Do not commit real secrets.
 sdk.dir=/path/to/Android/Sdk
 
-# Obtain at https://my.telegram.org/auth
+# Obtain at https://my.telegram.org/apps  (required — official TG ids will get the app banned)
 TELEGRAM_APP_ID=YOUR_TELEGRAM_APP_ID
 TELEGRAM_APP_HASH=YOUR_TELEGRAM_APP_HASH
 
-# Release signing (replace TMessagesProj/release.keystore with yours)
+# Release signing (keystore is TMessagesProj/release.keystore; passwords are NOT in git)
 KEYSTORE_PASS=YOUR_KEYSTORE_PASS
-ALIAS_NAME=YOUR_ALIAS_NAME
+ALIAS_NAME=nixgramx
 ALIAS_PASS=YOUR_ALIAS_PASS
 
 # Optional: build _base package (app.nixgramx.android.base)

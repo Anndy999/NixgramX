@@ -28,6 +28,14 @@ public class UpdateHelper extends BaseRemoteHelper {
     public static final int UPDATE_CHANNEL_BETA = 2;
     private boolean updateAlways = false;
 
+    public static boolean isChannelConfigured() {
+        return CHANNEL_METADATA_ID != 0L;
+    }
+
+    public static boolean isAutoCheckEnabled() {
+        return isChannelConfigured() && NaConfig.INSTANCE.getAutoUpdateChannel().Int() != UPDATE_OFF;
+    }
+
     public static UpdateHelper getInstance() {
         return InstanceHolder.instance;
     }
@@ -201,6 +209,18 @@ public class UpdateHelper extends BaseRemoteHelper {
     }
 
     public void checkNewVersionAvailable(Delegate delegate, boolean updateAlways) {
+        if (!isChannelConfigured()) {
+            if (delegate != null) {
+                delegate.onTLResponse(null, "updater_not_configured");
+            }
+            return;
+        }
+        if (!updateAlways && NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_OFF) {
+            if (delegate != null) {
+                delegate.onTLResponse(null, null);
+            }
+            return;
+        }
         this.updateAlways = updateAlways;
         load(delegate);
     }
