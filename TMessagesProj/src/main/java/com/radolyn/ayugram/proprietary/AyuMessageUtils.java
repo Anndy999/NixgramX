@@ -1,5 +1,7 @@
 package com.radolyn.ayugram.proprietary;
 
+import org.telegram.messenger.BuildConfig;
+
 import android.text.TextUtils;
 
 import androidx.core.util.Pair;
@@ -688,7 +690,7 @@ public abstract class AyuMessageUtils {
     }
 
     public static boolean shouldSaveMedia(int accountId, long dialogId) {
-        if (NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool() && NaConfig.INSTANCE.getMessageSavingSaveMedia().Bool()) {
+        if (!BuildConfig.IS_BASE && NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool() && NaConfig.INSTANCE.getMessageSavingSaveMedia().Bool()) {
             if (DialogObject.isUserDialog(dialogId)) {
                 return NaConfig.INSTANCE.getSaveMediaInPrivateChats().Bool();
             }
@@ -712,7 +714,7 @@ public abstract class AyuMessageUtils {
     }
 
     public static File decryptAndSaveMedia(String fileName, File encryptedFile, MessageObject messageObject) {
-        if (!NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) {
+        if (BuildConfig.IS_BASE || !NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) {
             return null;
         }
         File AttachmentsDir = AyuMessagesController.attachmentsPath;
@@ -800,7 +802,7 @@ public abstract class AyuMessageUtils {
     }
 
     public static File saveDownloadedMedia(File downloadedFile) {
-        if (!NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) {
+        if (BuildConfig.IS_BASE || !NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) {
             return null;
         }
         if (downloadedFile == null) {

@@ -1,89 +1,66 @@
-# Nagram X
-[![Crowdin](https://badges.crowdin.net/NagramX/localized.svg)](https://crowdin.com/project/NagramX)  
-A variant of [Nagram](https://github.com/NextAlone/Nagram) with additional features.
+# NixgramX
+
+Independent long-term fork based on [NagramX](https://github.com/risin42/NagramX) `12.9.2.1260` (`4335a2e`), with Day-1 identity isolation from NagramX.
+
+**Priorities:** (1) track Telegram Android official upstream; (2) maximize stability / bugfixes. Phase 1 is not a large new-feature push.
+
+## Identity
+
+| Product | applicationId | Display name |
+| --- | --- | --- |
+| Full (default) | `app.nixgramx.android` | NixgramX |
+| `_base` | `app.nixgramx.android.base` | NixgramX |
+
+Icons are temporarily still NagramX assets.
+
+NixgramX **cannot** overlay-install over NagramX (different package + signing). Re-login restores cloud chats; local-only data does not auto-migrate. Prefer settings import/export. See [`docs/IDENTITY.md`](docs/IDENTITY.md).
+
+## Risk
+
+Full builds include Save Deleted Messages and related enhancements (Telegram ToS / account risk). `_base` mirrors NagramX’s ToS-friendlier cut (without those advanced features). **No ban immunity.** See [`docs/BAN_RISK.md`](docs/BAN_RISK.md).
+
+Ghost Mode, hide-typing, and online-status hide/enhance are **removed-by-policy**.
+
+## Docs
+
+| Doc | Purpose |
+| --- | --- |
+| [IDENTITY.md](docs/IDENTITY.md) | Package IDs, migration, replacement paths |
+| [UPSTREAM_AUDIT.md](docs/UPSTREAM_AUDIT.md) | Baseline `4335a2e`, Telegram 12.10.1, `a6c7d0a` |
+| [UPSTREAM_SYNC.md](docs/UPSTREAM_SYNC.md) | Watch → Assist → Human → Gate |
+| [FEATURE_INVENTORY.md](docs/FEATURE_INVENTORY.md) | NaConfig export + statuses |
+| [BUILDING.md](docs/BUILDING.md) | Build full / `_base` |
+| [SIGNING.md](docs/SIGNING.md) | Keystore |
+| [BAN_RISK.md](docs/BAN_RISK.md) | ToS / ban notes |
+| [KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Blockers |
+| [STABILITY.md](docs/STABILITY.md) | Stability process |
+| [TEST_MATRIX.md](docs/TEST_MATRIX.md) | Release tests |
+| [BUG_FIX_SOURCES.md](docs/BUG_FIX_SOURCES.md) | Cherry-pick log |
+| [LICENSE_AUDIT.md](docs/LICENSE_AUDIT.md) | GPL notes |
 
 ## Download
 
-Latest versions are available through:
-* [Telegram Channel](https://t.me/NagramX) (Latest Beta)
-* [GitHub Actions](https://github.com/risin42/NagramX/actions/workflows/staging.yml) (CI Artifacts)
-* [GitHub Releases](https://github.com/risin42/NagramX/releases) (Latest Stable)
+Releases: https://github.com/Anndy999/NixgramX/releases
+
+## Build (short)
+
+```bash
+git clone --recursive --shallow-submodules https://github.com/Anndy999/NixgramX.git NixgramX
+cd NixgramX
+cp local.properties.example local.properties
+# fill TELEGRAM_APP_ID / HASH, KEYSTORE_*, sdk.dir
+# replace release.keystore, google-services.json, Maps API key
+
+./gradlew TMessagesProj:assembleRelease
+NIXGRAMX_BASE=true ./gradlew TMessagesProj:assembleRelease
+```
+
+Details: [`docs/BUILDING.md`](docs/BUILDING.md).
 
 ## Verify APK
 
-Official APKs use the following Android signing certificate:
+Official NixgramX signing fingerprint: **TBD** (fill after first release keystore). Do not trust NagramX’s certificate for NixgramX builds.
 
-* Package name: `nu.gpu.nagram` / `nu.gpu.nagramx` (base version)
-* SHA-256: `0D:51:91:56:E8:0C:91:8C:28:C4:80:BF:D1:3F:31:6A:3B:3B:F7:22:DB:53:2F:AB:74:66:0E:C8:E5:C5:06:A1`
+## License
 
-## Compilation Guide
-
-1. Clone the repository with its submodules:
-
-    ```bash
-    git clone --recursive --shallow-submodules https://github.com/risin42/NagramX.git NagramX
-    ```
-
-    If you already cloned the repository without submodules, run:
-
-    ```bash
-    git submodule update --init --recursive --depth=1
-    ```
-
-2. Obtain API credentials (`TELEGRAM_APP_ID` and `TELEGRAM_APP_HASH`) from [Telegram Developer Portal](https://my.telegram.org/auth). Create `local.properties` in the project root with:
-
-   ```properties
-   TELEGRAM_APP_ID=<your_telegram_app_id>
-   TELEGRAM_APP_HASH=<your_telegram_app_hash>
-   ```
-
-3. For APK signing: Replace `release.keystore` with your keystore and add signing configuration to `local.properties`:
-
-   ```properties
-   KEYSTORE_PASS=<your_keystore_password>
-   ALIAS_NAME=<your_alias_name>
-   ALIAS_PASS=<your_alias_password>
-   ```
-
-4. For FCM support: Replace `TMessagesProj/google-services.json` with your own configuration file.
-
-5. Replace project-specific metadata:
-
-    - Set your Google Maps API key in the `com.google.android.maps.v2.API_KEY` meta-data entry in `TMessagesProj/src/main/AndroidManifest.xml`.
-    - Set `BaseRemoteHelper.CHANNEL_METADATA_ID` in `TMessagesProj/src/main/java/tw/nekomimi/nekogram/helpers/remote/BaseRemoteHelper.java` to your metadata channel's numeric ID, without the `-100` prefix.
-
-6. Open the project in Android Studio to start building.
-
-## GitHub Actions Build
-
-1. Replace `TMessagesProj/release.keystore` with your keystore file.
-
-2. Configure `local.properties` with the following:
-
-   ```properties
-   KEYSTORE_PASS=<your_keystore_password>
-   ALIAS_NAME=<your_alias_name>
-   ALIAS_PASS=<your_alias_password>
-   TELEGRAM_APP_ID=<your_telegram_app_id>
-   TELEGRAM_APP_HASH=<your_telegram_app_hash>
-   ```
-
-   Base64 encode the contents of this file.
-
-3. Configure GitHub Action secrets:
-   - `LOCAL_PROPERTIES`: Base64-encoded content from step 2
-   - `HELPER_BOT_TOKEN`: Telegram bot token from [@Botfather](https://t.me/Botfather) (e.g., `1111:abcd`)
-   - `HELPER_BOT_TARGET`: Primary Telegram chat ID (e.g., `777000`)
-   - `HELPER_BOT_CANARY_TARGET`: Chat ID for test builds and metadata (can match `HELPER_BOT_TARGET`)
-
-4. Trigger the Release Build workflow.
-
-## Acknowledgments
-
-- [AyuGram](https://github.com/AyuGram/AyuGram4A)
-- [Cherrygram](https://github.com/arsLan4k1390/Cherrygram)
-- [Dr4iv3rNope](https://github.com/Dr4iv3rNope/NotSoAndroidAyuGram)
-- [exteraGram](https://github.com/exteraSquad/exteraGram)
-- [Nagram](https://github.com/NextAlone/Nagram)
-- [Nekogram](https://github.com/Nekogram/Nekogram)
-- [OctoGram](https://github.com/OctoGramApp/OctoGram)
+GNU GPL v2 or later — see `LICENSE`.

@@ -145,6 +145,8 @@ public class AyuGhostUtils {
     }
 
     public static InterceptResult interceptRequest(TLObject object, RequestDelegate onCompleteOrig) {
+        // NIXGRAMX_POLICY_GHOST_REMOVED: Ghost Mode / hide-typing / online-hide disabled
+        if (true) return Proceed(onCompleteOrig);
         Long dialogId = extractDialogId(object);
         boolean readExcluded = dialogId != null && AyuGhostPreferences.getGhostModeReadExclusion(dialogId);
         boolean typingExcluded = dialogId != null && AyuGhostPreferences.getGhostModeTypingExclusion(dialogId);

@@ -413,7 +413,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
-                <data android:mimeType="vnd.android.cursor.item/vnd.nu.gpu.nagram.android.profile"/>
+                <data android:mimeType="vnd.android.cursor.item/vnd.app.nixgramx.android.profile"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
@@ -460,8 +460,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
-                <data android:mimeType="vnd.android.cursor.item/vnd.nu.gpu.nagram.android.call"/>
-                <data android:mimeType="vnd.android.cursor.item/vnd.nu.gpu.nagram.android.call.video"/>
+                <data android:mimeType="vnd.android.cursor.item/vnd.app.nixgramx.android.call"/>
+                <data android:mimeType="vnd.android.cursor.item/vnd.app.nixgramx.android.call.video"/>
             </intent-filter>
         </activity-alias>
         <activity
@@ -561,7 +561,7 @@
         <activity
             android:name="tw.nekomimi.nekogram.helpers.AppRestartHelper"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:process=":nagramx"
+            android:process=":nixgramx"
             android:exported="false"
         />
 
@@ -853,7 +853,7 @@
             android:exported="false"
             android:grantUriPermissions="true"/>
 
-        <meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="AIzaSyDE_x6GRKJCSfCY33soBYUQ2piYsgjVpVE" />
+        <meta-data android:name="com.google.android.maps.v2.API_KEY" android:value="YOUR_GOOGLE_MAPS_API_KEY" />
         <uses-library android:name="com.google.android.maps" android:required="false"/>
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
 

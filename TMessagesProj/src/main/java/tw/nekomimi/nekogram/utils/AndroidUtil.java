@@ -78,7 +78,7 @@ public class AndroidUtil {
     }
 
     public static int getOnlineColor(TLRPC.User user, Theme.ResourcesProvider resourcesProvider) {
-        if (!NaConfig.INSTANCE.getShowOnlineStatus().Bool()) {
+        if (true /* NIXGRAMX_POLICY_ONLINE */ || !NaConfig.INSTANCE.getShowOnlineStatus().Bool()) {
             return 0;
         }
         if (user == null || user.status == null || user.bot || user.self) {
@@ -353,7 +353,7 @@ public class AndroidUtil {
     @SuppressWarnings("ConstantValue")
     public static boolean shouldEnableCrashlytics() {
         return !BuildConfig.DEBUG
-                && "nu.gpu.nagram".equals(BuildConfig.APPLICATION_ID)
+                && ("app.nixgramx.android".equals(BuildConfig.APPLICATION_ID) || "app.nixgramx.android.base".equals(BuildConfig.APPLICATION_ID))
                 && !NaConfig.INSTANCE.getDisableCrashlyticsCollection().Bool();
     }
 }

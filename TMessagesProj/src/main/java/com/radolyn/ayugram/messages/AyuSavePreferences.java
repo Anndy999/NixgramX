@@ -9,6 +9,8 @@
 
 package com.radolyn.ayugram.messages;
 
+import org.telegram.messenger.BuildConfig;
+
 
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
@@ -75,7 +77,7 @@ public class AyuSavePreferences {
     }
 
     public static boolean saveDeletedMessageFor(int accountId, long dialogId, long userId) {
-        if (!NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) {
+        if (BuildConfig.IS_BASE || !NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) {
             return false;
         }
 

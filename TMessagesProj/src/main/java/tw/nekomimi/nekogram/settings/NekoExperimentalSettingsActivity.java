@@ -1,5 +1,7 @@
 package tw.nekomimi.nekogram.settings;
 
+import org.telegram.messenger.BuildConfig;
+
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.animation.Animator;
@@ -208,6 +210,19 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
         checkUseDeletedIconRows();
         checkSaveBotMsgRows();
         checkSaveDeletedRows();
+        // NixgramX: Ghost Mode removed-by-policy; _base disables Save Deleted family
+        // NIXGRAMX_POLICY
+        cellGroup.rows.remove(ghostModeRow);
+        if (BuildConfig.IS_BASE) {
+            cellGroup.rows.remove(enableSaveDeletedMessagesRow);
+            cellGroup.rows.remove(enableSaveEditsHistoryRow);
+            cellGroup.rows.remove(messageSavingSaveMediaRow);
+            cellGroup.rows.remove(saveDeletedMessageForBotsUserRow);
+            cellGroup.rows.remove(saveDeletedMessageInBotChatRow);
+            cellGroup.rows.remove(translucentDeletedMessagesRow);
+            cellGroup.rows.remove(useDeletedIconRow);
+            cellGroup.rows.remove(customDeletedMarkRow);
+        }
         updateForceFontWeightFallbackEnabled();
         addRowsToMap(cellGroup);
     }

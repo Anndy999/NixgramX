@@ -496,6 +496,8 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         }
         checkSkipOpenLinkConfirmRows();
         checkConfirmAVRows();
+        // NIXGRAMX_POLICY_ONLINE: online-status enhance removed-by-policy
+        cellGroup.rows.remove(showOnlineStatusRow);
         addRowsToMap(cellGroup);
     }
 

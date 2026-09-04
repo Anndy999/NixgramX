@@ -303,6 +303,8 @@ public class NekoConfig {
 
     // --- Ghost Mode ---
     public static boolean isGhostModeActive() {
+        // NixgramX: Ghost Mode removed-by-policy
+        if (true) return false; // NIXGRAMX_POLICY_GHOST_REMOVED
         for (Pair<ConfigItem, ConfigItem> pair : ghostToggleItems) {
             ConfigItem item = pair.first;
             ConfigItem lockedItem = pair.second;
@@ -319,6 +321,8 @@ public class NekoConfig {
     }
 
     public static void setGhostMode(boolean enabled) {
+        // NixgramX: Ghost Mode removed-by-policy
+        if (true) return; // NIXGRAMX_POLICY_GHOST_REMOVED
         for (Pair<ConfigItem, ConfigItem> pair : ghostToggleItems) {
             ConfigItem item = pair.first;
             ConfigItem lockedItem = pair.second;
@@ -330,6 +334,8 @@ public class NekoConfig {
     }
 
     public static void toggleGhostMode() {
+        // NixgramX: Ghost Mode removed-by-policy
+        if (true) return; // NIXGRAMX_POLICY_GHOST_REMOVED
         boolean newState = !isGhostModeActive();
         setGhostMode(newState);
 
