@@ -32,7 +32,7 @@ import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.WriterException
 import com.google.zxing.common.GlobalHistogramBinarizer
 import com.google.zxing.qrcode.QRCodeReader
-import com.google.zxing.qrcode.QRCodeWriter
+import tw.nekomimi.nekogram.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.ApplicationLoader

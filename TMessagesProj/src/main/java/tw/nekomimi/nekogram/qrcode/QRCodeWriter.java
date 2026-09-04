@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode;
+package tw.nekomimi.nekogram.qrcode;
 
 import android.content.Context;
 import static org.telegram.messenger.AndroidUtilities.readRes;
