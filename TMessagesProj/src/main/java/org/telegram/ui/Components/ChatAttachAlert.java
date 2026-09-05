@@ -3559,7 +3559,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         writeButton = new ChatActivityEnterView.SendButton(context, R.drawable.send_plane_24, resourcesProvider) {
             @Override
             public boolean isOpen() {
-                return true;
+                // Gate circle draw on actual send-chrome visibility. Always-true made the FAB
+                // circle paint during sheet open even when count==0 (white flash / perceived jank).
+                return writeButtonContainer.getVisibility() == View.VISIBLE
+                        && writeButtonContainer.getAlpha() > 0f;
             }
 
             @Override
@@ -3581,6 +3584,18 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             public int getFillColor() {
                 return getThemedColor(Theme.key_dialogFloatingButton);
             }
+
+            @Override
+            protected boolean shouldUseActionStyleColors() {
+                // Attach picker must keep dialogFloatingButton fill; ActionButtonStyle (e.g. WHITE)
+                // would otherwise win over getFillColor() because shouldDrawBackground() is true.
+                return false;
+            }
+
+            @Override
+            public int resolveSendIconColor(int themeColor) {
+                return Color.WHITE;
+            }
         };
         writeButton.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         writeButtonContainer.addView(writeButton, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.FILL));
@@ -3588,6 +3603,8 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         writeButton.setCircleSize(dp(52), dp(38));
         writeButton.setCirclePadding(dp(7), dp(6));
         writeButton.newCounterPos = true;
+        writeButton.open.force(false);
+        writeButton.updateColors();
         writeButton.setOnClickListener(v -> {
             onWriteButtonPressed();
         });
@@ -4494,6 +4511,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
         updateDoneItemEnabled();
         openTransitionFinished = false;
+        if (writeButton != null) {
+            writeButton.open.force(false);
+            writeButton.updateColors();
+        }
         if (Build.VERSION.SDK_INT >= 30) {
             navBarColorKey = -1;
             navBarColor = ColorUtils.setAlphaComponent(getThemedColor(Theme.key_windowBackgroundGray), 0);
@@ -4541,6 +4562,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
         buttonsAdapter.notifyDataSetChanged();
         updateCountButton(0);
+        if (writeButton != null) {
+            writeButton.open.force(false);
+            writeButton.updateColors();
+        }
     }
 
     public MessageObject getEditingMessageObject() {
@@ -5175,6 +5200,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                     if (animation.equals(commentsAnimator)) {
                         if (!show) {
                             writeButtonContainer.setVisibility(View.INVISIBLE);
+                            writeButton.open.force(false);
                         } else if (typeButtonsAvailable) {
                             if (currentAttachLayout == null || currentAttachLayout.shouldHideBottomButtons()) {
                                 buttonsRecyclerViewWrapper.setVisibility(View.INVISIBLE);
@@ -5207,6 +5233,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             }
             if (!show) {
                 writeButtonContainer.setVisibility(View.INVISIBLE);
+                writeButton.open.force(false);
             }
         }
         writeButton.setCount(0, animated);
@@ -5282,6 +5309,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                                 frameLayout2.setVisibility(View.INVISIBLE);
                             }
                             writeButtonContainer.setVisibility(View.INVISIBLE);
+                            writeButton.open.force(false);
                         } else if (typeButtonsAvailable) {
                             if (currentAttachLayout == null || currentAttachLayout.shouldHideBottomButtons()) {
                                 buttonsRecyclerViewWrapper.setVisibility(View.INVISIBLE);
@@ -5327,6 +5355,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             if (!show) {
                 frameLayout2.setVisibility(View.INVISIBLE);
                 writeButtonContainer.setVisibility(View.INVISIBLE);
+                writeButton.open.force(false);
             }
             // actionBarShadow.setTranslationY(currentPanTranslationY);
             if (above) {
@@ -6272,6 +6301,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             photoLayout.setCheckCameraWhenShown(true);
         }
         updateCountButton(0);
+        if (writeButton != null) {
+            writeButton.open.force(false);
+            writeButton.updateColors();
+        }
 
         buttonsAdapter.notifyDataSetChanged();
         getCommentView().setText("");
