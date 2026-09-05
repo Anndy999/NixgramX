@@ -11,6 +11,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 public class GooglePushListenerServiceProvider implements PushListenerController.IPushListenerServiceProvider {
 
     private Boolean hasServices;
+    private int lastPlayServicesStatusCode = ConnectionResult.SUCCESS;
 
     public GooglePushListenerServiceProvider() {}
 
@@ -22,6 +23,31 @@ public class GooglePushListenerServiceProvider implements PushListenerController
     @Override
     public int getPushType() {
         return PushListenerController.PUSH_TYPE_FIREBASE;
+    }
+
+    /** Clear cached Play Services availability so the next hasServices() re-queries GMS. */
+    public void reset() {
+        hasServices = null;
+    }
+
+    /**
+     * Fresh GoogleApiAvailability check (does not use the cached {@link #hasServices} flag).
+     * @return ConnectionResult code (SUCCESS == 0 when Play Services are usable)
+     */
+    public static int checkPlayServicesStatusCode() {
+        try {
+            return GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ApplicationLoader.applicationContext);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return ConnectionResult.SERVICE_MISSING;
+        }
+    }
+
+    public int getLastPlayServicesStatusCode() {
+        if (hasServices == null) {
+            hasServices();
+        }
+        return lastPlayServicesStatusCode;
     }
 
     @Override
@@ -42,11 +68,20 @@ public class GooglePushListenerServiceProvider implements PushListenerController
                         .addOnCompleteListener(task -> {
                             SharedConfig.pushStringGetTimeEnd = SystemClock.elapsedRealtime();
                             if (!task.isSuccessful()) {
-                                FileLog.d("Failed to get regid");
+                                Exception exception = task.getException();
+                                if (exception != null) {
+                                    FileLog.e(exception);
+                                    String message = exception.getMessage();
+                                    SharedConfig.pushStringLastError = !TextUtils.isEmpty(message) ? message : exception.toString();
+                                } else {
+                                    FileLog.e("Failed to get FCM regid (no exception)");
+                                    SharedConfig.pushStringLastError = "getToken failed (no exception)";
+                                }
                                 SharedConfig.pushStringStatus = "__FIREBASE_FAILED__";
                                 PushListenerController.sendRegistrationToServer(getPushType(), null);
                                 return;
                             }
+                            SharedConfig.pushStringLastError = "";
                             String token = task.getResult();
                             if (!TextUtils.isEmpty(token)) {
                                 PushListenerController.sendRegistrationToServer(getPushType(), token);
@@ -54,6 +89,9 @@ public class GooglePushListenerServiceProvider implements PushListenerController
                         });
             } catch (Throwable e) {
                 FileLog.e(e);
+                String message = e.getMessage();
+                SharedConfig.pushStringLastError = !TextUtils.isEmpty(message) ? message : e.toString();
+                SharedConfig.pushStringStatus = "__FIREBASE_FAILED__";
             }
         });
     }
@@ -62,10 +100,11 @@ public class GooglePushListenerServiceProvider implements PushListenerController
     public boolean hasServices() {
         if (hasServices == null) {
             try {
-                int resultCode = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ApplicationLoader.applicationContext);
-                hasServices = resultCode == ConnectionResult.SUCCESS;
+                lastPlayServicesStatusCode = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(ApplicationLoader.applicationContext);
+                hasServices = lastPlayServicesStatusCode == ConnectionResult.SUCCESS;
             } catch (Exception e) {
                 FileLog.e(e);
+                lastPlayServicesStatusCode = ConnectionResult.SERVICE_MISSING;
                 hasServices = false;
             }
         }

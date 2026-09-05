@@ -66,6 +66,17 @@
     <string name="PushServiceType">推播服務類型</string>
     <string name="PushServiceTypeInApp">Nixgram</string>
     <string name="PushServiceTypeInAppDialog">使用常駐通知</string>
+    <string name="FcmPushStatus">FCM 狀態</string>
+    <string name="FcmPushStatusHint">點按可重新請求 FCM 令牌</string>
+    <string name="FcmPushRequestToken">重新請求 FCM 令牌</string>
+    <string name="FcmPushRequesting">正在請求 FCM 令牌…</string>
+    <string name="FcmPlayServicesAvailable">Play 服務：可用</string>
+    <string name="FcmPlayServicesUnavailable">Play 服務：不可用（code=%1$d）</string>
+    <string name="FcmPushServiceTypeValue">推送類型：%1$s</string>
+    <string name="FcmPushStringStatus">status：%1$s</string>
+    <string name="FcmPushTokenOk">token：OK（len=%1$d，prefix=%2$s…）</string>
+    <string name="FcmPushTokenMissing">token：缺失</string>
+    <string name="FcmPushLastError">最近錯誤：%1$s</string>
     <string name="SendMp4DocumentAsVideo">MP4 影片作為檔案傳送時可預覽</string>
     <string name="StickersChooseShortNameForStickerPack">為您的貼圖包選擇一個簡短的名稱</string>
     <string name="StickersCopyStickerSet">複製整個貼圖包</string>
