@@ -281,7 +281,13 @@ public class ApplicationLoader extends Application {
             UserConfig.getInstance(a).loadConfig();
             MessagesController.getInstance(a);
             if (a == 0) {
-                SharedConfig.pushStringStatus = "__FIREBASE_GENERATING_SINCE_" + ConnectionsManager.getInstance(a).getCurrentTime() + "__";
+                ConnectionsManager.getInstance(a);
+                // Only mark GENERATING when we do not already have a token; otherwise clear stale status.
+                if (!android.text.TextUtils.isEmpty(SharedConfig.pushString)) {
+                    SharedConfig.pushStringStatus = "";
+                } else {
+                    SharedConfig.pushStringStatus = "__FIREBASE_GENERATING_SINCE_" + ConnectionsManager.getInstance(a).getCurrentTime() + "__";
+                }
             } else {
                 ConnectionsManager.getInstance(a);
             }
@@ -396,6 +402,9 @@ public class ApplicationLoader extends Application {
 
     private static void startPushServiceInternal() {
         if (PushListenerController.getProvider().hasServices()) {
+            // GMS/FCM present: do not start the in-app NotificationsService, and do not force-disable
+            // pushConnection. Keep hybrid MTProto long-poll enabled by default.
+            PushListenerController.ensureHybridPushConnectionForFcm();
             return;
         }
         SharedPreferences preferences = MessagesController.getNotificationsSettings(UserConfig.selectedAccount);
@@ -461,6 +470,8 @@ public class ApplicationLoader extends Application {
     private static void initPushServices() {
         AndroidUtilities.runOnUIThread(() -> {
             if (getPushProvider().hasServices()) {
+                // Hybrid long-poll + FCM when GMS present (skipped for In-App PushServiceType==0).
+                PushListenerController.ensureHybridPushConnectionForFcm();
                 getPushProvider().onRequestPushToken();
             } else {
                 if (BuildVars.LOGS_ENABLED) {
