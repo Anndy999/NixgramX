@@ -7,7 +7,7 @@
 | KI-003 | Medium | Icons still temporary NagramX assets | Accepted for Phase 0/1 |
 | KI-004 | Medium | Remote-config / updater channel ID is placeholder `0` | Framework in; switch default OFF until you own a channel |
 | KI-005 | Medium | Telegram 12.10.1 sync is on `upstream-sync/12.10.1`, not `main` | In progress |
-| KI-006 | Low | String resource key still named `NagramX` (value `NixgramX`) | Cosmetic |
+| KI-006 | Low | Legacy resource identifier remains `NagramX` for source compatibility | Fixed — all user-visible values now say `NixgramX` |
 | KI-007 | Medium | NixgramX release keystore generated (alias `nixgramx`) | Done — passwords not in git; see SIGNING.md |
 | UB-1 | High | Translation bubble width after EN→ZH (replace or keep-original) | Fixed on `fix/user-requested-bugs` |
 | UB-2 | High | Save deleted / edit history on full flavor | Tracked |

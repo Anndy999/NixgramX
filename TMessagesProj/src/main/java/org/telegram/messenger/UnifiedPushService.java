@@ -98,7 +98,7 @@ public class UnifiedPushService extends PushService {
         numOfReceivedNotifications++;
 
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-        PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "nagramx:wp");
+        PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "nixgramx:wp");
         wakeLock.acquire(WAKELOCK_TIMEOUT_MS);
 
         loadWebPushKeys();
