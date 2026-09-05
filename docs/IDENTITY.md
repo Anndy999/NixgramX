@@ -6,8 +6,8 @@ Day-1 identity cut (Phase 0/1). NixgramX is an independent app — it does **not
 
 | Product | applicationId | Display name | Notes |
 | --- | --- | --- | --- |
-| Full (default) | `app.nixgramx.android` | Nixgram | Keeps NagramX full-feature set except policy removals |
-| `_base` | `app.nixgramx.android.base` | Nixgram | Mirrors NagramX `_base` cut (ToS-friendlier) |
+| Full (default) | `app.nixgramx.android` | NixgramX | Keeps NagramX full-feature set except policy removals |
+| `_base` | `app.nixgramx.android.base` | NixgramX | Mirrors NagramX `_base` cut (ToS-friendlier) |
 
 Both packages:
 

@@ -8,7 +8,7 @@ NixgramX reuses NagramX `UpdateHelper` / `BaseRemoteHelper` (metadata channel po
 
 | Channel | Role |
 | --- | --- |
-| Public [@NixgramX](https://t.me/NixgramX) | **APKs only** (media group + human caption). Never post `#updateRelease` / `#updateBeta` JSON here. |
+| Public [@NixgramX](https://t.me/NixgramX) | Stable and Beta APK media groups. Stable uses `NixgramX · <version> (<code>)`; Beta uses `NixgramX Beta · <version> (<code>)`; both add only the commit title. Never post `#updateRelease` / `#updateBeta` JSON here. |
 | Private metadata channel | Receives `#update*` JSON (+ optional canary line) for in-app updates. |
 
 `Tools/scripts/upload.py`:
@@ -17,6 +17,8 @@ NixgramX reuses NagramX `UpdateHelper` / `BaseRemoteHelper` (metadata channel po
 2. Posts `#updateRelease` / `#updateBeta` JSON **only** to `HELPER_BOT_CANARY_TARGET` (argv[4]) when that chat is **different** from the APK chat.
 3. If both secrets are the same public channel: **skips** JSON, prints a warning, and still ships APKs with caption only.
 4. When JSON goes to a private metadata chat, the `document` map is left empty (APK message IDs are not in that chat); `url` stays `https://t.me/NixgramX` so the updater can open the public channel.
+
+`stable` uploads use the `NixgramX` title and `beta` uploads use `NixgramX Beta`; both use the commit title as their only second line. The tag sent to the private metadata channel remains `#updateRelease` or `#updateBeta`, so each user only sees the channel selected in Settings.
 
 ## App constants
 
@@ -38,7 +40,7 @@ Already expected on the repo (do not commit values):
 
 Bot must be an **admin** of `@NixgramX` (post APKs) and of the private metadata channel (post JSON).
 
-Version fields come from `APP_VERSION_NAME` / `APP_VERSION_CODE` env, else `gradle.properties`. `BUILD_TIMESTAMP` comes from the workflow env. APK filename `(verCode)` is preferred for `version_code` in JSON.
+NixgramX release fields come from `NIXGRAMX_VERSION_NAME` / `NIXGRAMX_VERSION_CODE`; `APP_VERSION_*` remains Telegram upstream metadata. `BUILD_TIMESTAMP` comes from the workflow env. APK filename `(verCode)` is preferred for `version_code` in JSON.
 
 ## Delete accidental public `#updateRelease` message
 
@@ -84,7 +86,7 @@ JSON post body after the tag, example (url-only while APKs live on the public ch
 {
   "can_not_skip": false,
   "version": "12.10.1",
-  "version_code": 1263,
+  "version_code": 1266,
   "build_timestamp": 0,
   "sticker": 0,
   "message": 0,

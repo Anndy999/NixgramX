@@ -17121,7 +17121,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             return themeColor;
         }
 
-        private boolean shouldUseActionStyleColors() {
+        protected boolean shouldUseActionStyleColors() {
             return isNewDesignSendButton || shouldDrawBackground();
         }
 

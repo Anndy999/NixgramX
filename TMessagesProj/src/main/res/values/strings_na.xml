@@ -9,7 +9,7 @@
     <string name="SendReactions">Send Reactions</string>
     <string name="ShowReactions">Show Reactions</string>
     <string name="CustomTitle">Custom Title</string>
-    <string name="CustomTitleHint">Leave blank to use Nixgram</string>
+    <string name="CustomTitleHint">Leave blank to use NixgramX</string>
     <string name="CreateMono">Create Monospace</string>
     <string name="CreateMonoLanguage">Code Language</string>
     <string name="CopyPhoto">Copy Photo</string>
@@ -39,7 +39,7 @@
     <string name="CustomEditedMessage">Custom Edited Mark</string>
     <string name="NotificationIcon">Notification Icon</string>
     <string name="Official">Official</string>
-    <string name="Nagram" translatable="false">Nagram</string>
+    <string name="Nagram" translatable="false">NixgramX</string>
     <string name="HalloWeen">HalloWeen</string>
     <string name="ShowOnlineStatus">Show Online Status</string>
     <string name="ShowOnlineStatusNotice">Show the online status of other people next to their profile photo in groups.</string>
@@ -80,6 +80,7 @@
     <string name="FcmPlayServicesUnavailable">Play Services: no (code=%1$d)</string>
     <string name="FcmPushServiceTypeValue">Push type: %1$s</string>
     <string name="FcmPushStringStatus">status: %1$s</string>
+    <string name="FcmPushStringStatusRegistered">status: registered</string>
     <string name="FcmPushTokenOk">token: OK (len=%1$d, prefix=%2$s…)</string>
     <string name="FcmPushTokenMissing">token: missing</string>
     <string name="FcmPushLastError">last error: %1$s</string>

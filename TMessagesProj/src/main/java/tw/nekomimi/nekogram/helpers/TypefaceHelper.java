@@ -148,15 +148,15 @@ public class TypefaceHelper {
     }
 
 
-    /** Normalize legacy branding defaults so home title shows Nixgram on existing installs. */
+    /** Normalize legacy branding defaults so home title shows NixgramX on existing installs. */
     public static String resolveCustomTitle() {
         var item = NaConfig.INSTANCE.getCustomTitle();
         String title = item.String();
         if (title == null) {
             title = "";
         }
-        if (title.isEmpty() || "Nagram X".equals(title) || "NagramX".equals(title) || "NixgramX".equals(title)) {
-            title = "Nixgram";
+        if (title.isEmpty() || "Nagram X".equals(title) || "NagramX".equals(title) || "Nixgram".equals(title) || "NixgramX".equals(title)) {
+            title = "NixgramX";
             if (!title.equals(item.String())) {
                 item.setConfigString(title);
             }

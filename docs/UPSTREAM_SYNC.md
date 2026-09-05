@@ -5,7 +5,7 @@
 1. Track `DrKLO/Telegram` master latest `update to x.y.z (build)` commit.
 2. Preserve NixgramX identity, signing, FCM, Maps, remote-config placeholders.
 3. Preserve NagramX feature baseline (4335a2e behavior) adapted onto new Telegram code.
-4. Never auto-merge unresolved conflicts into `main` / Stable.
+4. Never auto-merge unresolved conflicts into `beta`, `main`, or Stable.
 
 ## Automation levels
 
@@ -14,7 +14,7 @@
 | L1 | Watch | Detect new Telegram `update to` commits; open issue/report (`upstream-watch.yml`) |
 | L2 | Assist | Open sync branch + conflict report; **no** auto-merge |
 | L3 | Human adapt | Resolve conflicts, re-apply NixgramX identity + policy |
-| L4 | Gate | CI + manual checklist before Stable |
+| L4 | Gate | CI + manual checklist before entering `beta`, then Stable |
 
 ## Current sync attempt: 12.10.1 (L3 Adapt in progress)
 

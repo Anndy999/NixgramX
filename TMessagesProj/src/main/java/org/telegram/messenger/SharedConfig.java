@@ -807,7 +807,28 @@ public class SharedConfig {
     }
 
     public static boolean isAppUpdateAvailable() {
-        if (pendingAppUpdate == null || pendingAppUpdate.document == null || !ApplicationLoader.isStandaloneBuild()) {
+        return isAppUpdateAvailable(true);
+    }
+
+    /**
+     * Returns whether the current build has an update that can be opened from the update layout.
+     *
+     * URL-only updates are used when the APK is published in a public channel while the signed
+     * update metadata remains private. They cannot be downloaded through FileLoader, but should
+     * still surface the update entry point.
+     */
+    public static boolean isAppUpdateAvailableOrUrl() {
+        return isAppUpdateAvailable(false);
+    }
+
+    private static boolean isAppUpdateAvailable(boolean requireDocument) {
+        if (pendingAppUpdate == null || !ApplicationLoader.isStandaloneBuild()) {
+            return false;
+        }
+        if (requireDocument && pendingAppUpdate.document == null) {
+            return false;
+        }
+        if (!requireDocument && pendingAppUpdate.document == null && TextUtils.isEmpty(pendingAppUpdate.url)) {
             return false;
         }
         int currentVersion;

@@ -471,11 +471,15 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
         }
         sb.append('\n').append(LocaleController.formatString(R.string.FcmPushServiceTypeValue, pushTypeLabel));
 
-        if (!TextUtils.isEmpty(SharedConfig.pushStringStatus)) {
+        boolean hasToken = !TextUtils.isEmpty(SharedConfig.pushString);
+        if (hasToken) {
+            // Token present: treat as success; do not prominently show stale GENERATING status.
+            sb.append('\n').append(getString(R.string.FcmPushStringStatusRegistered));
+        } else if (!TextUtils.isEmpty(SharedConfig.pushStringStatus)) {
             sb.append('\n').append(LocaleController.formatString(R.string.FcmPushStringStatus, SharedConfig.pushStringStatus));
         }
 
-        if (!TextUtils.isEmpty(SharedConfig.pushString)) {
+        if (hasToken) {
             String token = SharedConfig.pushString;
             int len = token.length();
             String prefix = len >= 8 ? token.substring(0, 8) : token;

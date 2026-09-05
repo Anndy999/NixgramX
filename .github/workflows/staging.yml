@@ -1,28 +1,30 @@
-name: Staging build
+name: Beta Build
 
 on:
   push:
     branches:
-      - dev
+      - beta
     paths-ignore:
       - '**.md'
       - '.github/**'
       - '!.github/workflows/staging.yml'
   workflow_dispatch:
     inputs:
-      upload:
-        description: 'Skip Upload: Set to "y" to skip uploading the build.'
-        required: false
+      publish:
+        description: 'Publish this Beta build to @NixgramX with a [BETA] label.'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Gradle Build
+    name: Beta Gradle Build
     runs-on: ubuntu-latest
     outputs:
-      build_timestamp: ${{ steps.staging_build_step.outputs.build_timestamp }}
+      build_timestamp: ${{ steps.beta_build_step.outputs.build_timestamp }}
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_HARDLINK: "true"
@@ -35,6 +37,11 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Verify beta source
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'beta'
+        run: |
+          echo "Beta publishing must run from the beta branch."
+          exit 1
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -74,10 +81,11 @@ jobs:
             echo "org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=2G -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
           fi
           cat gradle.properties
-      - name: Staging Build
-        id: staging_build_step
+      - name: Beta Build
+        id: beta_build_step
         env:
-          COMMIT_ID: ${{ github.event.head_commit.id }}
+          COMMIT_ID: ${{ github.sha }}
+          NIXGRAMX_CHANNEL: beta
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           export KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}"
@@ -89,16 +97,16 @@ jobs:
       - name: Upload arm64-v8a Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Staging-arm64-v8a
+          name: Beta-arm64-v8a
           path: TMessagesProj/build/outputs/apk/staging/*-arm64-v8a.apk
       - name: Upload universal Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Staging-universal
+          name: Beta-universal
           path: TMessagesProj/build/outputs/apk/staging/*-universal.apk
   upload:
-    name: Upload staging
-    if: github.event.inputs.upload != 'y' && !contains(github.event.head_commit.message, '[skip upload]')
+    name: Publish Beta
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
     needs:
       - build
@@ -117,10 +125,11 @@ jobs:
         env:
           APP_ID: ${{ secrets.APP_ID }}
           APP_HASH: ${{ secrets.APP_HASH }}
-          COMMIT_ID: ${{ github.event.head_commit.id }}
-          COMMIT_URL: ${{ github.event.head_commit.url }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_ID: ${{ github.sha }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Beta release' }}
           BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
-          python Tools/scripts/upload.py ${{ secrets.HELPER_BOT_TOKEN }} ${{ secrets.HELPER_BOT_TARGET }} test ${{ secrets.HELPER_BOT_CANARY_TARGET }}
+          export COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
+          python Tools/scripts/upload.py ${{ secrets.HELPER_BOT_TOKEN }} ${{ secrets.HELPER_BOT_TARGET }} beta ${{ secrets.HELPER_BOT_CANARY_TARGET }}
