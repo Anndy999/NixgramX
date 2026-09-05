@@ -14,3 +14,4 @@
 | UB-3 | High | Channel message menu sometimes does not open (#392) | Tracked |
 | UB-4 | Medium | Attach-menu image pinch-zoom jank | Fixed on `fix/user-requested-bugs` — verify on device |
 | UB-5 | Medium | 32-bit download boost ineffective (#448) | Needs armeabi-v7a APK |
+| KI-008 | High | Passkeys (通行密钥) fail on NixgramX: telegram.org assetlinks only lists official package+certs; custom app.nixgramx.android signature → Credential Manager “browser signature mismatch”. Not fixable without Telegram listing us. SUPPORTS_PASSKEYS disabled; login menu explains phone/QR fallback. | Accepted — cryptographic / DAL binding |

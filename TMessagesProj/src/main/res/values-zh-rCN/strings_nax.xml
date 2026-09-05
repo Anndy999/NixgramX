@@ -276,6 +276,8 @@
     <string name="PasskeyUnsupportedTitle">不支持的密码管理器</string>
     <string name="PasskeyUnsupportedMessage">尝试使用其他密码管理器，例如 **Bitwarden** 或 **KeePassDX**。</string>
     <string name="PasskeyNoCredentialAvailable">没有可用的有效凭证。</string>
+    <string name="PasskeyForkUnavailableTitle">通行密钥不可用</string>
+    <string name="PasskeyForkUnavailableMessage">Telegram 仅允许官方客户端使用通行密钥：RP 绑定 telegram.org，且 Digital Asset Links 只收录官方包名与签名证书。\n\nNixgramX 使用 app.nixgramx.android 与独立签名证书，因此系统会报「由于浏览器签名不匹配，通行密钥操作失败」。\n\n请改用手机号/短信验证码登录，或使用已登录设备的二维码登录。</string>
     <string name="BookmarksManager">书签</string>
     <string name="AddBookmark">添加书签</string>
     <string name="RemoveBookmark">移除书签</string>
