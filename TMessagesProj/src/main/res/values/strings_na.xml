@@ -80,6 +80,7 @@
     <string name="FcmPlayServicesUnavailable">Play Services: no (code=%1$d)</string>
     <string name="FcmPushServiceTypeValue">Push type: %1$s</string>
     <string name="FcmPushStringStatus">status: %1$s</string>
+    <string name="FcmPushStringStatusRegistered">status: registered</string>
     <string name="FcmPushTokenOk">token: OK (len=%1$d, prefix=%2$s…)</string>
     <string name="FcmPushTokenMissing">token: missing</string>
     <string name="FcmPushLastError">last error: %1$s</string>
