@@ -5267,7 +5267,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             writeButton = new ChatActivityEnterView.SendButton(context, R.drawable.send_plane_24, resourceProvider) {
                 @Override
                 public boolean isOpen() {
-                    return true;
+                    // Selected count only — avoid alpha/visibility gates that flip isOpen mid
+                    // show animation and trigger SendButton circle-morph (same as ChatAttachAlert).
+                    return !selectedDialogs.isEmpty();
                 }
 
                 @Override
@@ -5283,6 +5285,23 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 @Override
                 public boolean shouldDrawBackground() {
                     return true;
+                }
+
+                @Override
+                public int getFillColor() {
+                    return getThemedColor(Theme.key_dialogFloatingButton);
+                }
+
+                @Override
+                protected boolean shouldUseActionStyleColors() {
+                    // Share FAB must keep dialogFloatingButton fill; ActionButtonStyle WHITE
+                    // would otherwise win over getFillColor() because shouldDrawBackground() is true.
+                    return false;
+                }
+
+                @Override
+                public int resolveSendIconColor(int themeColor) {
+                    return Color.WHITE;
                 }
 
                 @Override

@@ -7575,6 +7575,16 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             public int getFillColor() {
                 return getThemedColor(Theme.key_chat_editMediaButton);
             }
+            @Override
+            protected boolean shouldUseActionStyleColors() {
+                // Keep chat_editMediaButton fill; ActionButtonStyle WHITE would otherwise
+                // paint a white circle and a white open-state plane (invisible on light).
+                return false;
+            }
+            @Override
+            public int resolveSendIconColor(int themeColor) {
+                return Color.WHITE;
+            }
         };
         pickerViewSendButton.setCircleSize(dp(52), dp(38));
         pickerViewSendButton.newCounterPos = true;
