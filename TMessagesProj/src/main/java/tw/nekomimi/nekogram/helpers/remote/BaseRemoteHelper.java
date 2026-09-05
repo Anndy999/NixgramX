@@ -19,10 +19,12 @@ import org.telegram.tgnet.TLRPC;
 import java.util.ArrayList;
 
 public abstract class BaseRemoteHelper {
-    // NixgramX placeholders — do not use NagramX author endpoints.
-    // Replace with your own private metadata channel before enabling remote-config / updater.
-    public static final long CHANNEL_METADATA_ID = 0L;
-    public static final String CHANNEL_METADATA_NAME = "nixgramx_remote_metadata";
+    // CHANNEL_METADATA_* must eventually point at a *private* metadata channel that receives
+    // #updateRelease / #updateBeta JSON (HELPER_BOT_CANARY_TARGET). Public @NixgramX is for APKs only.
+    // ID below is still the public channel until a private metadata channel exists — then switch both.
+    // Do not point these at NagramX author endpoints.
+    public static final long CHANNEL_METADATA_ID = 3819693045L;
+    public static final String CHANNEL_METADATA_NAME = "NixgramX";
 
     protected static final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoremoteconfig", Activity.MODE_PRIVATE);
 
@@ -80,6 +82,10 @@ public abstract class BaseRemoteHelper {
         onLoadSuccess(responses, delegate);
     }
 
+    public static boolean isMetadataChannelConfigured() {
+        return CHANNEL_METADATA_ID != 0L;
+    }
+
     public void load() {
         load(false, null);
     }
@@ -89,6 +95,12 @@ public abstract class BaseRemoteHelper {
     }
 
     private void load(boolean forceRefreshAccessHash, Delegate delegate) {
+        if (!isMetadataChannelConfigured()) {
+            if (delegate != null) {
+                onError("updater_not_configured", delegate);
+            }
+            return;
+        }
         var tag = "#" + getTag();
         TLRPC.TL_messages_search req = new TLRPC.TL_messages_search();
         req.limit = 10;

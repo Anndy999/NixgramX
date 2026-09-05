@@ -147,8 +147,25 @@ public class TypefaceHelper {
         return Typeface.create(family, italic ? Typeface.ITALIC : Typeface.NORMAL);
     }
 
+
+    /** Normalize legacy branding defaults so home title shows Nixgram on existing installs. */
+    public static String resolveCustomTitle() {
+        var item = NaConfig.INSTANCE.getCustomTitle();
+        String title = item.String();
+        if (title == null) {
+            title = "";
+        }
+        if (title.isEmpty() || "Nagram X".equals(title) || "NagramX".equals(title) || "NixgramX".equals(title)) {
+            title = "Nixgram";
+            if (!title.equals(item.String())) {
+                item.setConfigString(title);
+            }
+        }
+        return title;
+    }
+
     public static SpannableStringBuilder getTitleText(int currentAccount) {
-        String title = NaConfig.INSTANCE.getCustomTitle().String();
+        String title = resolveCustomTitle();
         if (NaConfig.INSTANCE.getCustomTitleUserName().Bool()) {
             TLRPC.User self = UserConfig.getInstance(currentAccount).getCurrentUser();
             if (self != null && self.first_name != null) {

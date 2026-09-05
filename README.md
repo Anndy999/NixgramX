@@ -8,8 +8,8 @@ Independent long-term fork based on [NagramX](https://github.com/risin42/NagramX
 
 | Product | applicationId | Display name |
 | --- | --- | --- |
-| Full (default) | `app.nixgramx.android` | NixgramX |
-| `_base` | `app.nixgramx.android.base` | NixgramX |
+| Full (default) | `app.nixgramx.android` | Nixgram |
+| `_base` | `app.nixgramx.android.base` | Nixgram |
 
 Icons are temporarily still NagramX assets.
 

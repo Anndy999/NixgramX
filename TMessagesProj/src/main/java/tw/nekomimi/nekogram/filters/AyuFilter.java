@@ -15,6 +15,7 @@ import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_keyboard;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -127,26 +128,55 @@ public class AyuFilter {
     }
 
     private static CharSequence getInlineKeyboardText(TLRPC.Message message) {
-        if (message == null || message.reply_markup == null || message.reply_markup.rows == null) {
+        if (message == null || message.reply_markup == null) {
             return null;
         }
         StringBuilder builder = null;
-        for (int i = 0, size = message.reply_markup.rows.size(); i < size; i++) {
-            TLRPC.TL_keyboardButtonRow row = message.reply_markup.rows.get(i);
-            if (row == null || row.buttons == null) {
-                continue;
+        if (message.reply_markup instanceof TLRPC.TL_replyInlineMarkup) {
+            final ArrayList<TL_keyboard.KeyboardInlineButtonRow> rows = ((TLRPC.TL_replyInlineMarkup) message.reply_markup).rows;
+            if (rows == null) {
+                return null;
             }
-            for (int j = 0, buttonsSize = row.buttons.size(); j < buttonsSize; j++) {
-                TLRPC.KeyboardButton button = row.buttons.get(j);
-                if (button == null || TextUtils.isEmpty(button.text)) {
+            for (int i = 0, size = rows.size(); i < size; i++) {
+                TL_keyboard.KeyboardInlineButtonRow row = rows.get(i);
+                if (row == null || row.buttons == null) {
                     continue;
                 }
-                if (builder == null) {
-                    builder = new StringBuilder();
-                } else {
-                    builder.append('\n');
+                for (int j = 0, buttonsSize = row.buttons.size(); j < buttonsSize; j++) {
+                    TL_keyboard.KeyboardInlineButton button = row.buttons.get(j);
+                    if (button == null || TextUtils.isEmpty(button.getText())) {
+                        continue;
+                    }
+                    if (builder == null) {
+                        builder = new StringBuilder();
+                    } else {
+                        builder.append('\n');
+                    }
+                    builder.append(button.getText());
                 }
-                builder.append(button.text);
+            }
+        } else if (message.reply_markup instanceof TLRPC.TL_replyKeyboardMarkup) {
+            final ArrayList<TL_keyboard.KeyboardButtonRow> rows = ((TLRPC.TL_replyKeyboardMarkup) message.reply_markup).rows;
+            if (rows == null) {
+                return null;
+            }
+            for (int i = 0, size = rows.size(); i < size; i++) {
+                TL_keyboard.KeyboardButtonRow row = rows.get(i);
+                if (row == null || row.buttons == null) {
+                    continue;
+                }
+                for (int j = 0, buttonsSize = row.buttons.size(); j < buttonsSize; j++) {
+                    TL_keyboard.KeyboardButton button = row.buttons.get(j);
+                    if (button == null || TextUtils.isEmpty(button.getText())) {
+                        continue;
+                    }
+                    if (builder == null) {
+                        builder = new StringBuilder();
+                    } else {
+                        builder.append('\n');
+                    }
+                    builder.append(button.getText());
+                }
             }
         }
         return builder;

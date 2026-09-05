@@ -6,8 +6,8 @@ Day-1 identity cut (Phase 0/1). NixgramX is an independent app — it does **not
 
 | Product | applicationId | Display name | Notes |
 | --- | --- | --- | --- |
-| Full (default) | `app.nixgramx.android` | NixgramX | Keeps NagramX full-feature set except policy removals |
-| `_base` | `app.nixgramx.android.base` | NixgramX | Mirrors NagramX `_base` cut (ToS-friendlier) |
+| Full (default) | `app.nixgramx.android` | Nixgram | Keeps NagramX full-feature set except policy removals |
+| `_base` | `app.nixgramx.android.base` | Nixgram | Mirrors NagramX `_base` cut (ToS-friendlier) |
 
 Both packages:
 
@@ -51,12 +51,12 @@ Different `applicationId` **and** different signing certificate → Android trea
 4. Do **not** attempt to read NagramX private data directories.
 5. NagramX full users → install `app.nixgramx.android`; NagramX `_base` users → `app.nixgramx.android.base`.
 
-## Signing fingerprints
+## Signing fingerprints (current)
 
-Placeholder until first official NixgramX release signing:
+NixgramX release keystore (`TMessagesProj/release.keystore`, alias `nixgramx`, PKCS12, rotated 2026-09-05). Passwords are **not** in git (GitHub secrets `KEYSTORE_PASS` / `ALIAS_PASS`, local `nixgramx-release-signing.txt`).
 
-- SHA-256: `TBD after first NixgramX release keystore`
-- Do not reuse NagramX SHA-256 `0D:51:91:56:…`
+- SHA-256: `52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C`
+
 
 ## Policy removals (not part of `_base` cut)
 

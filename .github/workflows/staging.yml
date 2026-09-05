@@ -80,6 +80,9 @@ jobs:
           COMMIT_ID: ${{ github.event.head_commit.id }}
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
+          export KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}"
+          export ALIAS_PASS="${{ secrets.ALIAS_PASS }}"
+          export ALIAS_NAME="${{ secrets.ALIAS_NAME }}"
           export BUILD_TIMESTAMP=$(date +%s)
           echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
           ./gradlew TMessagesProj:assembleStaging
