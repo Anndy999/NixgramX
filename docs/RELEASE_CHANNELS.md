@@ -6,8 +6,8 @@ NixgramX has two user-visible distribution channels:
 
 | Channel | Branch | Build type | Public caption | Private metadata tag |
 | --- | --- | --- | --- | --- |
-| Stable | `main` | `release` | `[STABLE] Release version / 正式版本` | `#updateRelease` |
-| Beta | `beta` | `staging` | `[BETA] Test version / 测试版本` | `#updateBeta` |
+| Stable | `main` | `release` | `NixgramX · <version> (<code>)` + commit title | `#updateRelease` |
+| Beta | `beta` | `staging` | `NixgramX Beta · <version> (<code>)` + commit title | `#updateBeta` |
 
 Both use `app.nixgramx.android` and the same release signing identity. A Beta APK therefore replaces the installed Stable APK; it is an update channel, not a second installable app.
 
@@ -33,10 +33,10 @@ upstream-sync/* ─────┘          │
 
 ```properties
 NIXGRAMX_VERSION_NAME=12.10.1
-NIXGRAMX_VERSION_CODE=1264
+NIXGRAMX_VERSION_CODE=1266
 ```
 
-Every APK that is **published** to either channel must use a never-before-published, strictly higher `NIXGRAMX_VERSION_CODE`. The current Stable floor is `1264`; the first Beta must be at least `1265`, and a later Stable promotion must use a new code greater than every published Beta. This preserves Android upgrade paths in both directions.
+Every APK that is **published** to either channel must use a never-before-published, strictly higher `NIXGRAMX_VERSION_CODE`. The current public Beta is `1265`, so this Stable promotion uses `1266`. This preserves Android upgrade paths in both directions.
 
 The Gradle channel is supplied only by CI:
 
@@ -49,7 +49,7 @@ Before publishing, bump the two `NIXGRAMX_VERSION_*` values in the same reviewed
 
 - **Stable Release** runs only from a `v*` tag, or manually from `main` with `publish=true`. A tag is the explicit decision to post a Stable build.
 - **Beta Build** builds artifacts on every push to `beta`, but posts to the channel only when manually dispatched from `beta` with `publish=true`. This prevents unreviewed commits from spamming users.
-- Both upload APKs to the existing public `@NixgramX` channel. Captions clearly say `[STABLE]` or `[BETA]`.
+- Both upload APKs to the existing public `@NixgramX` channel. The public caption is exactly a product/version line and the commit title; only Beta includes the `Beta` label.
 - The private metadata channel receives the matching `#updateRelease` or `#updateBeta` JSON. Never put that JSON into the public channel.
 
 After this configuration is merged to `main`, create the Beta branch once:

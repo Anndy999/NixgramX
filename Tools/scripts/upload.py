@@ -89,15 +89,11 @@ def get_commit_info():
 
 
 def get_caption() -> str:
-    import html
-
-    commit_id, commit_url, commit_message = get_commit_info()
     version, version_code = resolve_version()
-    pre = "[BETA] Test version / 测试版本" if beta_version else "[STABLE] Release version / 正式版本"
-    caption = f"{pre}\nVersion: {version} ({version_code})\n\n"
-    caption += f"Commit Message:\n<blockquote expandable>{html.escape(commit_message)}</blockquote>\n\n"
-    caption += f"See commit details [{commit_id}]({commit_url})"
-    return caption
+    _, _, commit_message = get_commit_info()
+    headline = next((line.strip() for line in commit_message.splitlines() if line.strip()), "Release")
+    title = "NixgramX Beta" if beta_version else "NixgramX"
+    return f"{title} · {version} ({version_code})\n{headline}"
 
 
 def get_documents_with_abis() -> list[tuple[str, "InputMediaDocument"]]:

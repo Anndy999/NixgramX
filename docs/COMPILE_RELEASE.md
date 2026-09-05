@@ -34,7 +34,7 @@ gh workflow run "Beta Build" --ref beta -f publish=true
 gh workflow run "Stable Release" --ref main -f publish=false
 ```
 
-Both workflows upload to [@NixgramX](https://t.me/NixgramX). The caption identifies `[STABLE]` or `[BETA]`; updater JSON is sent only to the separate private metadata channel.
+Both workflows upload to [@NixgramX](https://t.me/NixgramX). Stable captions are `NixgramX · <version> (<code>)` followed by the commit title; Beta captions use `NixgramX Beta` instead. Updater JSON is sent only to the separate private metadata channel.
 
 ## Required GitHub Secrets
 
