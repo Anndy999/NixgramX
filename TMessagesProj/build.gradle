@@ -9,8 +9,34 @@ plugins {
 
 def buildTimestamp = System.getenv('BUILD_TIMESTAMP') ?: '0'
 def commitId = System.getenv('COMMIT_ID')
-def verName = "${APP_VERSION_NAME}${commitId?.take(7) ? "-${commitId.take(7)}" : ''}"
-def verCode = 1264
+def distributionChannel = (System.getenv('NIXGRAMX_CHANNEL') ?: findProperty('NIXGRAMX_CHANNEL') ?: 'stable').toString().trim().toLowerCase()
+if (!(distributionChannel in ['stable', 'beta'])) {
+    throw new GradleException("NIXGRAMX_CHANNEL must be stable or beta, got '${distributionChannel}'")
+}
+
+def nixgramxVersionName = (System.getenv('NIXGRAMX_VERSION_NAME') ?: findProperty('NIXGRAMX_VERSION_NAME') ?: APP_VERSION_NAME).toString().trim()
+if (nixgramxVersionName.isBlank()) {
+    throw new GradleException('NIXGRAMX_VERSION_NAME must not be blank')
+}
+
+def nixgramxVersionCodeValue = System.getenv('NIXGRAMX_VERSION_CODE') ?: findProperty('NIXGRAMX_VERSION_CODE')
+if (nixgramxVersionCodeValue == null) {
+    throw new GradleException('NIXGRAMX_VERSION_CODE must be configured')
+}
+
+int verCode
+try {
+    verCode = Integer.parseInt(nixgramxVersionCodeValue.toString())
+} catch (NumberFormatException ignored) {
+    throw new GradleException("NIXGRAMX_VERSION_CODE must be an integer, got '${nixgramxVersionCodeValue}'")
+}
+if (verCode <= 0) {
+    throw new GradleException('NIXGRAMX_VERSION_CODE must be positive')
+}
+
+def betaSuffix = distributionChannel == 'beta' ? '-beta' : ''
+def commitSuffix = distributionChannel == 'beta' && commitId?.take(7) ? "-${commitId.take(7)}" : ''
+def verName = "${nixgramxVersionName}${betaSuffix}${commitSuffix}"
 
 def officialVer = APP_VERSION_NAME
 def officialCode = APP_VERSION_CODE
@@ -114,6 +140,7 @@ android {
         }
 
         buildConfigField 'String', 'BUILD_VERSION_STRING', '"' + verName + '"'
+        buildConfigField 'String', 'NIXGRAMX_CHANNEL', '"' + distributionChannel + '"'
         buildConfigField 'String', 'OFFICIAL_VERSION', '"' + officialVer + '"'
         buildConfigField 'int', 'OFFICIAL_VERSION_CODE', officialCode + ''
         buildConfigField 'int', 'APP_ID', appId
