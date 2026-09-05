@@ -39,23 +39,34 @@ def _read_gradle_property(key: str) -> str | None:
 
 
 def resolve_version() -> tuple[str, int]:
+    """Prefer APK filename versionCode (BuildConfig) over Telegram APP_VERSION_CODE."""
     name = os.environ.get("APP_VERSION_NAME") or _read_gradle_property("APP_VERSION_NAME")
-    code_raw = os.environ.get("APP_VERSION_CODE") or _read_gradle_property("APP_VERSION_CODE")
+    code = 0
 
-    if not name:
-        for apk in artifacts_path.rglob("*.apk"):
-            # NixgramX-v12.10.1-arm64-v8a.apk or similar
-            m = re.search(r"[Vv]?(\d+\.\d+(?:\.\d+)?)", apk.name)
-            if m:
-                name = m.group(1)
-                break
+    # NixgramX-v12.10.1(1262)-arm64-v8a.apk — (1262) is the shipped versionCode
+    for apk in artifacts_path.rglob("*.apk"):
+        m = re.search(r"[Vv]?(\d+\.\d+(?:\.\d+)?)\((\d+)\)", apk.name)
+        if m:
+            name = name or m.group(1)
+            code = int(m.group(2))
+            break
+        if not name:
+            m2 = re.search(r"[Vv]?(\d+\.\d+(?:\.\d+)?)", apk.name)
+            if m2:
+                name = m2.group(1)
+
+    if not code:
+        code_raw = (
+            os.environ.get("BUILD_VERSION_CODE")
+            or os.environ.get("APP_VERSION_CODE")
+            or _read_gradle_property("APP_VERSION_CODE")
+        )
+        if code_raw:
+            with contextlib.suppress(ValueError):
+                code = int(code_raw)
+
     if not name:
         name = "0.0.0"
-
-    code = 0
-    if code_raw:
-        with contextlib.suppress(ValueError):
-            code = int(code_raw)
     return name, code
 
 
