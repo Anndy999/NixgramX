@@ -3559,10 +3559,13 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         writeButton = new ChatActivityEnterView.SendButton(context, R.drawable.send_plane_24, resourcesProvider) {
             @Override
             public boolean isOpen() {
-                // Gate circle draw on actual send-chrome visibility. Always-true made the FAB
-                // circle paint during sheet open even when count==0 (white flash / perceived jank).
+                // Count is the send-chrome signal. The previous alpha>0 gate flipped isOpen
+                // on the first animation frame of a select, so SendButton.open ran a 420ms
+                // circle-morph on top of the 180ms container scale (white blob + jank).
+                // Turbo keeps isOpen=true; we only claim open when there is something to send.
                 return writeButtonContainer.getVisibility() == View.VISIBLE
-                        && writeButtonContainer.getAlpha() > 0f;
+                        && currentAttachLayout != null
+                        && currentAttachLayout.getSelectedItemsCount() > 0;
             }
 
             @Override
@@ -5166,6 +5169,26 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
     }
 
+
+    private void applyWriteButtonOpenState(boolean show) {
+        if (writeButton == null || writeButtonContainer == null) {
+            return;
+        }
+        // Force the circle morph so it does not run as a second animation beside the
+        // container scale/alpha. Appear/hide is the 180ms scale; the circle is either
+        // fully open (count>0) or fully closed.
+        writeButton.open.force(show);
+        if (show) {
+            writeButton.updateColors();
+        }
+        FileLog.d("ChatAttachAlert send chrome show=" + show
+                + " count=" + (currentAttachLayout == null ? -1 : currentAttachLayout.getSelectedItemsCount())
+                + " vis=" + writeButtonContainer.getVisibility()
+                + " alpha=" + writeButtonContainer.getAlpha()
+                + " isOpen=" + writeButton.isOpen()
+                + " openF=" + writeButton.open.get());
+    }
+
     public boolean showSendButtonOnly(boolean show, boolean animated) {
         if (show == (frameLayout2.getTag() != null)) {
             return false;
@@ -5179,6 +5202,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         } else if (typeButtonsAvailable) {
             buttonsRecyclerViewWrapper.setVisibility(View.VISIBLE);
         }
+        applyWriteButtonOpenState(show);
         if (animated) {
             commentsAnimator = new AnimatorSet();
             ArrayList<Animator> animators = new ArrayList<>();
@@ -5263,6 +5287,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         } else if (typeButtonsAvailable) {
             buttonsRecyclerViewWrapper.setVisibility(View.VISIBLE);
         }
+        applyWriteButtonOpenState(show);
         final boolean allowAbove = (currentAttachLayout == photoLayout || currentAttachLayout == photoPreviewLayout);
         final boolean above = allowAbove && captionAbove;
         if (animated) {
@@ -6009,6 +6034,12 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             return;
         }
         int count = currentAttachLayout.getSelectedItemsCount();
+        FileLog.d("ChatAttachAlert updateCountButton count=" + count
+                + " animated=" + animated
+                + " vis=" + (writeButtonContainer == null ? -1 : writeButtonContainer.getVisibility())
+                + " alpha=" + (writeButtonContainer == null ? -1 : writeButtonContainer.getAlpha())
+                + " isOpen=" + (writeButton == null ? false : writeButton.isOpen())
+                + " openF=" + (writeButton == null ? -1 : writeButton.open.get()));
 
         if (count == 0) {
             writeButton.setCount(0, animated != 0);
