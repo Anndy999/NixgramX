@@ -72,6 +72,17 @@
     <string name="PushServiceTypeMicroG" translatable="false">microG</string>
     <string name="PushServiceTypeInAppDialog">Show Resident Notifications</string>
     <string name="PushServiceTypeUnifiedGateway">Unified Push Gateway</string>
+    <string name="FcmPushStatus">FCM Status</string>
+    <string name="FcmPushStatusHint">Tap to re-request FCM token</string>
+    <string name="FcmPushRequestToken">Re-request FCM token</string>
+    <string name="FcmPushRequesting">Requesting FCM token…</string>
+    <string name="FcmPlayServicesAvailable">Play Services: yes</string>
+    <string name="FcmPlayServicesUnavailable">Play Services: no (code=%1$d)</string>
+    <string name="FcmPushServiceTypeValue">Push type: %1$s</string>
+    <string name="FcmPushStringStatus">status: %1$s</string>
+    <string name="FcmPushTokenOk">token: OK (len=%1$d, prefix=%2$s…)</string>
+    <string name="FcmPushTokenMissing">token: missing</string>
+    <string name="FcmPushLastError">last error: %1$s</string>
     <string name="SendMp4DocumentAsVideo">Send MP4 Document as Video</string>
     <string name="StickersChooseShortNameForStickerPack">Choose a short name for your pack.</string>
     <string name="StickersCopyStickerSet">Copy Sticker Set</string>
