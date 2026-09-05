@@ -3,7 +3,7 @@
 | ID | Severity | Summary | Status |
 | --- | --- | --- | --- |
 | KI-001 | High | Workflow files cannot be pushed without GitHub Actions workflow OAuth/scope | Stale — workflows are on the repo |
-| KI-002 | High | APK must use owner api_id; sample id 6 is rejected at compile | Owner action — set TELEGRAM_APP_ID/HASH in local.properties and CI LOCAL_PROPERTIES (not the upload.py APP_ID secret) |
+| KI-002 | High | APK defaults to owner api_id 39764388; sample id 6 rejected at compile | Done on this branch — my.telegram.org FCM credentials still empty |
 | KI-003 | Medium | Icons still temporary NagramX assets | Accepted for Phase 0/1 |
 | KI-004 | Medium | Remote-config / updater channel ID is placeholder `0` | Framework in; switch default OFF until you own a channel |
 | KI-005 | Medium | Telegram 12.10.1 sync is on `upstream-sync/12.10.1`, not `main` | In progress |
