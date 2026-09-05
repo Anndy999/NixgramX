@@ -1225,12 +1225,28 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
     }
 
     private void needShowAlert(String title, String text) {
+        needShowAlert(title, text, null);
+    }
+
+    /** Show alert with optional secondary/detail line (smaller) for screenshottable raw errors. */
+    private void needShowAlert(String title, String text, String secondaryDetail) {
         if (text == null || getParentActivity() == null) {
             return;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(title);
-        builder.setMessage(text);
+        if (TextUtils.isEmpty(secondaryDetail)) {
+            builder.setMessage(text);
+        } else {
+            SpannableStringBuilder message = new SpannableStringBuilder();
+            message.append(text);
+            message.append("\n\n");
+            int start = message.length();
+            message.append(secondaryDetail);
+            message.setSpan(new android.text.style.RelativeSizeSpan(0.85f), start, message.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            message.setSpan(new android.text.style.ForegroundColorSpan(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText)), start, message.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            builder.setMessage(message);
+        }
         builder.setPositiveButton(getString("OK", R.string.OK), null);
         showDialog(builder.create());
     }
@@ -3582,7 +3598,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
                 } else if (err != null) {
                     if (isPasskeyOriginOrSignatureError(err)) {
-                        needShowAlert(getString(R.string.PasskeyForkUnavailableTitle), getString(R.string.PasskeyForkUnavailableMessage));
+                        needShowAlert(getString(R.string.PasskeyForkUnavailableTitle), getString(R.string.PasskeyForkUnavailableMessage), err);
                     } else {
                         BulletinFactory.of(LoginActivity.this).showForError(err);
                     }

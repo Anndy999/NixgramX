@@ -75,6 +75,7 @@
     <string name="FcmPlayServicesUnavailable">Play 服务：不可用（code=%1$d）</string>
     <string name="FcmPushServiceTypeValue">推送类型：%1$s</string>
     <string name="FcmPushStringStatus">status：%1$s</string>
+    <string name="FcmPushStringStatusRegistered">status：已注册</string>
     <string name="FcmPushTokenOk">token：OK（len=%1$d，prefix=%2$s…）</string>
     <string name="FcmPushTokenMissing">token：缺失</string>
     <string name="FcmPushLastError">最近错误：%1$s</string>
