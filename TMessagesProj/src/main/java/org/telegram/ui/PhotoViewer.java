@@ -7577,8 +7577,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
             @Override
             protected boolean shouldUseActionStyleColors() {
-                // Keep chat_editMediaButton fill; ActionButtonStyle WHITE would otherwise
-                // paint a white circle and a white open-state plane (invisible on light).
+                // Keep chat_editMediaButton fill + white plane. Opting out of ActionButtonStyle
+                // fixes Accent/Neutral/White alike (light fills would otherwise clash with a white plane).
                 return false;
             }
             @Override

@@ -5294,8 +5294,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 @Override
                 protected boolean shouldUseActionStyleColors() {
-                    // Share FAB must keep dialogFloatingButton fill; ActionButtonStyle WHITE
-                    // would otherwise win over getFillColor() because shouldDrawBackground() is true.
+                    // Share FAB must keep dialogFloatingButton fill + white plane. Opting out of
+                    // ActionButtonStyle fixes Accent/Neutral/White alike (shouldDrawBackground()
+                    // would otherwise let light fills win over getFillColor()).
                     return false;
                 }
 
