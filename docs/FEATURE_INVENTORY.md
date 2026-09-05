@@ -275,3 +275,8 @@ Save Deleted Messages family gated by `BuildConfig.IS_BASE` (UI rows removed in 
 Translation, proxy, N-Settings, and unrelated features remain available in `_base` (per NagramX practice).
 
 NaConfig entries exported: **229**.
+
+
+## Upstream sync note (12.10.1 L2)
+
+Inventory **not re-exported** on branch `upstream-sync/12.10.1`. Telegram Java surfaces changed; re-run export after L3 feature ports compile. See `docs/UPSTREAM_AUDIT.md` reject list.

@@ -21,7 +21,7 @@ jobs:
     outputs:
       build_timestamp: ${{ steps.release_build_step.outputs.build_timestamp }}
     env:
-      NATIVE_TARGET: "universal"
+      NATIVE_TARGET: "arm64-v8a"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -60,6 +60,9 @@ jobs:
         id: release_build_step
         env:
           COMMIT_ID: ${{ github.event.head_commit.id }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           export BUILD_TIMESTAMP=$(date +%s)
@@ -100,6 +103,11 @@ jobs:
           COMMIT_URL: ${{ github.event.head_commit.url }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
+          UPDATE_URL: https://t.me/NixgramX
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
+          # Prefer explicit versions for #updateRelease JSON (upload.py also reads gradle.properties)
+          export APP_VERSION_NAME="$(sed -n 's/^APP_VERSION_NAME=//p' gradle.properties | head -n1)"
+          export APP_VERSION_CODE="$(sed -n 's/^APP_VERSION_CODE=//p' gradle.properties | head -n1)"
+          echo "APP_VERSION_NAME=$APP_VERSION_NAME APP_VERSION_CODE=$APP_VERSION_CODE"
           python Tools/scripts/upload.py ${{ secrets.HELPER_BOT_TOKEN }} ${{ secrets.HELPER_BOT_TARGET }} release ${{ secrets.HELPER_BOT_CANARY_TARGET }}

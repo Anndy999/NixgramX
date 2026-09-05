@@ -22,7 +22,7 @@ public class BuildVars {
     public static boolean LOGS_ENABLED = false;
     public static boolean DEBUG_PRIVATE_VERSION = false;
     public static boolean USE_CLOUD_STRINGS = true;
-    public static boolean CHECK_UPDATES = true;
+    public static boolean CHECK_UPDATES = false; // NixgramX: no Play/official TG updater; in-app channel is opt-in
     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
     public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
 
@@ -40,7 +40,9 @@ public class BuildVars {
     // You can use this flag to disable Google Play Billing (If you're making fork and want it to be in Google Play)
     public static boolean IS_BILLING_UNAVAILABLE = false;
 
-    // works only on official app ids, disable on your forks
+    // Limited passkeys (same approach as NagramX): Android 14+ Credential Manager with
+    // CREDENTIAL_MANAGER_SET_ORIGIN. Google Password Manager / telegram.org assetlinks will
+    // fail on custom package+signature; Bitwarden/KeePassDX can work if the user trusts this app.
     public static boolean SUPPORTS_PASSKEYS = Build.VERSION.SDK_INT >= 34;
 
     static {

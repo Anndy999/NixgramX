@@ -16,7 +16,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 import com.google.zxing.EncodeHintType;
-import com.google.zxing.qrcode.QRCodeWriter;
+import tw.nekomimi.nekogram.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import org.telegram.messenger.AndroidUtilities;

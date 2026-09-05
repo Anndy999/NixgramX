@@ -14,3 +14,8 @@ TMessagesProj/jniLibs/
 TMessagesProj/jniRes/
 TMessagesProj/afat/
 TMessagesProj/jni/ffmpeg/build_android
+# NixgramX signing secrets — never commit passwords
+nixgramx-release-signing.txt
+**/nixgramx-release-signing.txt
+signing/*.env
+*.keystore.credentials

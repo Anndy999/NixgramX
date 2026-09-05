@@ -1210,6 +1210,20 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
     }
 
+    private static boolean isPasskeyOriginOrSignatureError(String err) {
+        if (err == null || err.isEmpty()) {
+            return false;
+        }
+        final String e = err.toLowerCase(Locale.US);
+        return e.contains("signature")
+                || e.contains("origin")
+                || e.contains("privileged")
+                || e.contains("asset link")
+                || e.contains("assetlink")
+                || err.contains("签名")
+                || err.contains("通行密钥");
+    }
+
     private void needShowAlert(String title, String text) {
         if (text == null || getParentActivity() == null) {
             return;
@@ -3567,8 +3581,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         }
                     }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
                 } else if (err != null) {
-                    // if (BuildVars.DEBUG_VERSION)
+                    if (isPasskeyOriginOrSignatureError(err)) {
+                        needShowAlert(getString(R.string.PasskeyForkUnavailableTitle), getString(R.string.PasskeyForkUnavailableMessage));
+                    } else {
                         BulletinFactory.of(LoginActivity.this).showForError(err);
+                    }
                     return;
                 }
                 if (authObject instanceof TLRPC.TL_auth_authorization) {
@@ -4253,9 +4270,9 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
         private void applyLottieColors(RLottieDrawable drawable) {
             if (drawable != null) {
-                drawable.setLayerColor("Bubble.**", Theme.getColor(Theme.key_chats_actionBackground));
-                drawable.setLayerColor("Phone.**", Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-                drawable.setLayerColor("Note.**", Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+                drawable.setLayerColor("Bubble", Theme.getColor(Theme.key_chats_actionBackground));
+                drawable.setLayerColor("Phone", Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+                drawable.setLayerColor("Note", Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             }
         }
 
