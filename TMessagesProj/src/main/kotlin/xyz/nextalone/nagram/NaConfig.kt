@@ -1272,6 +1272,30 @@ object NaConfig {
             ConfigItem.configTypeInt,
             0 // 0: default; 1: Modern; 2: MD3
         )
+    val iosButtonPlacement =
+        addConfig(
+            "IosButtonPlacement",
+            ConfigItem.configTypeBool,
+            false
+        )
+    val iosInputAppearance =
+        addConfig(
+            "IosInputAppearance",
+            ConfigItem.configTypeBool,
+            false
+        )
+    val compactInputSize =
+        addConfig(
+            "CompactInputSize",
+            ConfigItem.configTypeBool,
+            false
+        )
+    val actionButtonStyle =
+        addConfig(
+            "ActionButtonStyle",
+            ConfigItem.configTypeInt,
+            0
+        )
     val ignoreUnreadCount =
         addConfig(
             "IgnoreUnreadCount",
@@ -1488,6 +1512,11 @@ object NaConfig {
         if (!getPreferences().contains(cameraInVideoMessages.key)) {
             val legacyRear = getPreferences().getBoolean("RearVideoMessages", false)
             cameraInVideoMessages.setConfigInt(if (legacyRear) 1 else 0)
+        }
+        if (!getPreferences().contains(actionButtonStyle.key)) {
+            val legacyWhiteSend = getPreferences().getBoolean("WhiteSendButton", false)
+            actionButtonStyle.setConfigInt(if (legacyWhiteSend) 2 else 0)
+            getPreferences().edit { remove("WhiteSendButton") }
         }
         if (!getPreferences().contains(backAnimationStyle.key) &&
             getPreferences().contains("SpringAnimation")
