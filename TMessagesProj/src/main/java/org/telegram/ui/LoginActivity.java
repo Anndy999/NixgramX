@@ -1210,6 +1210,20 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
     }
 
+    private static boolean isPasskeyOriginOrSignatureError(String err) {
+        if (err == null || err.isEmpty()) {
+            return false;
+        }
+        final String e = err.toLowerCase(Locale.US);
+        return e.contains("signature")
+                || e.contains("origin")
+                || e.contains("privileged")
+                || e.contains("asset link")
+                || e.contains("assetlink")
+                || err.contains("签名")
+                || err.contains("通行密钥");
+    }
+
     private void needShowAlert(String title, String text) {
         if (text == null || getParentActivity() == null) {
             return;
