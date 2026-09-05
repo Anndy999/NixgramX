@@ -41,15 +41,15 @@ if (base64 != null && !base64.isBlank()) {
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
 }
 
+// Prefer explicit CI/env signing secrets over LOCAL_PROPERTIES (avoids stale passwords in the blob).
+keystorePwd = System.getenv('KEYSTORE_PASS')
+alias = System.getenv('ALIAS_NAME')
+pwd = System.getenv('ALIAS_PASS')
 if (properties != null) {
-    keystorePwd = properties.getProperty('KEYSTORE_PASS')
-    alias = properties.getProperty('ALIAS_NAME')
-    pwd = properties.getProperty('ALIAS_PASS')
+    keystorePwd = keystorePwd ?: properties.getProperty('KEYSTORE_PASS')
+    alias = alias ?: properties.getProperty('ALIAS_NAME')
+    pwd = pwd ?: properties.getProperty('ALIAS_PASS')
 }
-
-keystorePwd = keystorePwd ?: System.getenv('KEYSTORE_PASS')
-alias = alias ?: System.getenv('ALIAS_NAME')
-pwd = pwd ?: System.getenv('ALIAS_PASS')
 
 def nativeTarget = System.getenv('NATIVE_TARGET') ?: ''
 

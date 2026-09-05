@@ -51,14 +51,12 @@ Different `applicationId` **and** different signing certificate → Android trea
 4. Do **not** attempt to read NagramX private data directories.
 5. NagramX full users → install `app.nixgramx.android`; NagramX `_base` users → `app.nixgramx.android.base`.
 
-## Signing fingerprints
+## Signing fingerprints (current)
 
-NixgramX release keystore (`TMessagesProj/release.keystore`, alias `nixgramx`, PKCS12, generated 2026-09-04). Passwords are **not** in git.
+NixgramX release keystore (`TMessagesProj/release.keystore`, alias `nixgramx`, PKCS12, rotated 2026-09-05). Passwords are **not** in git (GitHub secrets `KEYSTORE_PASS` / `ALIAS_PASS`, local `nixgramx-release-signing.txt`).
 
-- SHA-1: `20:EB:E0:E4:4A:9B:A7:AC:B8:6D:17:E1:81:DD:70:34:04:B5:A8:12`
-- SHA-256: `FC:B2:58:4B:2A:CA:0A:20:F7:7D:7E:72:74:AF:70:C7:17:58:D0:E3:9C:86:BC:08:63:4D:CB:70:64:91:77:90`
-- Valid until 2054-01-20
-- Do **not** reuse NagramX SHA-256 `0D:51:91:56:…`
+- SHA-256: `52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C`
+
 
 ## Policy removals (not part of `_base` cut)
 
