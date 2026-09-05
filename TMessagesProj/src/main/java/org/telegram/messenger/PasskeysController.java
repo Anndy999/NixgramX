@@ -60,6 +60,13 @@ import kotlinx.coroutines.Job;
 import kotlinx.coroutines.JobCancellationException;
 import tw.nekomimi.nekogram.NekoXConfig;
 
+/**
+ * Limited passkey support for custom-signed forks.
+ * <p>
+ * Root constraint: WebAuthn rpId/origin is {@code https://telegram.org}. Google Password Manager
+ * + Digital Asset Links will fail on a custom package (app.nixgramx.android). Bitwarden/KeePassDX
+ * only work via privileged-app trust with the correct signing SHA-256 fingerprint.
+ */
 @RequiresApi(api = 28)
 public class PasskeysController {
 
@@ -215,6 +222,8 @@ public class PasskeysController {
                 return;
             }
 
+            // Keep setOrigin(rpId) (https://telegram.org/…). When clickedButton, preferImmediately=false
+            // so the credential picker appears (helps the user choose Bitwarden over Google PM).
             final GetPublicKeyCredentialOption passkeyOption = new GetPublicKeyCredentialOption(requestJson, clientDataHash);
             final GetCredentialRequest request = new GetCredentialRequest.Builder()
                     .addCredentialOption(passkeyOption)
@@ -293,6 +302,7 @@ public class PasskeysController {
 
                     @Override
                     public void onError(@NonNull GetCredentialException err2) {
+                        FileLog.e(err2);
                         if (err2 instanceof NoCredentialException) {
                             done.run(0L, null, "EMPTY");
                         } else if (err2 instanceof GetCredentialCancellationException) {
@@ -300,14 +310,19 @@ public class PasskeysController {
                         } else if (err2 instanceof GetCredentialInterruptedException) {
                             done.run(0L, null, "CANCELLED");
                         } else if (err2 != null) {
-                            done.run(0L, null, err2.getMessage());
+                            String msg = err2.getMessage();
+                            String detail = err2.getClass().getSimpleName() + (msg != null && !msg.isEmpty() ? (": " + msg) : "");
+                            done.run(0L, null, detail);
                         }
                     }
                 });
 
                 cancel[0] = cancellationSignal::cancel;
             } catch (Exception e) {
-                done.run(0L, null, e.getMessage());
+                FileLog.e(e);
+                String msg = e.getMessage();
+                String detail = e.getClass().getSimpleName() + (msg != null && !msg.isEmpty() ? (": " + msg) : "");
+                done.run(0L, null, detail);
             }
 
         }, ConnectionsManager.RequestFlagWithoutLogin);

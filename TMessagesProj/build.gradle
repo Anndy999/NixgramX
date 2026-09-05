@@ -9,8 +9,34 @@ plugins {
 
 def buildTimestamp = System.getenv('BUILD_TIMESTAMP') ?: '0'
 def commitId = System.getenv('COMMIT_ID')
-def verName = "${APP_VERSION_NAME}${commitId?.take(7) ? "-${commitId.take(7)}" : ''}"
-def verCode = 1264
+def distributionChannel = (System.getenv('NIXGRAMX_CHANNEL') ?: findProperty('NIXGRAMX_CHANNEL') ?: 'stable').toString().trim().toLowerCase()
+if (!(distributionChannel in ['stable', 'beta'])) {
+    throw new GradleException("NIXGRAMX_CHANNEL must be stable or beta, got '${distributionChannel}'")
+}
+
+def nixgramxVersionName = (System.getenv('NIXGRAMX_VERSION_NAME') ?: findProperty('NIXGRAMX_VERSION_NAME') ?: APP_VERSION_NAME).toString().trim()
+if (nixgramxVersionName.isBlank()) {
+    throw new GradleException('NIXGRAMX_VERSION_NAME must not be blank')
+}
+
+def nixgramxVersionCodeValue = System.getenv('NIXGRAMX_VERSION_CODE') ?: findProperty('NIXGRAMX_VERSION_CODE')
+if (nixgramxVersionCodeValue == null) {
+    throw new GradleException('NIXGRAMX_VERSION_CODE must be configured')
+}
+
+int verCode
+try {
+    verCode = Integer.parseInt(nixgramxVersionCodeValue.toString())
+} catch (NumberFormatException ignored) {
+    throw new GradleException("NIXGRAMX_VERSION_CODE must be an integer, got '${nixgramxVersionCodeValue}'")
+}
+if (verCode <= 0) {
+    throw new GradleException('NIXGRAMX_VERSION_CODE must be positive')
+}
+
+def betaSuffix = distributionChannel == 'beta' ? '-beta' : ''
+def commitSuffix = distributionChannel == 'beta' && commitId?.take(7) ? "-${commitId.take(7)}" : ''
+def verName = "${nixgramxVersionName}${betaSuffix}${commitSuffix}"
 
 def officialVer = APP_VERSION_NAME
 def officialCode = APP_VERSION_CODE
@@ -49,6 +75,19 @@ if (properties != null) {
     keystorePwd = keystorePwd ?: properties.getProperty('KEYSTORE_PASS')
     alias = alias ?: properties.getProperty('ALIAS_NAME')
     pwd = pwd ?: properties.getProperty('ALIAS_PASS')
+}
+
+// NixgramX app on my.telegram.org (api_id 39764388). Sample id 6 is mass-revoked.
+// GitHub secret APP_ID is only for Tools/scripts/upload.py — it is not baked into the APK.
+// local.properties / env still override these defaults.
+def appId = properties?.getProperty('TELEGRAM_APP_ID') ?: System.getenv('TELEGRAM_APP_ID') ?: '39764388'
+def appHash = properties?.getProperty('TELEGRAM_APP_HASH') ?: System.getenv('TELEGRAM_APP_HASH') ?: '6560b562ce8b4ba88fe2d5e9240cbbf9'
+if (!appId || appId == '6' || !(appId ==~ /^\d+$/) || !appHash || appHash == 'eb06d4abfb49dc3eeb1aeb98ae0f581e') {
+    throw new GradleException(
+        "TELEGRAM_APP_ID/TELEGRAM_APP_HASH are missing or set to the public sample '6'. " +
+        "Telegram revokes sessions for clients on api_id=6, and FCM cannot bind to that app. " +
+        "Set TELEGRAM_APP_ID and TELEGRAM_APP_HASH in local.properties (local) or the LOCAL_PROPERTIES secret (CI)."
+    )
 }
 
 def nativeTarget = System.getenv('NATIVE_TARGET') ?: ''
@@ -104,16 +143,8 @@ android {
         versionName verName
         versionCode verCode
 
-        // obtain your own keys at https://core.telegram.org/api/obtaining_api_id
-        def appId = '6'
-        def appHash = 'eb06d4abfb49dc3eeb1aeb98ae0f581e'
-
-        if (properties != null) {
-            appId = properties.getProperty('TELEGRAM_APP_ID') ?: System.getenv('TELEGRAM_APP_ID') ?: appId
-            appHash = properties.getProperty('TELEGRAM_APP_HASH') ?: System.getenv('TELEGRAM_APP_HASH') ?: appHash
-        }
-
         buildConfigField 'String', 'BUILD_VERSION_STRING', '"' + verName + '"'
+        buildConfigField 'String', 'NIXGRAMX_CHANNEL', '"' + distributionChannel + '"'
         buildConfigField 'String', 'OFFICIAL_VERSION', '"' + officialVer + '"'
         buildConfigField 'int', 'OFFICIAL_VERSION_CODE', officialCode + ''
         buildConfigField 'int', 'APP_ID', appId

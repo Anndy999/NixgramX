@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="XChannel">Nixgram 頻道</string>
+    <string name="XChannel">NixgramX 頻道</string>
     <string name="EnableSaveDeletedMessages">儲存已刪除訊息</string>
     <string name="DeletedMessage">已刪除</string>
     <string name="EnableSaveEditsHistory">儲存編輯歷史</string>
@@ -277,7 +277,7 @@
     <string name="PasskeyUnsupportedMessage">嘗試使用其他密碼管理器，例如 **Bitwarden** 或 **KeePassDX**。</string>
     <string name="PasskeyNoCredentialAvailable">沒有可用的有效憑證。</string>
     <string name="PasskeyForkUnavailableTitle">需要設定通行金鑰提供方</string>
-    <string name="PasskeyForkUnavailableMessage">NixgramX 通行金鑰需要 Android 14+，並使用可信任本應用的密碼管理器（Bitwarden 或 KeePassDX）。Bitwarden：設定 → 自動填充 → 特權應用，信任 app.nixgramx.android。不要使用 Google 密碼管理器。簽章 SHA-256：52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C</string>
+    <string name="PasskeyForkUnavailableMessage">NixgramX 通行金鑰需要 Android 14+。\n\n1）將 Bitwarden 設為系統自動填充 / 首選憑證提供方（不要使用 Google 密碼管理器）。\n2）Bitwarden → 設定 → 自動填充 → 特權應用 → 新增 app.nixgramx.android，並填入 SHA-256 指紋：\n   含冒號：52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C\n   不含冒號：52548159979141626EE5B407B84EE70A3344ED91297F5FBE8E91DF8F0C29A31C\n3）強制停止 Bitwarden 與 NixgramX 後重試。\n4）首次：先用簡訊/驗證碼登入一次，再於 NixgramX 設定內建立新的通行金鑰（在官方 Telegram / Google 密碼管理器建立的通行金鑰通常在此無法使用）。\n\n根因限制：WebAuthn rpId/origin 為 https://telegram.org — 自訂套件名稱下 Google 密碼管理器 + assetlinks 會失敗；僅 Bitwarden/KeePassDX 可透過特權信任 + 正確簽章指紋使用。</string>
     <string name="BookmarksManager">書籤</string>
     <string name="AddBookmark">新增書籤</string>
     <string name="RemoveBookmark">移除書籤</string>
@@ -311,8 +311,8 @@
     <string name="BackAnimationSpring">Spring</string>
     <string name="BackAnimationPredictive">預測</string>
     <string name="AddToFilter">新增過濾器</string>
-    <string name="UnifiedPushNeverReceivedNotifications">自 Nixgram 啟動後，您從未收到 UnifiedPush 的通知。</string>
-    <string name="UnifiedPushLastReceivedNotification">最後一次透過 UnifiedPush 接收到的通知是 %1$d 秒前。\n\n自 Nixgram 啟動以來，您已收到 %2$d 條通知。</string>
+    <string name="UnifiedPushNeverReceivedNotifications">自 NixgramX 啟動後，您從未收到 UnifiedPush 的通知。</string>
+    <string name="UnifiedPushLastReceivedNotification">最後一次透過 UnifiedPush 接收到的通知是 %1$d 秒前。\n\n自 NixgramX 啟動以來，您已收到 %2$d 條通知。</string>
     <string name="UnifiedPushCurrentEndpoint">目前的 UnifiedPush 端點是：%1$s</string>
     <string name="PlayOnce">播放一次</string>
     <string name="StorageSettings">儲存</string>

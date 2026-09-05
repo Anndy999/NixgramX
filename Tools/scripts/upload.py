@@ -11,8 +11,11 @@ from pyrogram.types import InputMediaDocument
 api_id = os.environ.get("APP_ID")
 api_hash = os.environ.get("APP_HASH")
 artifacts_path = Path("artifacts")
-test_version = argv[3] == "test" if len(argv) > 2 else None
-metadata_chat_id = argv[4] if len(argv) > 3 else None
+distribution = argv[3].strip().lower() if len(argv) > 3 else "release"
+if distribution not in {"release", "stable", "test", "beta", "canary"}:
+    raise SystemExit(f"Unknown distribution channel: {distribution}")
+beta_version = distribution in {"test", "beta", "canary"}
+metadata_chat_id = argv[4] if len(argv) > 4 else None
 
 ABIS = ["arm64-v8a", "universal"]
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -39,15 +42,20 @@ def _read_gradle_property(key: str) -> str | None:
 
 
 def resolve_version() -> tuple[str, int]:
-    """Prefer APK filename versionCode (BuildConfig) over Telegram APP_VERSION_CODE."""
-    name = os.environ.get("APP_VERSION_NAME") or _read_gradle_property("APP_VERSION_NAME")
+    """Prefer the NixgramX APK filename over Telegram upstream version properties."""
+    name = (
+        os.environ.get("NIXGRAMX_VERSION_NAME")
+        or _read_gradle_property("NIXGRAMX_VERSION_NAME")
+        or os.environ.get("APP_VERSION_NAME")
+        or _read_gradle_property("APP_VERSION_NAME")
+    )
     code = 0
 
-    # NixgramX-v12.10.1(1262)-arm64-v8a.apk — (1262) is the shipped versionCode
+    # NixgramX-v12.10.1-beta-a1b2c3d(1265)-arm64-v8a.apk
     for apk in artifacts_path.rglob("*.apk"):
-        m = re.search(r"[Vv]?(\d+\.\d+(?:\.\d+)?)\((\d+)\)", apk.name)
+        m = re.search(r"[Vv]?(\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?)\((\d+)\)", apk.name)
         if m:
-            name = name or m.group(1)
+            name = m.group(1)
             code = int(m.group(2))
             break
         if not name:
@@ -57,7 +65,9 @@ def resolve_version() -> tuple[str, int]:
 
     if not code:
         code_raw = (
-            os.environ.get("BUILD_VERSION_CODE")
+            os.environ.get("NIXGRAMX_VERSION_CODE")
+            or _read_gradle_property("NIXGRAMX_VERSION_CODE")
+            or os.environ.get("BUILD_VERSION_CODE")
             or os.environ.get("APP_VERSION_CODE")
             or _read_gradle_property("APP_VERSION_CODE")
         )
@@ -79,14 +89,11 @@ def get_commit_info():
 
 
 def get_caption() -> str:
-    import html
-
-    commit_id, commit_url, commit_message = get_commit_info()
-    pre = "Test version." if test_version else "Release version."
-    caption = f"{pre}\n\n"
-    caption += f"Commit Message:\n<blockquote expandable>{html.escape(commit_message)}</blockquote>\n\n"
-    caption += f"See commit details [{commit_id}]({commit_url})"
-    return caption
+    version, version_code = resolve_version()
+    _, _, commit_message = get_commit_info()
+    headline = next((line.strip() for line in commit_message.splitlines() if line.strip()), "Release")
+    title = "NixgramX Beta" if beta_version else "NixgramX"
+    return f"{title} · {version} ({version_code})\n{headline}"
 
 
 def get_documents_with_abis() -> list[tuple[str, "InputMediaDocument"]]:
@@ -120,7 +127,7 @@ def build_update_payload(document_ids: dict[str, int]) -> str:
     except ValueError:
         build_timestamp = 0
     url = os.environ.get("UPDATE_URL") or DEFAULT_UPDATE_URL
-    tag = "#updateBeta" if test_version else "#updateRelease"
+    tag = "#updateBeta" if beta_version else "#updateRelease"
     body = {
         "can_not_skip": False,
         "version": version,

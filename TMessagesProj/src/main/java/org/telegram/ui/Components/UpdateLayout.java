@@ -20,6 +20,7 @@ import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
+import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.IUpdateLayout;
 
@@ -66,7 +67,11 @@ public class UpdateLayout extends IUpdateLayout {
         updateLayout.setBackground(Theme.getSelectorDrawable(0x40ffffff, false));
         sideMenuContainer.addView(updateLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.LEFT | Gravity.BOTTOM));
         updateLayout.setOnClickListener(v -> {
-            if (!SharedConfig.isAppUpdateAvailable()) {
+            if (!SharedConfig.isAppUpdateAvailableOrUrl()) {
+                return;
+            }
+            if (SharedConfig.pendingAppUpdate.document == null) {
+                Browser.openUrl(activity, SharedConfig.pendingAppUpdate.url);
                 return;
             }
             if (updateLayoutIcon.getIcon() == MediaActionDrawable.ICON_DOWNLOAD) {
@@ -125,27 +130,33 @@ public class UpdateLayout extends IUpdateLayout {
         if (sideMenuContainer == null) {
             return;
         }
-        if (SharedConfig.isAppUpdateAvailable()) {
+        if (SharedConfig.isAppUpdateAvailableOrUrl()) {
             createUpdateUI(currentAccount);
 
-            String fileName = FileLoader.getAttachFileName(SharedConfig.pendingAppUpdate.document);
-            File path = FileLoader.getInstance(currentAccount).getPathToAttach(SharedConfig.pendingAppUpdate.document, true);
-            boolean showSize;
-            if (path.exists()) {
-                updateLayoutIcon.setIcon(MediaActionDrawable.ICON_UPDATE, true, animated);
-                setUpdateText(LocaleController.getString(R.string.AppUpdateNow), animated);
-                showSize = false;
+            boolean showSize = false;
+            if (SharedConfig.pendingAppUpdate.document == null) {
+                updateLayoutIcon.setIcon(MediaActionDrawable.ICON_DOWNLOAD, true, animated);
+                updateLayoutIcon.setProgress(0, false);
+                setUpdateText(LocaleController.getString(R.string.AppUpdate).replace("Telegram", LocaleController.getString(R.string.NagramX)), animated);
             } else {
-                if (FileLoader.getInstance(currentAccount).isLoadingFile(fileName)) {
-                    updateLayoutIcon.setIcon(MediaActionDrawable.ICON_CANCEL, true, animated);
-                    updateLayoutIcon.setProgress(0, false);
-                    Float p = ImageLoader.getInstance().getFileProgress(fileName);
-                    setUpdateText(LocaleController.formatString(R.string.AppUpdateDownloading, (int) ((p != null ? p : 0.0f) * 100)), animated);
+                String fileName = FileLoader.getAttachFileName(SharedConfig.pendingAppUpdate.document);
+                File path = FileLoader.getInstance(currentAccount).getPathToAttach(SharedConfig.pendingAppUpdate.document, true);
+                if (path.exists()) {
+                    updateLayoutIcon.setIcon(MediaActionDrawable.ICON_UPDATE, true, animated);
+                    setUpdateText(LocaleController.getString(R.string.AppUpdateNow), animated);
                     showSize = false;
                 } else {
-                    updateLayoutIcon.setIcon(MediaActionDrawable.ICON_DOWNLOAD, true, animated);
-                    setUpdateText(LocaleController.getString(R.string.AppUpdate).replace("Telegram", LocaleController.getString(R.string.NagramX)), animated);
-                    showSize = true;
+                    if (FileLoader.getInstance(currentAccount).isLoadingFile(fileName)) {
+                        updateLayoutIcon.setIcon(MediaActionDrawable.ICON_CANCEL, true, animated);
+                        updateLayoutIcon.setProgress(0, false);
+                        Float p = ImageLoader.getInstance().getFileProgress(fileName);
+                        setUpdateText(LocaleController.formatString(R.string.AppUpdateDownloading, (int) ((p != null ? p : 0.0f) * 100)), animated);
+                        showSize = false;
+                    } else {
+                        updateLayoutIcon.setIcon(MediaActionDrawable.ICON_DOWNLOAD, true, animated);
+                        setUpdateText(LocaleController.getString(R.string.AppUpdate).replace("Telegram", LocaleController.getString(R.string.NagramX)), animated);
+                        showSize = true;
+                    }
                 }
             }
             updateSizeTextView.setText(showSize ? AndroidUtilities.formatFileSize(SharedConfig.pendingAppUpdate.document.size) : null, animated);

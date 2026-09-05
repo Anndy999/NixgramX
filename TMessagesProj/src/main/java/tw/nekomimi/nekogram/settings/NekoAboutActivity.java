@@ -18,8 +18,6 @@ import tw.nekomimi.nekogram.DatacenterActivity;
 public class NekoAboutActivity extends BaseNekoSettingsActivity {
 
     private int xChannelRow;
-    private int channelRow;
-    private int channelTipsRow;
     private int sourceCodeRow;
     private int translationRow;
     private int datacenterStatusRow;
@@ -29,8 +27,6 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
         super.updateRows();
 
         xChannelRow = addRow();
-        channelRow = addRow();
-        channelTipsRow = addRow();
         sourceCodeRow = addRow();
         translationRow = addRow();
         datacenterStatusRow = addRow();
@@ -45,10 +41,6 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == xChannelRow) {
             MessagesController.getInstance(currentAccount).openByUserName("NixgramX", NekoAboutActivity.this, 1);
-        } else if (position == channelRow) {
-            MessagesController.getInstance(currentAccount).openByUserName("nagram_channel", NekoAboutActivity.this, 1);
-        } else if (position == channelTipsRow) {
-            MessagesController.getInstance(currentAccount).openByUserName("NagramTips", NekoAboutActivity.this, 1);
         } else if (position == translationRow) {
             Browser.openUrl(getParentActivity(), "https://crowdin.com/project/NixgramX");
         } else if (position == sourceCodeRow) {
@@ -75,10 +67,6 @@ public class NekoAboutActivity extends BaseNekoSettingsActivity {
                 TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                 if (position == xChannelRow) {
                     textCell.setTextAndValue(getString(R.string.XChannel), "@NixgramX", true);
-                } else if (position == channelRow) {
-                    textCell.setTextAndValue(getString(R.string.OfficialChannel), "@nagram_channel", true);
-                } else if (position == channelTipsRow) {
-                    textCell.setTextAndValue(getString(R.string.TipsChannel), "@" + "NagramTips", true);
                 } else if (position == sourceCodeRow) {
                     textCell.setTextAndValue(getString(R.string.SourceCode), "Github", true);
                 } else if (position == translationRow) {

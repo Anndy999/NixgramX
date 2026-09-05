@@ -9,7 +9,7 @@
     <string name="SendReactions">表情回应</string>
     <string name="ShowReactions">显示表情回应菜单</string>
     <string name="CustomTitle">自定义标题</string>
-    <string name="CustomTitleHint">留空则使用 Nixgram</string>
+    <string name="CustomTitleHint">留空则使用 NixgramX</string>
     <string name="CreateMono">创建等宽</string>
     <string name="CreateMonoLanguage">等宽语言</string>
     <string name="CopyPhoto">复制图片</string>
@@ -75,6 +75,7 @@
     <string name="FcmPlayServicesUnavailable">Play 服务：不可用（code=%1$d）</string>
     <string name="FcmPushServiceTypeValue">推送类型：%1$s</string>
     <string name="FcmPushStringStatus">status：%1$s</string>
+    <string name="FcmPushStringStatusRegistered">status：已注册</string>
     <string name="FcmPushTokenOk">token：OK（len=%1$d，prefix=%2$s…）</string>
     <string name="FcmPushTokenMissing">token：缺失</string>
     <string name="FcmPushLastError">最近错误：%1$s</string>

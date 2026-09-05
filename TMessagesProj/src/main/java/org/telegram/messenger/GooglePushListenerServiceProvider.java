@@ -82,6 +82,8 @@ public class GooglePushListenerServiceProvider implements PushListenerController
                                 return;
                             }
                             SharedConfig.pushStringLastError = "";
+                            // Clear stale __FIREBASE_GENERATING_SINCE_*__ / prior status on success.
+                            SharedConfig.pushStringStatus = "";
                             String token = task.getResult();
                             if (!TextUtils.isEmpty(token)) {
                                 PushListenerController.sendRegistrationToServer(getPushType(), token);

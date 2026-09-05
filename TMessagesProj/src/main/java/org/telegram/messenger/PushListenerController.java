@@ -2,6 +2,7 @@ package org.telegram.messenger;
 
 import static org.telegram.messenger.LocaleController.getString;
 
+import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Base64;
@@ -52,9 +53,16 @@ public class PushListenerController {
         if (isPushTypeDisabled(pushType)) {
             return;
         }
+        if (token != null) {
+            // Successful registration: drop stale GENERATING / failed status before setRegId.
+            SharedConfig.pushStringStatus = "";
+        }
         ConnectionsManager.setRegId(token, pushType, SharedConfig.pushStringStatus);
         if (token == null) {
             return;
+        }
+        if (pushType == PUSH_TYPE_FIREBASE) {
+            ensureHybridPushConnectionForFcm();
         }
         boolean sendStat = false;
         if (SharedConfig.pushStringGetTimeStart != 0 && SharedConfig.pushStringGetTimeEnd != 0 && (!SharedConfig.pushStatSent || !TextUtils.equals(SharedConfig.pushString, token))) {
@@ -1692,6 +1700,40 @@ public class PushListenerController {
         @Override
         public int getPushType() {
             return PUSH_TYPE_FIREBASE;
+        }
+    }
+
+
+    /**
+     * When Google Play Services / FCM is available and the user did not choose In-App push
+     * (PushServiceType==0), default notification prefs {@code pushConnection} to true and enable
+     * the MTProto long-poll push connection for logged-in accounts. Goal: hybrid long-poll + FCM
+     * so cold-start FCM wakeups are not the only delivery path. Does not force-disable anything
+     * when GMS is present, and does not override an explicit user "off" toggle.
+     */
+    public static void ensureHybridPushConnectionForFcm() {
+        if (NaConfig.INSTANCE.getPushServiceType().Int() == 0) {
+            return;
+        }
+        try {
+            if (GooglePushListenerServiceProvider.checkPlayServicesStatusCode() != com.google.android.gms.common.ConnectionResult.SUCCESS) {
+                return;
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return;
+        }
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            SharedPreferences preferences = MessagesController.getNotificationsSettings(a);
+            if (!preferences.contains("pushConnection")) {
+                preferences.edit().putBoolean("pushConnection", true).apply();
+            }
+            if (!UserConfig.getInstance(a).isClientActivated()) {
+                continue;
+            }
+            if (preferences.getBoolean("pushConnection", true)) {
+                ConnectionsManager.getInstance(a).setPushConnectionEnabled(true);
+            }
         }
     }
 

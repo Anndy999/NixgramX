@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="NagramX" translatable="false">Nixgram</string>
-    <string name="XChannel">Nixgram Channel</string>
+    <string name="NagramX" translatable="false">NixgramX</string>
+    <string name="XChannel">NixgramX Channel</string>
     <string name="EnableSaveDeletedMessages">Save Deleted Messages</string>
     <string name="DeletedMessage">deleted</string>
     <string name="EnableSaveEditsHistory">Save Edits History</string>
@@ -291,7 +291,7 @@
     <string name="PasskeyUnsupportedMessage">Try other password managers like **Bitwarden** or **KeePassDX**.</string>
     <string name="PasskeyNoCredentialAvailable">No viable credential is available.</string>
     <string name="PasskeyForkUnavailableTitle">Passkey setup needed</string>
-    <string name="PasskeyForkUnavailableMessage">Passkeys on NixgramX need Android 14+ and a password manager that can trust this app (Bitwarden or KeePassDX). In Bitwarden: Settings → Autofill → Privileged apps — trust app.nixgramx.android. Do not use Google Password Manager. Fingerprint SHA-256: 52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C</string>
+    <string name="PasskeyForkUnavailableMessage">Passkeys on NixgramX need Android 14+.\n\n1) Set Bitwarden as the system Autofill / preferred credential provider (not Google Password Manager).\n2) Bitwarden → Settings → Autofill → Privileged apps → add app.nixgramx.android with this SHA-256 fingerprint:\n   With colons: 52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C\n   Without colons: 52548159979141626EE5B407B84EE70A3344ED91297F5FBE8E91DF8F0C29A31C\n3) Force-stop Bitwarden and NixgramX, then retry.\n4) First time: sign in with SMS/code once, then create a new passkey inside NixgramX settings (passkeys created in official Telegram / Google PM often will not work here).\n\nRoot constraint: WebAuthn rpId/origin is https://telegram.org — Google PM + assetlinks fail on this custom package; Bitwarden/KeePassDX only via privileged trust + matching signing fingerprint.</string>
     <string name="BookmarksManager">Bookmarks</string>
     <string name="AddBookmark">Bookmark</string>
     <string name="RemoveBookmark">Remove bookmark</string>
@@ -325,8 +325,8 @@
     <string name="BackAnimationSpring">Spring</string>
     <string name="BackAnimationPredictive">Predictive</string>
     <string name="AddToFilter">Add to Filter</string>
-    <string name="UnifiedPushNeverReceivedNotifications">You never received notifications with UnifiedPush since Nixgram was started.</string>
-    <string name="UnifiedPushLastReceivedNotification">The last received notification with UnifiedPush was %1$d seconds ago.\n\nYou received %2$d notifications since Nixgram was started.</string>
+    <string name="UnifiedPushNeverReceivedNotifications">You never received notifications with UnifiedPush since NixgramX was started.</string>
+    <string name="UnifiedPushLastReceivedNotification">The last received notification with UnifiedPush was %1$d seconds ago.\n\nYou received %2$d notifications since NixgramX was started.</string>
     <string name="UnifiedPushCurrentEndpoint">The current UnifiedPush endpoint is: %1$s</string>
     <string name="PlayOnce">Play once</string>
     <string name="StorageSettings">Storage</string>
