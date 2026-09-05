@@ -60,6 +60,9 @@ public class NekoConfig {
     public static final int ID_TYPE_API = 1;
     public static final int ID_TYPE_BOT_API = 2;
 
+    private static final String LEGACY_DEFAULT_CUSTOM_SAVE_PATH = "Nagram";
+    private static final String DEFAULT_CUSTOM_SAVE_PATH = "NixgramX";
+
     private static SharedPreferences preferences;
 
     public static SharedPreferences getPreferences() {
@@ -125,7 +128,7 @@ public class NekoConfig {
     public static ConfigItem showIdAndDc = addConfig("ShowIdAndDc", configTypeBool, true);
 
     public static ConfigItem cachePath = addConfig("cache_path", configTypeString, "");
-    public static ConfigItem customSavePath = addConfig("customSavePath", configTypeString, "Nagram");
+    public static ConfigItem customSavePath = addConfig("customSavePath", configTypeString, DEFAULT_CUSTOM_SAVE_PATH);
 
     public static ConfigItem translationProvider = addConfig("translationProvider", configTypeInt, 1);
     public static ConfigItem translateToLang = addConfig("TransToLang", configTypeString, ""); // "" -> translate to current language (MessageTrans.kt & Translator.kt)
@@ -272,6 +275,9 @@ public class NekoConfig {
                     o.value = o.defaultValue;
                     getPreferences().edit().remove(o.key).apply();
                 }
+            }
+            if (LEGACY_DEFAULT_CUSTOM_SAVE_PATH.equals(customSavePath.String())) {
+                customSavePath.setConfigString(DEFAULT_CUSTOM_SAVE_PATH);
             }
             if (!configLoaded)
                 getPreferences().registerOnSharedPreferenceChangeListener(CloudSettingsHelper.listener);
