@@ -797,9 +797,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         moreButtonView.setIcon(R.drawable.ic_ab_other);
         moreButtonView.addSubItem(0, R.drawable.msg_policy_solar, getString(R.string.Proxy));
         moreButtonView.addSubItem(1, R.drawable.msg_qrcode_solar, getString(R.string.ImportLogin));
-        // Always expose the entry so users get an honest explanation instead of a
-        // Credential Manager “browser signature mismatch” crash path on custom-signed builds.
-        moreButtonView.addSubItem(4, R.drawable.menu_passkey_add, getString(R.string.PasskeyLogin));
+        if (BuildVars.SUPPORTS_PASSKEYS) moreButtonView.addSubItem(4, R.drawable.menu_passkey_add, getString(R.string.PasskeyLogin));
         moreButtonView.addSubItem(2, R.drawable.msg_permissions_solar, getString(R.string.CustomApi)).setContentDescription(getString(R.string.CustomApi));
         moreButtonView.addSubItem(3, R.drawable.msg_retry_solar, getString(R.string.TestBackend));
         moreButtonView.setDelegate(id -> {
@@ -819,10 +817,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                      phoneView.testBackendCheckBox.setVisibility(phoneView.testBackendCheckBox.getVisibility() == View.GONE ? View.VISIBLE : View.GONE);
                 }
             } else if (id == 4) {
-                if (!BuildVars.SUPPORTS_PASSKEYS) {
-                    needShowAlert(getString(R.string.PasskeyForkUnavailableTitle), getString(R.string.PasskeyForkUnavailableMessage));
-                    return;
-                }
                 PhoneView phoneView = (PhoneView)views[VIEW_PHONE_INPUT];
                 if (phoneView != null) {
                     phoneView.requestPasskey(true, true);

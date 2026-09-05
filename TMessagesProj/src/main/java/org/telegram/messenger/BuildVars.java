@@ -40,12 +40,10 @@ public class BuildVars {
     // You can use this flag to disable Google Play Billing (If you're making fork and want it to be in Google Play)
     public static boolean IS_BILLING_UNAVAILABLE = false;
 
-    // Telegram RP ID is telegram.org; Android Credential Manager requires the caller
-    // package+signing cert to be listed in https://telegram.org/.well-known/assetlinks.json
-    // (relation get_login_creds). Official docs: "unofficial Telegram apps won't be able to
-    // use passkeys at all". NixgramX is app.nixgramx.android with a custom keystore, so keep
-    // this false — enabling only surfaces signature-mismatch failures.
-    public static boolean SUPPORTS_PASSKEYS = false;
+    // Limited passkeys (same approach as NagramX): Android 14+ Credential Manager with
+    // CREDENTIAL_MANAGER_SET_ORIGIN. Google Password Manager / telegram.org assetlinks will
+    // fail on custom package+signature; Bitwarden/KeePassDX can work if the user trusts this app.
+    public static boolean SUPPORTS_PASSKEYS = Build.VERSION.SDK_INT >= 34;
 
     static {
         APP_ID = BuildConfig.APP_ID;

@@ -290,8 +290,8 @@
     <string name="PasskeyUnsupportedTitle">Unsupported password manager</string>
     <string name="PasskeyUnsupportedMessage">Try other password managers like **Bitwarden** or **KeePassDX**.</string>
     <string name="PasskeyNoCredentialAvailable">No viable credential is available.</string>
-    <string name="PasskeyForkUnavailableTitle">Passkeys unavailable</string>
-    <string name="PasskeyForkUnavailableMessage">Telegram only allows passkeys for official apps listed in telegram.org Digital Asset Links (matching package name and signing certificate).\n\nNixgramX uses app.nixgramx.android with its own release keystore, so Android Credential Manager rejects the WebAuthn origin (for example “browser signature mismatch”).\n\nPlease sign in with your phone number / SMS, or use QR login from another logged-in device.</string>
+    <string name="PasskeyForkUnavailableTitle">Passkey setup needed</string>
+    <string name="PasskeyForkUnavailableMessage">Passkeys on NixgramX need Android 14+ and a password manager that can trust this app (Bitwarden or KeePassDX). In Bitwarden: Settings → Autofill → Privileged apps — trust app.nixgramx.android. Do not use Google Password Manager. Fingerprint SHA-256: 52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C</string>
     <string name="BookmarksManager">Bookmarks</string>
     <string name="AddBookmark">Bookmark</string>
     <string name="RemoveBookmark">Remove bookmark</string>

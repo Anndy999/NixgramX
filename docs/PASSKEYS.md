@@ -1,53 +1,22 @@
-# Passkeys (通行密钥) on NixgramX
+# Passkeys on NixgramX (limited, NagramX-compatible)
 
-## Root cause
+NixgramX keeps NagramX-style **limited** passkey support on Android 14+ (`SUPPORTS_PASSKEYS = SDK_INT >= 34`), using `CREDENTIAL_MANAGER_SET_ORIGIN` and Bitwarden/KeePassDX.
 
-Telegram Android passkeys use WebAuthn with RP ID `telegram.org` via Android Credential Manager (`PasskeysController`).
+## Why Google Password Manager fails
 
-For a native app to assert that web origin, Android requires a Digital Asset Links match at:
+`https://telegram.org/.well-known/assetlinks.json` only lists official Telegram packages and signing certs. NixgramX (`app.nixgramx.android` + our release keystore) is not listed, so Google’s provider reports signature / origin mismatch.
 
-`https://telegram.org/.well-known/assetlinks.json`
+## What works (same as NagramX)
 
-with relation `delegate_permission/common.get_login_creds` (and typically `handle_all_urls`).
+1. Android 14+
+2. Bitwarden **or** KeePassDX as the system passkey / credential provider
+3. Bitwarden → Settings → Autofill → **Privileged apps** → trust **NixgramX** / `app.nixgramx.android` when prompted
+4. Prefer creating the passkey **from this app** (or add this package+fingerprint to an existing vault item). Do not expect an official-Telegram-only item to work unchanged.
 
-That file currently lists only official packages / signing certs, e.g.:
+Release signing SHA-256 (current keystore):
 
-- `org.telegram.messenger` (+ `.web` / `.beta`)
-- `org.thunderdog.challegram` (Telegram X)
+`52:54:81:59:97:91:41:62:6E:E5:B4:07:B8:4E:E7:0A:33:44:ED:91:29:7F:5F:BE:8E:91:DF:8F:0C:29:A3:1C`
 
-NixgramX is `app.nixgramx.android` signed with the NixgramX release keystore. It is **not** listed, so Credential Manager fails with localized errors such as:
+## Fallback
 
-> 由于浏览器签名不匹配，通行密钥操作失败
-
-Official API note ([Passkeys in unofficial Telegram apps](https://core.telegram.org/api/passkeys)): unofficial apps cannot use passkeys because the server requires RP ID `telegram.org`.
-
-Upstream `BuildVars` comment: *“works only on official app ids, disable on your forks”*.
-
-## Why we cannot “just fix” it
-
-| Approach | Why it fails |
-| --- | --- |
-| Keep Credential Manager + `setOrigin(https://telegram.org)` | Needs DAL / privileged-browser association we do not have |
-| Change `applicationId` to `org.telegram.messenger` | Forbidden (identity) and still needs official signing cert |
-| Reuse official Telegram / NagramX keystore | Forbidden |
-| Host our own `assetlinks.json` | We do not control `telegram.org` |
-| Bitwarden / KeePassDX trust hacks | May bypass local provider checks; Telegram still expects `telegram.org` origin / official binding |
-
-This is **not** a NixgramX regression vs NagramX 12.10.1 — same cryptographic constraint.
-
-## What we ship
-
-- `BuildVars.SUPPORTS_PASSKEYS = false` (no broken Credential Manager create/get)
-- Login “Passkey” menu still visible → clear dialog (EN / zh-CN / zh-TW) pointing to **phone/SMS** or **QR** login
-- Signature/origin-looking errors mapped to the same dialog if the path is re-enabled later
-
-## How to verify
-
-1. Install release APK (`app.nixgramx.android`).
-2. Open login → ⋮ → Passkey / 通行密钥 → expect explanation dialog, **not** system signature-mismatch toast.
-3. Confirm phone-number SMS login and QR login still work.
-4. Optional: official Telegram app on same device can still use passkeys for the same account.
-
-## Residual limitation
-
-Passkey **create** and **login** inside NixgramX will not work until Telegram adds `app.nixgramx.android` + our SHA-256 cert to `telegram.org` assetlinks (extremely unlikely) or changes RP policy for unofficial clients.
+Phone / SMS and QR login always work.
