@@ -51,10 +51,11 @@ if (properties != null) {
     pwd = pwd ?: properties.getProperty('ALIAS_PASS')
 }
 
-// Own keys from https://my.telegram.org. Sample api_id 6 is mass-revoked by Telegram.
+// NixgramX app on my.telegram.org (api_id 39764388). Sample id 6 is mass-revoked.
 // GitHub secret APP_ID is only for Tools/scripts/upload.py — it is not baked into the APK.
-def appId = properties?.getProperty('TELEGRAM_APP_ID') ?: System.getenv('TELEGRAM_APP_ID')
-def appHash = properties?.getProperty('TELEGRAM_APP_HASH') ?: System.getenv('TELEGRAM_APP_HASH')
+// local.properties / env still override these defaults.
+def appId = properties?.getProperty('TELEGRAM_APP_ID') ?: System.getenv('TELEGRAM_APP_ID') ?: '39764388'
+def appHash = properties?.getProperty('TELEGRAM_APP_HASH') ?: System.getenv('TELEGRAM_APP_HASH') ?: '6560b562ce8b4ba88fe2d5e9240cbbf9'
 if (!appId || appId == '6' || !(appId ==~ /^\d+$/) || !appHash || appHash == 'eb06d4abfb49dc3eeb1aeb98ae0f581e') {
     throw new GradleException(
         "TELEGRAM_APP_ID/TELEGRAM_APP_HASH are missing or set to the public sample '6'. " +
