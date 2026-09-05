@@ -82,7 +82,18 @@ def get_caption() -> str:
     import html
 
     commit_id, commit_url, commit_message = get_commit_info()
-    pre = "Test version." if test_version else "Release version."
+    if test_version:
+        pre = (
+            "🧪 Beta / 测试版\n"
+            "Track: #updateBeta (in-app updater)\n"
+            "Test version — install if you opted into beta updates."
+        )
+    else:
+        pre = (
+            "✅ Release / 正式版\n"
+            "Track: #updateRelease (in-app updater)\n"
+            "Release version."
+        )
     caption = f"{pre}\n\n"
     caption += f"Commit Message:\n<blockquote expandable>{html.escape(commit_message)}</blockquote>\n\n"
     caption += f"See commit details [{commit_id}]({commit_url})"
@@ -192,13 +203,22 @@ async def send_to_channel(client: "Client", cid) -> dict[str, int]:
 
 
 @retry
-async def send_update_json(client: "Client", cid, document_ids: dict[str, int]):
+async def send_update_json(client: "Client", cid, document_ids: dict[str, int], *, public_labeled: bool = False):
     with contextlib.suppress(ValueError):
         cid = int(cid)
-    text = build_update_payload(document_ids)
-    print(f"Posting updater metadata ({text.split(' ', 1)[0]}):", flush=True)
-    print(text, flush=True)
-    msg = await client.send_message(chat_id=cid, text=text)
+    payload = build_update_payload(document_ids)
+    tag = payload.split(' ', 1)[0]
+    if public_labeled:
+        track = "Beta / 测试版" if test_version else "Release / 正式版"
+        label = (
+            f"📦 应用内更新元数据 · {track}\n"
+            f"Tag: {tag}\n"
+            "给 NixgramX「检查更新」用；可忽略此条。"
+        )
+        await client.send_message(chat_id=cid, text=label)
+    print(f"Posting updater metadata ({tag}):", flush=True)
+    print(payload, flush=True)
+    msg = await client.send_message(chat_id=cid, text=payload)
     print(f"Updater metadata message_id={msg.id}", flush=True)
     return msg
 
@@ -234,13 +254,11 @@ async def main():
     client = get_client(bot_token)
     await client.start()
     await resolve_and_print_chat(client, chat_id)
-    # Public/APK lane: upload APKs only (caption OK). Never post #update* JSON here when
-    # metadata target is missing or identical — that would spam the public channel.
+    # APKs always go to HELPER_BOT_TARGET (public @NixgramX).
     document_ids = await send_to_channel(client, chat_id)
     if metadata_chat_id and not same_chat(metadata_chat_id, chat_id):
         await resolve_and_print_chat(client, metadata_chat_id)
-        # Document message IDs live in the APK chat; they are not usable from a different
-        # private metadata channel. Ship url-only JSON so the in-app updater opens @NixgramX.
+        # Private metadata chat: url-only JSON (APK message IDs are not in that chat).
         url_only_docs: dict[str, int] = {}
         await send_update_json(client, metadata_chat_id, url_only_docs)
         await send_canary_metadata(client, metadata_chat_id)
@@ -250,15 +268,17 @@ async def main():
             flush=True,
         )
     else:
+        # Same chat or canary unset: post labeled #update* JSON on the public APK channel
+        # (owner preference — clearer than skipping; APK caption already marks Beta/Release).
+        meta_target = metadata_chat_id or chat_id
         print(
-            "WARNING: HELPER_BOT_CANARY_TARGET is missing or equals HELPER_BOT_TARGET "
+            "INFO: posting #update* JSON to the APK/public chat "
             f"(APK chat={chat_id}, metadata={metadata_chat_id}). "
-            "Skipping #updateRelease/#updateBeta JSON so the public channel does not show "
-            "ugly updater metadata. Create a *private* metadata channel, set "
-            "HELPER_BOT_CANARY_TARGET to it, and point BaseRemoteHelper.CHANNEL_METADATA_* at it. "
-            "APKs were still uploaded with caption only.",
+            "Human label + #updateBeta/#updateRelease tag; document map includes APK message ids.",
             flush=True,
         )
+        await send_update_json(client, meta_target, document_ids, public_labeled=True)
+        await send_canary_metadata(client, meta_target)
     await client.log_out()
 
 

@@ -8,7 +8,7 @@ NixgramX reuses NagramX `UpdateHelper` / `BaseRemoteHelper` (metadata channel po
 
 | Channel | Role |
 | --- | --- |
-| Public [@NixgramX](https://t.me/NixgramX) | **APKs only** (media group + human caption). Never post `#updateRelease` / `#updateBeta` JSON here. |
+| Public [@NixgramX](https://t.me/NixgramX) | **APKs** (caption marks Beta/Release). If `HELPER_BOT_CANARY_TARGET` is unset or equals this chat, also posts labeled `#updateRelease` / `#updateBeta` JSON here (owner OK). Prefer a *private* canary chat when you want JSON off the public feed. |
 | Private metadata channel | Receives `#update*` JSON (+ optional canary line) for in-app updates. |
 
 `Tools/scripts/upload.py`:
