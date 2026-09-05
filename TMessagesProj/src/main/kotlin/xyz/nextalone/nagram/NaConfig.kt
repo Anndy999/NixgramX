@@ -178,7 +178,7 @@ object NaConfig {
         addConfig(
             "CustomTitle",
             ConfigItem.configTypeString,
-            "Nagram X"
+            "Nixgram"
         )
     val dateOfForwardedMsg =
         addConfig(
@@ -1509,6 +1509,13 @@ object NaConfig {
                 putBoolean("photoHighQualityDefault", highQuality)
             }
             SharedConfig.photoHighQualityDefault = highQuality
+        }
+
+        // Migrate legacy home-title defaults to Nixgram without wiping other settings.
+        val legacyTitles = setOf("Nagram X", "NagramX", "NixgramX", "")
+        val storedTitle = customTitle.String()
+        if (storedTitle in legacyTitles) {
+            customTitle.setConfigString("Nixgram")
         }
 
         val currentLlmApiUrl = llmApiUrl.String()

@@ -222,25 +222,43 @@ def get_client(bot_token: str):
     )
 
 
+def same_chat(a, b) -> bool:
+    if a is None or b is None:
+        return False
+    return str(a).strip().lower() == str(b).strip().lower()
+
+
 async def main():
     bot_token = argv[1]
     chat_id = argv[2]
     client = get_client(bot_token)
     await client.start()
     await resolve_and_print_chat(client, chat_id)
+    # Public/APK lane: upload APKs only (caption OK). Never post #update* JSON here when
+    # metadata target is missing or identical — that would spam the public channel.
     document_ids = await send_to_channel(client, chat_id)
-    # Prefer posting #update* into the APK chat so document message IDs resolve in-channel.
-    await send_update_json(client, chat_id, document_ids)
-    if metadata_chat_id:
-        # If canary/metadata target differs, also post update JSON there and keep canary line.
-        same = str(metadata_chat_id) == str(chat_id)
-        if not same:
-            await resolve_and_print_chat(client, metadata_chat_id)
-            await send_update_json(client, metadata_chat_id, document_ids)
-            await send_canary_metadata(client, metadata_chat_id)
-        else:
-            # Same channel (@NixgramX): skip duplicate canary to avoid noise.
-            print("metadata chat same as APK chat; skipped duplicate canary metadata", flush=True)
+    if metadata_chat_id and not same_chat(metadata_chat_id, chat_id):
+        await resolve_and_print_chat(client, metadata_chat_id)
+        # Document message IDs live in the APK chat; they are not usable from a different
+        # private metadata channel. Ship url-only JSON so the in-app updater opens @NixgramX.
+        url_only_docs: dict[str, int] = {}
+        await send_update_json(client, metadata_chat_id, url_only_docs)
+        await send_canary_metadata(client, metadata_chat_id)
+        print(
+            "Posted #update* JSON to private metadata chat only "
+            f"(APK chat={chat_id}, metadata chat={metadata_chat_id}); document map empty (url-only).",
+            flush=True,
+        )
+    else:
+        print(
+            "WARNING: HELPER_BOT_CANARY_TARGET is missing or equals HELPER_BOT_TARGET "
+            f"(APK chat={chat_id}, metadata={metadata_chat_id}). "
+            "Skipping #updateRelease/#updateBeta JSON so the public channel does not show "
+            "ugly updater metadata. Create a *private* metadata channel, set "
+            "HELPER_BOT_CANARY_TARGET to it, and point BaseRemoteHelper.CHANNEL_METADATA_* at it. "
+            "APKs were still uploaded with caption only.",
+            flush=True,
+        )
     await client.log_out()
 
 

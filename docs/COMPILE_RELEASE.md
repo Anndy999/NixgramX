@@ -51,7 +51,7 @@ After upload, check the job log for `CHANNEL_METADATA_ID candidate=` and `chat.i
 - Auto-update framework, switch default OFF; metadata name `NixgramX`, id still `0`
 - Nixgram display branding
 - NixgramX release keystore binary (passwords not in git)
-- `upload.py` posts `#updateRelease` / `#updateBeta` JSON after APK media group
+- `upload.py` posts APKs to public channel; `#update*` JSON only to private metadata chat when distinct
 
 ## What you still must supply / verify
 
