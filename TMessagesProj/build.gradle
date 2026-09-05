@@ -77,6 +77,18 @@ if (properties != null) {
     pwd = pwd ?: properties.getProperty('ALIAS_PASS')
 }
 
+// Own keys from https://my.telegram.org. Sample api_id 6 is mass-revoked by Telegram.
+// GitHub secret APP_ID is only for Tools/scripts/upload.py — it is not baked into the APK.
+def appId = properties?.getProperty('TELEGRAM_APP_ID') ?: System.getenv('TELEGRAM_APP_ID')
+def appHash = properties?.getProperty('TELEGRAM_APP_HASH') ?: System.getenv('TELEGRAM_APP_HASH')
+if (!appId || appId == '6' || !(appId ==~ /^\d+$/) || !appHash || appHash == 'eb06d4abfb49dc3eeb1aeb98ae0f581e') {
+    throw new GradleException(
+        "TELEGRAM_APP_ID/TELEGRAM_APP_HASH are missing or set to the public sample '6'. " +
+        "Telegram revokes sessions for clients on api_id=6, and FCM cannot bind to that app. " +
+        "Set TELEGRAM_APP_ID and TELEGRAM_APP_HASH in local.properties (local) or the LOCAL_PROPERTIES secret (CI)."
+    )
+}
+
 def nativeTarget = System.getenv('NATIVE_TARGET') ?: ''
 
 // NixgramX identity: full = app.nixgramx.android, base = app.nixgramx.android.base
@@ -129,15 +141,6 @@ android {
     defaultConfig {
         versionName verName
         versionCode verCode
-
-        // obtain your own keys at https://core.telegram.org/api/obtaining_api_id
-        def appId = '6'
-        def appHash = 'eb06d4abfb49dc3eeb1aeb98ae0f581e'
-
-        if (properties != null) {
-            appId = properties.getProperty('TELEGRAM_APP_ID') ?: System.getenv('TELEGRAM_APP_ID') ?: appId
-            appHash = properties.getProperty('TELEGRAM_APP_HASH') ?: System.getenv('TELEGRAM_APP_HASH') ?: appHash
-        }
 
         buildConfigField 'String', 'BUILD_VERSION_STRING', '"' + verName + '"'
         buildConfigField 'String', 'NIXGRAMX_CHANNEL', '"' + distributionChannel + '"'

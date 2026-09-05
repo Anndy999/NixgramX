@@ -10,6 +10,8 @@
 ```bash
 cp local.properties.example local.properties
 # fill TELEGRAM_APP_ID / TELEGRAM_APP_HASH, KEYSTORE_*, sdk.dir
+# Gradle refuses the public sample api_id 6 (Telegram mass-revokes those sessions).
+# CI: TELEGRAM_APP_ID must be inside the LOCAL_PROPERTIES secret, not secrets.APP_ID (upload.py only).
 ```
 
 Replace:
