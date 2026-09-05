@@ -67,6 +67,17 @@
     <string name="PushServiceTypeInApp">内置</string>
     <string name="PushServiceTypeInAppDialog">显示常驻通知</string>
     <string name="PushServiceTypeUnifiedGateway">Unified Push 网关</string>
+    <string name="FcmPushStatus">FCM 状态</string>
+    <string name="FcmPushStatusHint">点按可重新请求 FCM 令牌</string>
+    <string name="FcmPushRequestToken">重新请求 FCM 令牌</string>
+    <string name="FcmPushRequesting">正在请求 FCM 令牌…</string>
+    <string name="FcmPlayServicesAvailable">Play 服务：可用</string>
+    <string name="FcmPlayServicesUnavailable">Play 服务：不可用（code=%1$d）</string>
+    <string name="FcmPushServiceTypeValue">推送类型：%1$s</string>
+    <string name="FcmPushStringStatus">status：%1$s</string>
+    <string name="FcmPushTokenOk">token：OK（len=%1$d，prefix=%2$s…）</string>
+    <string name="FcmPushTokenMissing">token：缺失</string>
+    <string name="FcmPushLastError">最近错误：%1$s</string>
     <string name="SendMp4DocumentAsVideo">MP4 视频作为文件发送时可预览</string>
     <string name="StickersChooseShortNameForStickerPack">为您的包选择一个简短的名称。</string>
     <string name="StickersCopyStickerSet">复制整个贴纸包</string>
@@ -105,4 +116,13 @@
     <string name="VideoPlayerDecoderPreferSW">软解优先</string>
     <string name="VideoPlayerDecoderHardware">仅硬解</string>
     <string name="VideoPlayerDecoderPreferHW">硬解优先</string>
+
+    <string name="InputBar">输入栏</string>
+    <string name="IosButtonPlacement">按钮位置（iOS）</string>
+    <string name="IosInputAppearance">外观（iOS）</string>
+    <string name="CompactInputSize">紧凑尺寸</string>
+    <string name="ActionButtonStyle">操作按钮样式</string>
+    <string name="ActionButtonStyleAccent">强调色</string>
+    <string name="ActionButtonStyleNeutral">中性</string>
+    <string name="ActionButtonStyleWhite">白色</string>
 </resources>

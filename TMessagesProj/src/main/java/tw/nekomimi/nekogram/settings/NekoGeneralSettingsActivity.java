@@ -16,8 +16,12 @@ import android.view.View;
 
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.common.ConnectionResult;
+
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ContactsController;
+import org.telegram.messenger.GooglePushListenerServiceProvider;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.PushListenerController;
@@ -29,6 +33,8 @@ import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.SimpleTextView;
+import org.telegram.ui.Cells.TextDetailSettingsCell;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.UndoView;
@@ -41,6 +47,7 @@ import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.config.CellGroup;
 import tw.nekomimi.nekogram.config.cell.AbstractConfigCell;
 import tw.nekomimi.nekogram.config.cell.ConfigCellDivider;
+import tw.nekomimi.nekogram.config.cell.ConfigCellCustom;
 import tw.nekomimi.nekogram.config.cell.ConfigCellHeader;
 import tw.nekomimi.nekogram.config.cell.ConfigCellSelectBox;
 import tw.nekomimi.nekogram.config.cell.ConfigCellTextCheck;
@@ -254,6 +261,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
             getString(R.string.PushServiceTypeUnified),
             getString(R.string.PushServiceTypeMicroG),
     }, null));
+    private final AbstractConfigCell fcmPushStatusRow = cellGroup.appendCell(new ConfigCellCustom("FcmPushStatus", CellGroup.ITEM_TYPE_TEXT_DETAIL, true));
     private final AbstractConfigCell pushServiceTypeUnifiedGatewayRow = cellGroup.appendCell(new ConfigCellTextInput(null, NaConfig.INSTANCE.getPushServiceTypeUnifiedGateway(), UnifiedPushService.UP_GATEWAY_DEFAULT, null, (input) -> input.isEmpty() ? (String) NaConfig.INSTANCE.getPushServiceTypeUnifiedGateway().defaultValue : input));
     private final AbstractConfigCell pushServiceTypeInAppDialogRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getPushServiceTypeInAppDialog()));
     private final AbstractConfigCell disableNotificationBubblesRow = cellGroup.appendCell(new ConfigCellTextCheck(NekoConfig.disableNotificationBubbles));
@@ -322,6 +330,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
                     NaConfig.INSTANCE.getPushServiceTypeInAppDialog().setConfigBool(false);
                 }
                 checkPushServiceTypeRows();
+                refreshFcmPushStatusRow();
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NaConfig.INSTANCE.getPushServiceTypeInAppDialog().getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
@@ -418,19 +427,6 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
     }
 
     @Override
-    protected boolean onItemLongClick(View view, int position, float x, float y) {
-        AbstractConfigCell a = cellGroup.rows.get(position);
-        if (a == pushServiceTypeUnifiedGatewayRow) {
-            ItemOptions options = makeLongClickOptions(view);
-            options.add(R.drawable.msg_stats, getString(R.string.Statistics), this::showUnifiedPushStatistics);
-            addDefaultLongClickOptions(options, "general", position);
-            showLongClickOptions(view, options);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
     public int getBaseGuid() {
         return 12000;
     }
@@ -445,6 +441,125 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
         return getString(R.string.General);
     }
 
+    private String buildFcmPushStatusValue() {
+        StringBuilder sb = new StringBuilder();
+        int playServicesCode = GooglePushListenerServiceProvider.checkPlayServicesStatusCode();
+        if (playServicesCode == ConnectionResult.SUCCESS) {
+            sb.append(getString(R.string.FcmPlayServicesAvailable));
+        } else {
+            sb.append(LocaleController.formatString(R.string.FcmPlayServicesUnavailable, playServicesCode));
+        }
+
+        int pushType = NaConfig.INSTANCE.getPushServiceType().Int();
+        String pushTypeLabel;
+        switch (pushType) {
+            case 0:
+                pushTypeLabel = getString(R.string.PushServiceTypeInApp);
+                break;
+            case 1:
+                pushTypeLabel = getString(R.string.PushServiceTypeFCM);
+                break;
+            case 2:
+                pushTypeLabel = getString(R.string.PushServiceTypeUnified);
+                break;
+            case 3:
+                pushTypeLabel = getString(R.string.PushServiceTypeMicroG);
+                break;
+            default:
+                pushTypeLabel = String.valueOf(pushType);
+                break;
+        }
+        sb.append('\n').append(LocaleController.formatString(R.string.FcmPushServiceTypeValue, pushTypeLabel));
+
+        if (!TextUtils.isEmpty(SharedConfig.pushStringStatus)) {
+            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushStringStatus, SharedConfig.pushStringStatus));
+        }
+
+        if (!TextUtils.isEmpty(SharedConfig.pushString)) {
+            String token = SharedConfig.pushString;
+            int len = token.length();
+            String prefix = len >= 8 ? token.substring(0, 8) : token;
+            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushTokenOk, len, prefix));
+        } else {
+            sb.append('\n').append(getString(R.string.FcmPushTokenMissing));
+        }
+
+        if (!TextUtils.isEmpty(SharedConfig.pushStringLastError)) {
+            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushLastError, SharedConfig.pushStringLastError));
+        }
+
+        sb.append('\n').append(getString(R.string.FcmPushStatusHint));
+        return sb.toString();
+    }
+
+    private void refreshFcmPushStatusRow() {
+        if (listAdapter == null) {
+            return;
+        }
+        int index = cellGroup.rows.indexOf(fcmPushStatusRow);
+        if (index >= 0) {
+            listAdapter.notifyItemChanged(index);
+        }
+    }
+
+    private void showFcmPushStatusDialog() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        showDialog(new AlertDialog.Builder(getParentActivity())
+                .setTitle(getString(R.string.FcmPushStatus))
+                .setMessage(buildFcmPushStatusValue())
+                .setNegativeButton(getString(R.string.OK), null)
+                .setPositiveButton(getString(R.string.FcmPushRequestToken), (dialog, which) -> rerequestFcmToken())
+                .create());
+    }
+
+    private void rerequestFcmToken() {
+        SharedConfig.pushStringLastError = "";
+        PushListenerController.IPushListenerServiceProvider provider = ApplicationLoader.getPushProvider();
+        if (provider instanceof GooglePushListenerServiceProvider googleProvider) {
+            googleProvider.reset();
+            googleProvider.onRequestPushToken();
+        } else {
+            GooglePushListenerServiceProvider googleProvider = new GooglePushListenerServiceProvider();
+            googleProvider.onRequestPushToken();
+        }
+        if (getParentActivity() != null) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, getString(R.string.FcmPushRequesting)).show();
+        }
+        refreshFcmPushStatusRow();
+        AndroidUtilities.runOnUIThread(this::refreshFcmPushStatusRow, 1500);
+        AndroidUtilities.runOnUIThread(this::refreshFcmPushStatusRow, 4000);
+    }
+
+    @Override
+    protected void onCustomCellClick(View view, int position, float x, float y) {
+        AbstractConfigCell a = cellGroup.rows.get(position);
+        if (a == fcmPushStatusRow) {
+            showFcmPushStatusDialog();
+        }
+    }
+
+    @Override
+    protected boolean onItemLongClick(View view, int position, float x, float y) {
+        AbstractConfigCell a = cellGroup.rows.get(position);
+        if (a == pushServiceTypeUnifiedGatewayRow) {
+            ItemOptions options = makeLongClickOptions(view);
+            options.add(R.drawable.msg_stats, getString(R.string.Statistics), this::showUnifiedPushStatistics);
+            addDefaultLongClickOptions(options, "general", position);
+            showLongClickOptions(view, options);
+            return true;
+        }
+        if (a == fcmPushStatusRow) {
+            ItemOptions options = makeLongClickOptions(view);
+            options.add(R.drawable.msg_retry, getString(R.string.FcmPushRequestToken), this::rerequestFcmToken);
+            addDefaultLongClickOptions(options, "general", position);
+            showLongClickOptions(view, options);
+            return true;
+        }
+        return false;
+    }
+
     // impl ListAdapter
     private class ListAdapter extends BaseListAdapter {
 
@@ -452,6 +567,13 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
             super(context);
         }
 
+        @Override
+        protected void onBindCustomViewHolder(@androidx.annotation.NonNull RecyclerView.ViewHolder holder, int position) {
+            if (position == cellGroup.rows.indexOf(fcmPushStatusRow) && holder.itemView instanceof TextDetailSettingsCell cell) {
+                cell.setMultilineDetail(true);
+                cell.setTextAndValue(getString(R.string.FcmPushStatus), buildFcmPushStatusValue(), cellGroup.needSetDivider(fcmPushStatusRow));
+            }
+        }
     }
 
     private void checkCustomDoHRows() {
