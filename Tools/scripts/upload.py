@@ -18,25 +18,46 @@ beta_version = distribution in {"test", "beta", "canary"}
 metadata_chat_id = argv[4] if len(argv) > 4 else None
 
 
+# Known public APK channel Bot API id (from prior successful uploads).
+DEFAULT_APK_CHAT_ID = "-1003819693045"
+
+
 def normalize_chat_ref(value):
     """Accept @Name, Name, t.me/Name, or numeric -100… / positive ids."""
     if value is None:
         return None
-    s = str(value).strip()
+    s = str(value).strip().strip('"').strip("'")
     if not s:
         return s
     # URLs / t.me links
-    for prefix in ("https://t.me/", "http://t.me/", "t.me/"):
+    for prefix in ("https://t.me/", "http://t.me/", "tg://resolve?domain="):
         if s.lower().startswith(prefix):
             s = s[len(prefix):]
             break
+    if s.lower().startswith("t.me/"):
+        s = s[5:]
     s = s.strip().strip("/")
-    # Numeric chat id
+    # Numeric chat id (Bot API / MTProto)
     if s.lstrip("-").isdigit():
+        return s
+    # Positive public channel id used by BaseRemoteHelper → Bot API form
+    if s.isdigit():
         return s
     if not s.startswith("@"):
         s = "@" + s
     return s
+
+
+def describe_chat_ref(value) -> str:
+    """Safe debug descriptor (no secret leak beyond shape)."""
+    if value is None:
+        return "None"
+    s = str(value)
+    if s.lstrip("-").isdigit():
+        return f"numeric(len={len(s)})"
+    if s.startswith("@"):
+        return f"username(@…{s[-4:]},len={len(s)})"
+    return f"other(len={len(s)})"
 
 
 
@@ -260,9 +281,28 @@ def same_chat(a, b) -> bool:
 
 async def main():
     bot_token = argv[1]
-    chat_id = normalize_chat_ref(argv[2])
+    chat_id = normalize_chat_ref(argv[2]) or DEFAULT_APK_CHAT_ID
     global metadata_chat_id
     metadata_chat_id = normalize_chat_ref(metadata_chat_id)
+    # Prefer numeric id: username resolve has been flaky for the helper bot.
+    if chat_id and not str(chat_id).lstrip("-").isdigit():
+        print(
+            f"WARN: chat ref is {describe_chat_ref(chat_id)}; "
+            f"falling back to DEFAULT_APK_CHAT_ID for reliability.",
+            flush=True,
+        )
+        chat_id = DEFAULT_APK_CHAT_ID
+    if metadata_chat_id and not str(metadata_chat_id).lstrip("-").isdigit():
+        print(
+            f"WARN: metadata ref is {describe_chat_ref(metadata_chat_id)}; "
+            f"using APK chat id instead.",
+            flush=True,
+        )
+        metadata_chat_id = chat_id
+    print(
+        f"Using APK chat={describe_chat_ref(chat_id)} metadata={describe_chat_ref(metadata_chat_id)}",
+        flush=True,
+    )
     client = get_client(bot_token)
     await client.start()
     await resolve_and_print_chat(client, chat_id)

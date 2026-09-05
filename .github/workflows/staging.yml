@@ -132,4 +132,4 @@ jobs:
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
           export COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
-          python Tools/scripts/upload.py ${{ secrets.HELPER_BOT_TOKEN }} ${{ secrets.HELPER_BOT_TARGET }} beta ${{ secrets.HELPER_BOT_CANARY_TARGET }}
+          python Tools/scripts/upload.py "${{ secrets.HELPER_BOT_TOKEN }}" "${{ secrets.HELPER_BOT_TARGET }}" beta "${{ secrets.HELPER_BOT_CANARY_TARGET }}"
