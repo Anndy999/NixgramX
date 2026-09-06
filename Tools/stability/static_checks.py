@@ -12,6 +12,7 @@ for path in Path('TMessagesProj/src').rglob('AndroidManifest.xml'):
     ET.parse(path)
 pr = Path('.github/workflows/pr.yml').read_text()
 assert "'**.xml'" not in pr, 'Android XML must trigger CI'
+assert "if: inputs.source_sha != '' ||" in Path('.github/workflows/upstream-sync-ci.yml').read_text(), 'Reusable compile job must run for ordinary PRs'
 release = Path('.github/workflows/release.yml').read_text()
 assert "if: github.event_name == 'workflow_dispatch' && inputs.publish" in release
 assert 'python3 Tools/stability/release_gate.py' in release

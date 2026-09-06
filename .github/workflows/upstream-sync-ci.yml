@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   compile:
-    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'upstream-sync/')
+    if: inputs.source_sha != '' || github.event_name != 'pull_request' || startsWith(github.head_ref, 'upstream-sync/')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -40,6 +40,8 @@ jobs:
         with:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
       - name: YAML, regression and diff checks
+        env:
+          STABILITY_BASE_REF: ${{ github.base_ref || 'main' }}
         run: |
           python3 -m pip install 'PyYAML==6.0.2'
           python3 Tools/stability/static_checks.py
@@ -47,7 +49,7 @@ jobs:
           mkdir -p /tmp/diagnostic-tests
           javac -d /tmp/diagnostic-tests TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java Tools/stability/DiagnosticStoreTest.java
           java -cp /tmp/diagnostic-tests DiagnosticStoreTest
-          git fetch origin "${{ github.base_ref || 'main' }}" --depth=1
+          git fetch origin "$STABILITY_BASE_REF" --depth=1
           git diff --check FETCH_HEAD HEAD
       - name: Prepare disposable Debug configuration
         run: |
