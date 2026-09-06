@@ -985,7 +985,6 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
     }
 
     private void updateMessageCellAnimated(@NonNull ChatMessageCell messageCell, @NonNull MessageObject messageObject, @Nullable Bitmap snapshotBefore) {
-        final boolean animate = MessagesController.getGlobalMainSettings().getBoolean("view_animations", true);
         final RecyclerView recyclerView = messageCell.getParent() instanceof RecyclerView ? (RecyclerView) messageCell.getParent() : null;
 
         if (recyclerView != null) {
@@ -1023,39 +1022,12 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
             }
         }
 
-        final HashMap<View, Float> beforeY;
-        final float anchorBottomBefore;
-        final int anchorHeightBefore;
-        final int anchorLeftBefore;
-        final int anchorWidthBefore;
-        if (animate && recyclerView != null) {
-            beforeY = captureChildY(recyclerView);
-            anchorBottomBefore = messageCell.getY() + messageCell.getHeight();
-            anchorHeightBefore = messageCell.getHeight();
-            anchorLeftBefore = Math.round(messageCell.getX());
-            anchorWidthBefore = messageCell.getWidth();
-        } else {
-            beforeY = null;
-            anchorBottomBefore = 0f;
-            anchorHeightBefore = 0;
-            anchorLeftBefore = 0;
-            anchorWidthBefore = 0;
-        }
-
         messageObject.forceUpdate = true;
         messageCell.setMessageObject(messageObject, messageCell.getCurrentMessagesGroup(), messageCell.isPinnedBottom(), messageCell.isPinnedTop(), messageCell.isFirstInChat(), messageCell.isLastInChatList());
         messageObject.forceUpdate = false;
         messageCell.requestLayout();
         messageCell.invalidate();
-
-        if (animate) {
-            animateCellChange(messageCell);
-        }
-        if (animate && recyclerView != null) {
-            animateRecyclerChildrenShift(recyclerView, messageCell, beforeY, anchorBottomBefore, anchorHeightBefore, anchorLeftBefore, anchorWidthBefore, snapshotBefore);
-        } else {
-            safeRecycle(snapshotBefore);
-        }
+        safeRecycle(snapshotBefore);
     }
 
     private void cancelAyuMessageAnimations() {
