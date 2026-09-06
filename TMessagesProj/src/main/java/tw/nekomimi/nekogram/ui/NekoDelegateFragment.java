@@ -1252,60 +1252,8 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
             return;
         }
 
-        if (snapshotBefore == null || snapshotBefore.isRecycled() || anchorWidthBefore <= 0 || anchorHeightBefore <= 0) {
-            safeRecycle(snapshotBefore);
-            return;
-        }
-
-        ValueAnimator runningOverlay = overlaySnapshotAnimators.remove(recyclerView);
-        if (runningOverlay != null) {
-            runningOverlay.cancel();
-        }
-        OwnedBitmapDrawable runningDrawable = overlayDrawables.remove(recyclerView);
-        if (runningDrawable != null) {
-            recyclerView.getOverlay().remove(runningDrawable);
-            runningDrawable.dispose();
-        }
-
-        int collapse = -heightDelta;
-        int top = Math.round(anchorBottomBefore - anchorHeightBefore);
-        int right = anchorLeftBefore + anchorWidthBefore;
-        int bottom = top + anchorHeightBefore;
-
-        OwnedBitmapDrawable drawable = new OwnedBitmapDrawable(snapshotBefore);
-        drawable.setBounds(anchorLeftBefore, top, right, bottom);
-        recyclerView.getOverlay().add(drawable);
-        overlayDrawables.put(recyclerView, drawable);
-
-        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
-        animator.setDuration(ChatListItemAnimator.DEFAULT_DURATION);
-        animator.setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR);
-        animator.addUpdateListener(animation -> {
-            float p = (float) animation.getAnimatedValue();
-            drawable.setClipTop(Math.round(collapse * p));
-            drawable.setAlpha(Math.round(255f * (1f - p)));
-            recyclerView.invalidate();
-        });
-        animator.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                recyclerView.getOverlay().remove(drawable);
-                if (overlayDrawables.get(recyclerView) == drawable) {
-                    overlayDrawables.remove(recyclerView);
-                }
-                drawable.dispose();
-                if (overlaySnapshotAnimators.get(recyclerView) == animator) {
-                    overlaySnapshotAnimators.remove(recyclerView);
-                }
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-                onAnimationEnd(animation);
-            }
-        });
-        overlaySnapshotAnimators.put(recyclerView, animator);
-        animator.start();
+        // heightDelta < 0: old snapshot over new EN/ZH glyphs is the overlap.
+        safeRecycle(snapshotBefore);
     }
 
     private void startVisiblePartTick(@NonNull RecyclerView recyclerView) {

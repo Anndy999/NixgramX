@@ -49,10 +49,10 @@ by the script above.
   `getLastLineWidthForTime` on the early text path, and put time on a new line
   when translated metadata cannot clearly share the last glyph line.
 - **UB-8 translate toggle original+translated overlap** (`fix/translate-text-overlap`):
-  Chat-bar 翻译为中文 / 显示原文 and bubble EN/ZH painted on top of each other.
-  `AnimatedTextView` word-diff has no CJK spaces so both labels sit at the
-  same origin for 450ms; `ChatMessageCell` crossfades `animateOutTextBlocks`
-  and the new layout at the same `textX/textY`. Bar now swaps the label
-  without that animation; translation toggles draw only the incoming layout
-  (bubble size can still animate). Keep-original (`--------`) stacking is
-  unchanged.
+  Chat-bar 翻译为中文 / 显示原文 and bubble EN/ZH painted on the same origin.
+  A previous flag (`lastDrawnTranslated`) often never tripped because
+  `recordDrawingState()` ran before `animateChange()`, so both layouts
+  still drew. The draw path now never composites outgoing+incoming text
+  at the same `textX/textY` (body, caption, reply, emoji). The bar swaps
+  the label without AnimatedTextView word-diff. Keep-original stacking
+  (`--------`) is unchanged.
