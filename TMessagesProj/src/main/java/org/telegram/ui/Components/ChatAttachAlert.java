@@ -2102,18 +2102,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
             @Override
             protected void dispatchDraw(Canvas canvas) {
-                if (Build.VERSION.SDK_INT >= 31 && scrollableViewNoiseSuppressor != null) {
-                    blur3_InvalidateBlur();
-                    if (iBlur3SourceGlassFrosted != null) {
-                        iBlur3SourceGlassFrosted.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
-                        iBlur3SourceGlassFrosted.updateDisplayListIfNeeded();
-                    }
-                    if (iBlur3SourceGlass != null) {
-                        iBlur3SourceGlass.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
-                        iBlur3SourceGlass.updateDisplayListIfNeeded();
-                    }
-                }
-
+                // Do not call blur3_InvalidateBlur / RenderNode updates here.
+                // Selection checkbox + send-count animations invalidate this view every
+                // frame; rebuilding blur then causes jank on light wallpapers.
+                // Scroll still refreshes blur via updateLayout(); layout transitions
+                // keep their own blur3_InvalidateBlur calls.
                 canvas.save();
 //                canvas.clipRect(0, getPaddingTop() + currentPanTranslationY, getMeasuredWidth(), getMeasuredHeight() + currentPanTranslationY - getPaddingBottom());
                 if (currentAttachLayout == photoPreviewLayout || nextAttachLayout == photoPreviewLayout || (currentAttachLayout == photoLayout && nextAttachLayout == null)) {
@@ -7389,6 +7382,15 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         final int mergedPositionsCount = RectFMergeBounding.mergeOverlapping(iBlur3Positions, hasFastScroll ? 3 : 2, iBlur3PositionsMerged);
         scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3PositionsMerged, mergedPositionsCount);
         scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+
+        if (iBlur3SourceGlassFrosted != null) {
+            iBlur3SourceGlassFrosted.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+            iBlur3SourceGlassFrosted.updateDisplayListIfNeeded();
+        }
+        if (iBlur3SourceGlass != null) {
+            iBlur3SourceGlass.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+            iBlur3SourceGlass.updateDisplayListIfNeeded();
+        }
     }
 
     @SuppressLint("ViewConstructor")
