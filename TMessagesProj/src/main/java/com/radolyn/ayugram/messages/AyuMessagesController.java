@@ -347,7 +347,7 @@ public class AyuMessagesController {
         }
 
         deletedMessageDao.deleteMessages(userId, dialogId, messageIds);
-        editedMessageDao.deleteByDialogIdAndMessageIds(dialogId, messageIds);
+        editedMessageDao.deleteByDialogIdAndMessageIds(userId, dialogId, messageIds);
 
         for (int messageId : messageIds) {
             var msg = getMessage(userId, dialogId, messageId);
@@ -386,21 +386,21 @@ public class AyuMessagesController {
         }
     }
 
-    public void deleteCurrent(long dialogId, long mergeDialogId, Runnable callback) {
-        List<DeletedMessageFull> messages = deletedMessageDao.getMessagesByDialog(dialogId);
+    public void deleteCurrent(long userId, long dialogId, long mergeDialogId, Runnable callback) {
+        List<DeletedMessageFull> messages = deletedMessageDao.getMessagesByDialog(userId, dialogId);
 
         if (mergeDialogId != 0) {
-            List<DeletedMessageFull> mergeMessages = deletedMessageDao.getMessagesByDialog(mergeDialogId);
+            List<DeletedMessageFull> mergeMessages = deletedMessageDao.getMessagesByDialog(userId, mergeDialogId);
             messages.addAll(mergeMessages);
         }
 
         // Delete messages and their edit history from database
-        deletedMessageDao.delete(dialogId);
-        editedMessageDao.delete(dialogId);
+        deletedMessageDao.delete(userId, dialogId);
+        editedMessageDao.delete(userId, dialogId);
 
         if (mergeDialogId != 0) {
-            deletedMessageDao.delete(mergeDialogId);
-            editedMessageDao.delete(mergeDialogId);
+            deletedMessageDao.delete(userId, mergeDialogId);
+            editedMessageDao.delete(userId, mergeDialogId);
         }
 
         // Clean up media files

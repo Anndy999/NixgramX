@@ -653,6 +653,7 @@ public class ConnectionsManager extends BaseController {
 
     public void setPushConnectionEnabled(boolean value) {
         native_setPushConnectionEnabled(currentAccount, value);
+        org.telegram.messenger.diagnostics.Diagnostics.pushConnection(currentAccount, value);
     }
 
     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
@@ -848,6 +849,9 @@ public class ConnectionsManager extends BaseController {
 
     public static void onConnectionStateChanged(final int state, final int currentAccount) {
         AndroidUtilities.runOnUIThread(() -> {
+            if (getInstance(currentAccount).connectionState != state) {
+                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.CONNECTION_STATE, state);
+            }
             getInstance(currentAccount).connectionState = state;
             AccountInstance.getInstance(currentAccount).getNotificationCenter().postNotificationName(NotificationCenter.didUpdateConnectionState);
         });
@@ -980,6 +984,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setProxySettings(boolean enabled, String address, int port, String username, String password, String secret) {
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PROXY_CHANGE, enabled ? 1 : 0);
         if (address == null) {
             address = "";
         }

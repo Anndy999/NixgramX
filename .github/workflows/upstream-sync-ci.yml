@@ -14,10 +14,11 @@ permissions:
 
 jobs:
   compile:
-    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'upstream-sync/')
+    if: inputs.source_sha != '' || github.event_name != 'pull_request' || startsWith(github.head_ref, 'upstream-sync/')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
+      COMMIT_ID: ${{ inputs.source_sha || github.event.pull_request.head.sha }}
       NATIVE_TARGET: arm64-v8a
       # Non-production compile-only placeholders, no repository secrets exposed.
       TELEGRAM_APP_ID: '123456'
@@ -38,6 +39,18 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
+      - name: YAML, regression and diff checks
+        env:
+          STABILITY_BASE_REF: ${{ github.base_ref || 'main' }}
+        run: |
+          python3 -m pip install 'PyYAML==6.0.2'
+          python3 Tools/stability/static_checks.py
+          python3 -m unittest discover -s Tools/stability -p 'test_*.py'
+          mkdir -p /tmp/diagnostic-tests
+          javac -d /tmp/diagnostic-tests TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java Tools/stability/DiagnosticStoreTest.java
+          java -cp /tmp/diagnostic-tests DiagnosticStoreTest
+          git fetch origin "$STABILITY_BASE_REF" --depth=1
+          git diff --check FETCH_HEAD HEAD
       - name: Prepare disposable Debug configuration
         run: |
           sudo apt-get update
@@ -70,6 +83,10 @@ jobs:
         id: manifest
         continue-on-error: true
         run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
+      - name: Android lint
+        id: lint
+        continue-on-error: true
+        run: ./gradlew :TMessagesProj:lintDebug --no-daemon
       - name: Native build
         id: native
         continue-on-error: true
@@ -98,7 +115,7 @@ jobs:
           python3 - <<'PY'
           import json, os
           steps = json.loads(os.environ['RESULTS'])
-          checks = {'config': 'Gradle config', 'compile': 'Java/Kotlin compile', 'resources': 'resource merge', 'manifest': 'manifest merge', 'native': 'native build', 'apk': 'arm64 Debug APK', 'adaptation': 'Adaptation review gate'}
+          checks = {'config': 'Gradle config', 'compile': 'Java/Kotlin compile', 'resources': 'resource merge', 'manifest': 'manifest merge', 'lint': 'Android lint', 'native': 'native build', 'apk': 'arm64 Debug APK', 'adaptation': 'Adaptation review gate'}
           ok = True
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('## Telegram Upstream Sync — actual CI results\n\n')
