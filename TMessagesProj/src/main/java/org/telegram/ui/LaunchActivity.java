@@ -6154,7 +6154,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                             }
                         }
                     }
-                    SharedConfig.setNewAppVersionAvailable(null);
+                    // A per-account failure or empty result cannot invalidate the global pending update.
                 }
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
                 if (progress != null) {
