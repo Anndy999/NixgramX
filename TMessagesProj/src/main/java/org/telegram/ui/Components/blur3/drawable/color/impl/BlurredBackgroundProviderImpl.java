@@ -185,14 +185,21 @@ public class BlurredBackgroundProviderImpl {
                     }
 
                     final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
-                    final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
+                    int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
+                    // If a dark theme still carries a bright topPanel bg (or glass_target
+                    // bleed), clamp so ActionBar capsules don't paint a light fringe fill.
+                    if (isDark && AndroidUtilities.computePerceivedBrightness(colorBg) > 0.721f) {
+                        colorBg = resolveGlassTargetColor(r, true, Theme.key_glass_targetMainTopPanel);
+                    }
                     return Theme.multAlpha(colorBg, alpha);
                 })
-                .setStrokeColorTop(0xFFFFFFFF, 0x20FFFFFF)
-                .setStrokeColorBottom(0xFFFFFFFF, 0x14FFFFFF)
-                .setShadowColor(0x20000000, 0)
-                //.setShadowLayer(dpf2(10 / 3f), 0, dpf2(2 / 3f))
-                .setStrokeWidth(dpf2(0.55f), dpf2(0.55f))
+                // Dark strokes matched to mainTabs/topPanel (was 0x20/0x14FFFFFF) — bright
+                // outline AA against status-bar black read as jagged fringe on back/⋮.
+                .setStrokeColorTop(0x11000000, 0x06FFFFFF)
+                .setStrokeColorBottom(0x20000000, 0x11FFFFFF)
+                .setShadowColor(0x20000000, 0x04FFFFFF)
+                .setShadowLayer(dpf2(2.667f), 0, dpf2(0.85f))
+                .setStrokeWidth(dpf2(0.4f), dpf2(0.4f))
                 .build();
     }
 

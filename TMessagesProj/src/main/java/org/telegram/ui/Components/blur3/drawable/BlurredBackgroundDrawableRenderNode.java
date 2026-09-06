@@ -140,14 +140,28 @@ public class BlurredBackgroundDrawableRenderNode extends BlurredBackgroundDrawab
                 c.drawColor(backgroundColor);
             }
         }
-        if (strokeColorTop != 0) {
-            drawStroke(c, 0, 0, boundProps.boundsWithPadding.width(),
-                    boundProps.boundsWithPadding.height(), boundProps.radii,
+        // Inset stroke into the outline so anti-aliased edge pixels are not clipped
+        // by renderNode clipToOutline (dark ActionBar glass fringe / 毛边 on back+menu).
+        if (strokeColorTop != 0 && boundProps.strokeWidthTop > 0) {
+            final float inset = boundProps.strokeWidthTop;
+            final float[] insetRadii = new float[8];
+            for (int i = 0; i < 8; i++) {
+                insetRadii[i] = Math.max(0, boundProps.radii[i] - inset);
+            }
+            drawStroke(c, inset, inset,
+                    boundProps.boundsWithPadding.width() - inset,
+                    boundProps.boundsWithPadding.height() - inset, insetRadii,
                     boundProps.strokeWidthTop, true, paintStrokeTop);
         }
-        if (strokeColorBottom != 0) {
-            drawStroke(c, 0, 0, boundProps.boundsWithPadding.width(),
-                    boundProps.boundsWithPadding.height(), boundProps.radii,
+        if (strokeColorBottom != 0 && boundProps.strokeWidthBottom > 0) {
+            final float inset = boundProps.strokeWidthBottom;
+            final float[] insetRadii = new float[8];
+            for (int i = 0; i < 8; i++) {
+                insetRadii[i] = Math.max(0, boundProps.radii[i] - inset);
+            }
+            drawStroke(c, inset, inset,
+                    boundProps.boundsWithPadding.width() - inset,
+                    boundProps.boundsWithPadding.height() - inset, insetRadii,
                     boundProps.strokeWidthBottom, false, paintStrokeBottom);
         }
         renderNode.endRecording();
