@@ -15,3 +15,4 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 | 2026-09-04 | `4335a2e` | Bootstrap baseline | `e6d49a82` |
 | 2026-09-04 | — | UB-1 translation bubble + UB-4 pinch jank | `fix/user-requested-bugs` |
 | 2026-09-04 | — | Auto-update default OFF + NixgramX release keystore | `fix/user-requested-bugs` |
+| 2026-09-06 | `4e63d17d` (exteraless/exteraless) | Memory leak cleanup: VideoAds LruCache, mention adapters, ChatAvatarContainer observers, PhotoViewer blur watcher / animator (manual port; compile not run / Not device-tested) | `stability/exteraless-audit` |
