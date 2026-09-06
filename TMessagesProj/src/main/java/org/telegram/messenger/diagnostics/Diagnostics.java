@@ -30,6 +30,8 @@ public final class Diagnostics {
     public static volatile boolean keepAliveRunning;
     public static volatile int lastPushError;
     private static volatile int tokenFetchResult;
+    private static final java.util.concurrent.atomic.AtomicLongArray warningTimes =
+            new java.util.concurrent.atomic.AtomicLongArray(Event.values().length);
     private static final java.util.concurrent.atomic.AtomicIntegerArray pushConnections =
             new java.util.concurrent.atomic.AtomicIntegerArray(UserConfig.MAX_ACCOUNT_COUNT);
 
@@ -45,9 +47,17 @@ public final class Diagnostics {
             if (event == Event.PUSH_REGISTRATION_FAILED) lastPushError = 3;
             if ("stable".equals(BuildConfig.NIXGRAMX_CHANNEL) && !BuildConfig.DEBUG &&
                     (event == Event.TOKEN_REQUEST || event == Event.TRANSLATION_REQUEST || event == Event.TRANSLATION_OK)) return;
+            final boolean warning = event.name().contains("FAILED") || event == Event.TRANSLATION_TIMEOUT;
+            if (warning && "stable".equals(BuildConfig.NIXGRAMX_CHANNEL) && !BuildConfig.DEBUG) {
+                long now = android.os.SystemClock.elapsedRealtime();
+                long previous = warningTimes.get(event.ordinal());
+                // Bound repeated failures during outages; no delayed work or sleeps.
+                if (previous != 0 && now - previous < 1000) { dropped.incrementAndGet(); return; }
+                if (!warningTimes.compareAndSet(event.ordinal(), previous, now)) { dropped.incrementAndGet(); return; }
+            }
             final long time = System.currentTimeMillis();
             IO.execute(() -> {
-                try { store().append(time + " " + (event.name().contains("FAILED") || event == Event.TRANSLATION_TIMEOUT ? "WARN " : "STATE ") + event.name() + " " + value + "\n"); }
+                try { store().append(time + " " + (warning ? "WARN " : "STATE ") + event.name() + " " + value + "\n"); }
                 catch (Throwable failure) { ioFailed = true; }
             });
         } catch (Throwable failure) { ioFailed = true; }
