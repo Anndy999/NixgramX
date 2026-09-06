@@ -12,6 +12,8 @@ permissions:
 jobs:
   watch:
     name: Check DrKLO/Telegram master update-to
+    # Report-only L1: never run on feature branches (avoids Actions failure emails).
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Detect latest update-to commit
@@ -19,8 +21,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          json=$(gh api 'repos/DrKLO/Telegram/commits?per_page=50')
+          set -uo pipefail
+          json=$(gh api 'repos/DrKLO/Telegram/commits?per_page=50') || {
+            echo "::warning::GitHub API failed while listing DrKLO/Telegram commits; exiting soft."
+            echo "sha=" >> "$GITHUB_OUTPUT"
+            echo "msg=" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
           sha=$(echo "$json" | python3 -c "import json,sys,re
 commits=json.load(sys.stdin)
 for c in commits:
@@ -28,12 +35,23 @@ for c in commits:
   if re.search(r'^update to ', msg, re.I):
     print(c['sha']); print(msg, file=sys.stderr); break
 else:
-  raise SystemExit('no update-to commit found')")
-          msg=$(gh api "repos/DrKLO/Telegram/commits/$sha" --jq '.commit.message|split("\n")[0]')
+  sys.exit(2)") || {
+            echo "::warning::No update-to commit found (or parse failed); exiting soft."
+            echo "sha=" >> "$GITHUB_OUTPUT"
+            echo "msg=" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          msg=$(gh api "repos/DrKLO/Telegram/commits/$sha" --jq '.commit.message|split("\n")[0]') || {
+            echo "::warning::Failed to fetch commit message for $sha; exiting soft."
+            echo "sha=" >> "$GITHUB_OUTPUT"
+            echo "msg=" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "msg=$msg" >> "$GITHUB_OUTPUT"
           echo "Detected: $sha $msg"
       - name: Report
+        if: steps.detect.outputs.sha != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
