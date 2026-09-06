@@ -86,7 +86,7 @@ JSON post body after the tag, example (url-only while APKs live on the public ch
 {
   "can_not_skip": false,
   "version": "12.10.1",
-  "version_code": 1268,
+  "version_code": 1269,
   "build_timestamp": 0,
   "sticker": 0,
   "message": 0,
