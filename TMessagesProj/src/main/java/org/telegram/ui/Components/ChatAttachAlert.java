@@ -2102,11 +2102,18 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
             @Override
             protected void dispatchDraw(Canvas canvas) {
-                // Do not call blur3_InvalidateBlur / RenderNode updates here.
-                // Selection checkbox + send-count animations invalidate this view every
-                // frame; rebuilding blur then causes jank on light wallpapers.
-                // Scroll still refreshes blur via updateLayout(); layout transitions
-                // keep their own blur3_InvalidateBlur calls.
+                if (Build.VERSION.SDK_INT >= 31 && scrollableViewNoiseSuppressor != null) {
+                    blur3_InvalidateBlur();
+                    if (iBlur3SourceGlassFrosted != null) {
+                        iBlur3SourceGlassFrosted.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+                        iBlur3SourceGlassFrosted.updateDisplayListIfNeeded();
+                    }
+                    if (iBlur3SourceGlass != null) {
+                        iBlur3SourceGlass.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+                        iBlur3SourceGlass.updateDisplayListIfNeeded();
+                    }
+                }
+
                 canvas.save();
 //                canvas.clipRect(0, getPaddingTop() + currentPanTranslationY, getMeasuredWidth(), getMeasuredHeight() + currentPanTranslationY - getPaddingBottom());
                 if (currentAttachLayout == photoPreviewLayout || nextAttachLayout == photoPreviewLayout || (currentAttachLayout == photoLayout && nextAttachLayout == null)) {
@@ -2717,14 +2724,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         buttonsRecyclerView.setGlowColor(getThemedColor(Theme.key_dialogScrollGlow));
         buttonsRecyclerView.setAdaptiveOverScroll();
 
-        // Keep watcher refs so selection-chrome animations can pause per-frame
-        // liquid-glass sourceOffset invalidates (group light wallpaper jank).
-        glassPositionWatcher = new ViewPositionWatcher(containerView);
-        glassFrostedPositionWatcher = new ViewPositionWatcher(containerView);
-        fadePositionWatcher = new ViewPositionWatcher(containerView);
-        iBlur3FactoryLiquidGlass.setSourceRootView(glassPositionWatcher, containerView);
-        iBlur3FactoryFrostedLiquidGlass.setSourceRootView(glassFrostedPositionWatcher, containerView);
-        iBlur3FactoryFade.setSourceRootView(fadePositionWatcher, containerView);
+        iBlur3FactoryLiquidGlass.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
+        iBlur3FactoryFrostedLiquidGlass.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
+        iBlur3FactoryFade.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
 
 
 
@@ -5205,7 +5207,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
         applyWriteButtonOpenState(show);
         if (animated) {
-            setSelectionChromeAnimating(true);
             commentsAnimator = new AnimatorSet();
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(writeButtonContainer, View.SCALE_X, show ? 1.0f : 0.2f));
@@ -5233,7 +5234,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                             }
                         }
                         commentsAnimator = null;
-                        setSelectionChromeAnimating(false);
                     }
                 }
 
@@ -5241,7 +5241,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 public void onAnimationCancel(Animator animation) {
                     if (animation.equals(commentsAnimator)) {
                         commentsAnimator = null;
-                        setSelectionChromeAnimating(false);
                     }
                 }
             });
@@ -5295,7 +5294,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         final boolean allowAbove = (currentAttachLayout == photoLayout || currentAttachLayout == photoPreviewLayout);
         final boolean above = allowAbove && captionAbove;
         if (animated) {
-            setSelectionChromeAnimating(true);
             commentsAnimator = new AnimatorSet();
             if (above) {
                 topCommentContainer.setVisibility(View.VISIBLE);
@@ -5350,7 +5348,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                             topCommentContainer.setVisibility(show ? View.VISIBLE : View.GONE);
                         }
                         commentsAnimator = null;
-                        setSelectionChromeAnimating(false);
                     }
                 }
 
@@ -5358,7 +5355,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 public void onAnimationCancel(Animator animation) {
                     if (animation.equals(commentsAnimator)) {
                         commentsAnimator = null;
-                        setSelectionChromeAnimating(false);
                     }
                 }
             });
@@ -6009,6 +6005,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             return;
         }
 
+        if (scrollableViewNoiseSuppressor != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            scrollableViewNoiseSuppressor.onScrolled(0, dy);
+            blur3_InvalidateBlur();
+        }
+
         int newOffset = layout.getCurrentItemTop();
         if (newOffset == Integer.MAX_VALUE) {
             return;
@@ -6025,17 +6026,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         newOffset += (layoutParams == null ? 0 : layoutParams.topMargin) - dp(11);
         int idx = currentAttachLayout == layout ? 0 : 1;
         boolean previewAnimationIsRunning = (currentAttachLayout instanceof ChatAttachAlertPhotoLayoutPreview || nextAttachLayout instanceof ChatAttachAlertPhotoLayoutPreview) && (viewChangeAnimator instanceof SpringAnimation && ((SpringAnimation) viewChangeAnimator).isRunning());
-        final boolean offsetChanged = scrollOffsetY[idx] != newOffset || previewAnimationIsRunning;
-        // Only rebuild blur on real scroll / offset change. Selection checkbox + send-count
-        // animations can trigger updateLayout(dy=0); rebuilding then janks on light wallpaper
-        // (especially groups with more glass tabs / denied-camera unsupported hash).
-        if (dy != 0 || offsetChanged) {
-            if (scrollableViewNoiseSuppressor != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                scrollableViewNoiseSuppressor.onScrolled(0, dy);
-                blur3_InvalidateBlur();
-            }
-        }
-        if (offsetChanged) {
+        if (scrollOffsetY[idx] != newOffset || previewAnimationIsRunning) {
             previousScrollOffsetY = scrollOffsetY[idx];
             scrollOffsetY[idx] = newOffset;
             updateSelectedPosition(idx);
@@ -7358,12 +7349,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     /* Blur */
 
-    private ViewPositionWatcher glassPositionWatcher;
-    private ViewPositionWatcher glassFrostedPositionWatcher;
-    private ViewPositionWatcher fadePositionWatcher;
-    private boolean selectionChromeAnimating;
-    private boolean photoViewerTransitionAnimating;
-
     private final @Nullable DownscaleScrollableNoiseSuppressor scrollableViewNoiseSuppressor;
     private final @Nullable BlurredBackgroundSourceRenderNode iBlur3SourceGlassFrosted;
     private final @Nullable BlurredBackgroundSourceRenderNode iBlur3SourceGlass;
@@ -7386,56 +7371,8 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     private final ArrayList<RectF> iBlur3PositionsMerged = new ArrayList<>();
 
-
-    private boolean isHeavyGlassPaused() {
-        return selectionChromeAnimating || photoViewerTransitionAnimating;
-    }
-
-    private void setSelectionChromeAnimating(boolean animating) {
-        if (selectionChromeAnimating == animating) {
-            return;
-        }
-        selectionChromeAnimating = animating;
-        applyHeavyGlassPause();
-    }
-
-    /**
-     * Pause liquid-glass capture / ViewPositionWatcher while PhotoViewer open/close
-     * morph runs over the attach sheet (channel + light wallpaper flash/jank).
-     */
-    public void setPhotoViewerTransitionAnimating(boolean animating) {
-        if (photoViewerTransitionAnimating == animating) {
-            return;
-        }
-        photoViewerTransitionAnimating = animating;
-        applyHeavyGlassPause();
-    }
-
-    private void applyHeavyGlassPause() {
-        final boolean paused = isHeavyGlassPaused();
-        if (glassPositionWatcher != null) {
-            glassPositionWatcher.setPaused(paused);
-        }
-        if (glassFrostedPositionWatcher != null) {
-            glassFrostedPositionWatcher.setPaused(paused);
-        }
-        if (fadePositionWatcher != null) {
-            fadePositionWatcher.setPaused(paused);
-        }
-        if (!paused) {
-            blur3_InvalidateBlur();
-            if (containerView != null) {
-                containerView.invalidate();
-            }
-        }
-    }
-
     public void blur3_InvalidateBlur() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
-            return;
-        }
-        if (isHeavyGlassPaused()) {
-            // Selection chrome or PhotoViewer open/close: skip per-frame capture.
             return;
         }
 
@@ -7464,15 +7401,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         final int mergedPositionsCount = RectFMergeBounding.mergeOverlapping(iBlur3Positions, hasFastScroll ? 3 : 2, iBlur3PositionsMerged);
         scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3PositionsMerged, mergedPositionsCount);
         scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
-
-        if (iBlur3SourceGlassFrosted != null) {
-            iBlur3SourceGlassFrosted.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
-            iBlur3SourceGlassFrosted.updateDisplayListIfNeeded();
-        }
-        if (iBlur3SourceGlass != null) {
-            iBlur3SourceGlass.setSize(containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
-            iBlur3SourceGlass.updateDisplayListIfNeeded();
-        }
     }
 
     @SuppressLint("ViewConstructor")
