@@ -48,6 +48,8 @@ import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BackDrawable;
 import org.telegram.ui.ActionBar.Theme;
+
+import tw.nekomimi.nekogram.helpers.LocalNameHelper;
 import org.telegram.ui.Business.BusinessChatbotController;
 import org.telegram.ui.Business.ChatbotsActivity;
 import org.telegram.ui.Business.LocationActivity;
@@ -802,6 +804,9 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
                 }
             }), ConnectionsManager.RequestFlagDoNotWaitFloodWait);
         }
+        // Drop any local nickname for self so putUser / reconnect cannot
+        // resurrect an old override over the profile name we just saved.
+        LocalNameHelper.clearUserNameOverride(user.id);
         // Keep MessagesController / userFull.user in sync with UserConfig so
         // account switch → reconnect does not show the previous display name.
         if (userFull.user != null) {
@@ -809,6 +814,7 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
             userFull.user.last_name = user.last_name;
         }
         getMessagesController().putUser(user, false);
+        getMessagesStorage().putUsersAndChats(java.util.Collections.singletonList(user), null, false, true);
         getMessagesStorage().updateUserInfo(userFull, false);
         getUserConfig().saveConfig(true);
 

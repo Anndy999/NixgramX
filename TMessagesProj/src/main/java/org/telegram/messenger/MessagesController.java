@@ -6944,16 +6944,21 @@ public class MessagesController extends BaseController implements NotificationCe
         }
 
         // user name override start
-        String overrideName = userOverrideNameCache.computeIfAbsent(user.id, k -> {
-            String fetchedName = LocalNameHelper.getUserNameOverride(k);
-            return (fetchedName != null) ? fetchedName : "";
-        });
-        if (!overrideName.isEmpty()) {
-            user.first_name = overrideName;
-            user.last_name = "";
-            if (oldUser != null) {
-                oldUser.first_name = overrideName;
-                oldUser.last_name = "";
+        // Never apply local nicknames to the signed-in self user: UserInfoActivity
+        // edits the real profile name, and an old override (e.g. "Anndy999 小号")
+        // would otherwise reappear after account switch / reconnect via putUser.
+        if (user.id != getUserConfig().getClientUserId()) {
+            String overrideName = userOverrideNameCache.computeIfAbsent(user.id, k -> {
+                String fetchedName = LocalNameHelper.getUserNameOverride(k);
+                return (fetchedName != null) ? fetchedName : "";
+            });
+            if (!overrideName.isEmpty()) {
+                user.first_name = overrideName;
+                user.last_name = "";
+                if (oldUser != null) {
+                    oldUser.first_name = overrideName;
+                    oldUser.last_name = "";
+                }
             }
         }
         // user name override end
