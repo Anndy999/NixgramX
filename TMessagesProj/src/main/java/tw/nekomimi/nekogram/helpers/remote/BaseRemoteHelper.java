@@ -77,9 +77,14 @@ public abstract class BaseRemoteHelper {
     private void onGetMessageSuccess(TLObject response, Delegate delegate, int account, String requestTag, TLRPC.InputChannel channel) {
         var tag = "#" + requestTag;
         final var res = (TLRPC.messages_Messages) response;
-        MessagesController.getInstance(account).removeDeletedMessagesFromArray(CHANNEL_METADATA_ID, res.messages);
+        var messages = res.messages;
+        if (messages == null) {
+            onLoadSuccess(new ArrayList<>(), delegate, account, channel);
+            return;
+        }
+        MessagesController.getInstance(account).removeDeletedMessagesFromArray(CHANNEL_METADATA_ID, messages);
         ArrayList<JSONObject> responses = new ArrayList<>();
-        for (var message : res.messages) {
+        for (var message : messages) {
             if (TextUtils.isEmpty(message.message) || !message.message.startsWith(tag)) {
                 continue;
             }
@@ -162,11 +167,11 @@ public abstract class BaseRemoteHelper {
                     resolveAndSearch(account, tag, delegate, true);
                 } else if (searchError != null) {
                     reportError(searchError.text, delegate);
+                } else if (empty) {
+                    onGetMessageSuccess(searchResponse, delegate, account, tag, channel);
                 } else if (!(searchResponse instanceof TLRPC.messages_Messages)) {
                     reportError("UPDATE_METADATA_INVALID", delegate);
                 } else {
-                    // Persistent empty search is a valid empty success for shared helpers
-                    // (EmojiHelper / PagePreviewRulesHelper). UpdateHelper maps empty → error.
                     onGetMessageSuccess(searchResponse, delegate, account, tag, channel);
                 }
             });

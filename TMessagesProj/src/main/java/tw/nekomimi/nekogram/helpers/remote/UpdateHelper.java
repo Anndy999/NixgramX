@@ -52,13 +52,18 @@ public class UpdateHelper extends BaseRemoteHelper {
         return res == null && error == null;
     }
 
-    /** Apply check outcome to the device-wide pending update without clearing on failures. */
+    /**
+     * Apply update-check outcome to the device-wide pending update.
+     * A failed check (error != null) must preserve pendingAppUpdate.
+     * A successful no-update (res == null && error == null) must clear it.
+     */
     public static void applyPendingUpdateCheckResult(TLRPC.TL_help_appUpdate res, String error) {
         if (res != null) {
             SharedConfig.setNewAppVersionAvailable(res);
-        } else if (shouldClearPendingAppUpdate(res, error)) {
+        } else if (error == null) {
             SharedConfig.setNewAppVersionAvailable(null);
         }
+        // else: failed check — preserve SharedConfig.pendingAppUpdate
     }
 
     public static UpdateHelper getInstance() {

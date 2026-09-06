@@ -213,8 +213,8 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
         // pending+failed → preserved; pending+successful no-update → cleared.
         var pending=new TLRPC.TL_help_appUpdate();pending.version="19";
         SharedConfig.pendingAppUpdate=pending;
-        check(!UpdateHelper.shouldClearPendingAppUpdate(null,"NETWORK_ERROR"));
-        UpdateHelper.applyPendingUpdateCheckResult(null,"NETWORK_ERROR");
+        check(!UpdateHelper.shouldClearPendingAppUpdate(null,"SOME_ERROR"));
+        UpdateHelper.applyPendingUpdateCheckResult(null,"SOME_ERROR");
         check(SharedConfig.pendingAppUpdate==pending);
         check(UpdateHelper.shouldClearPendingAppUpdate(null,null));
         UpdateHelper.applyPendingUpdateCheckResult(null,null);

@@ -6154,8 +6154,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                             }
                         }
                     }
-                    // A: failed query (error!=null) keeps pending; B: success no-update clears it.
-                    UpdateHelper.applyPendingUpdateCheckResult(res, error);
+                    // Failed checks (error != null) preserve pendingAppUpdate; successful no-update clears it.
+                    UpdateHelper.applyPendingUpdateCheckResult(null, error);
                 }
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
                 if (progress != null) {
