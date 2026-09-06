@@ -42,6 +42,25 @@ public class UpdateHelper extends BaseRemoteHelper {
         return isChannelConfigured() && NaConfig.INSTANCE.getAutoUpdateChannel().Int() != UPDATE_OFF;
     }
 
+    /**
+     * LaunchActivity pending-update policy for a checkAppUpdate callback:
+     * A) res==null && error!=null (query failed) → keep SharedConfig.pendingAppUpdate
+     * B) res==null && error==null (success, no update) → clear via setNewAppVersionAvailable(null)
+     * When res!=null the caller stores the new update instead.
+     */
+    public static boolean shouldClearPendingAppUpdate(TLRPC.TL_help_appUpdate res, String error) {
+        return res == null && error == null;
+    }
+
+    /** Apply check outcome to the device-wide pending update without clearing on failures. */
+    public static void applyPendingUpdateCheckResult(TLRPC.TL_help_appUpdate res, String error) {
+        if (res != null) {
+            SharedConfig.setNewAppVersionAvailable(res);
+        } else if (shouldClearPendingAppUpdate(res, error)) {
+            SharedConfig.setNewAppVersionAvailable(null);
+        }
+    }
+
     public static UpdateHelper getInstance() {
         return InstanceHolder.instance;
     }
@@ -208,7 +227,7 @@ public class UpdateHelper extends BaseRemoteHelper {
     protected void onLoadSuccess(ArrayList<JSONObject> responses, Delegate delegate,
                                  int account, TLRPC.InputChannel channel) {
         if (responses.isEmpty()) {
-            onError("UPDATE_METADATA_INVALID", delegate);
+            onError("UPDATE_METADATA_EMPTY", delegate);
             return;
         }
         var update = getShouldUpdateVersion(responses);

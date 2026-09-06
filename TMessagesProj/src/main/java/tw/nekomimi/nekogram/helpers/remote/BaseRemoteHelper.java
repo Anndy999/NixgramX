@@ -162,11 +162,11 @@ public abstract class BaseRemoteHelper {
                     resolveAndSearch(account, tag, delegate, true);
                 } else if (searchError != null) {
                     reportError(searchError.text, delegate);
-                } else if (empty) {
-                    reportError("UPDATE_METADATA_EMPTY", delegate);
                 } else if (!(searchResponse instanceof TLRPC.messages_Messages)) {
                     reportError("UPDATE_METADATA_INVALID", delegate);
                 } else {
+                    // Persistent empty search is a valid empty success for shared helpers
+                    // (EmojiHelper / PagePreviewRulesHelper). UpdateHelper maps empty → error.
                     onGetMessageSuccess(searchResponse, delegate, account, tag, channel);
                 }
             });
