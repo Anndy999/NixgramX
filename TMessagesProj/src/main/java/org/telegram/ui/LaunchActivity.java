@@ -7099,6 +7099,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     @Override
     protected void onResume() {
         super.onResume();
+        if (!SharedConfig.appLocked && !SharedConfig.isWaitingForPasscodeEnter) {
+            org.telegram.messenger.diagnostics.Diagnostics.promptLastCrash(this);
+        }
         isResumed = true;
         pipActivityHandler.onResume();
         if (onResumeStaticCallback != null) {

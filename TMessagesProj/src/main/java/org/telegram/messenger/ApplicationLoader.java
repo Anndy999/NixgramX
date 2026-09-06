@@ -840,6 +840,11 @@ public class ApplicationLoader extends Application {
     private void installCrashReportFilter() {
         Thread.UncaughtExceptionHandler crashlyticsHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            try {
+                org.telegram.messenger.diagnostics.Diagnostics.crash(thread, error);
+            } catch (Throwable diagnosticFailure) {
+                // Even class initialization/OOM must not interrupt the original handler chain.
+            }
             if (AndroidUtil.shouldReportCrashToCrashlytics(error)) {
                 if (crashlyticsHandler != null) {
                     crashlyticsHandler.uncaughtException(thread, error);
