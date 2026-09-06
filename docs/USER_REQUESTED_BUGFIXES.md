@@ -48,3 +48,11 @@ by the script above.
   `HintView2.measureCorrectly`, refresh `timeMore` after re-measure, use
   `getLastLineWidthForTime` on the early text path, and put time on a new line
   when translated metadata cannot clearly share the last glyph line.
+- **UB-8 translate toggle original+translated overlap** (`fix/translate-text-overlap`):
+  Chat-bar 翻译为中文 / 显示原文 and bubble EN/ZH painted on top of each other.
+  `AnimatedTextView` word-diff has no CJK spaces so both labels sit at the
+  same origin for 450ms; `ChatMessageCell` crossfades `animateOutTextBlocks`
+  and the new layout at the same `textX/textY`. Bar now swaps the label
+  without that animation; translation toggles draw only the incoming layout
+  (bubble size can still animate). Keep-original (`--------`) stacking is
+  unchanged.

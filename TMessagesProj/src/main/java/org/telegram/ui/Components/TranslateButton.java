@@ -92,6 +92,7 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
             @Override
             protected void onDraw(Canvas canvas) {
                 canvas.save();
+                canvas.clipRect(0, 0, getWidth(), getHeight());
                 canvas.translate(dp(17), 0);
                 super.onDraw(canvas);
                 canvas.restore();
@@ -414,6 +415,16 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
         popupWindow.showAsDropDown(menuView, 0, -menuView.getMeasuredHeight() - dp(8));
     }
 
+    /**
+     * Swap the bar label without AnimatedTextView's word-diff.
+     * 翻译为中文 / 显示原文 share almost no Latin words, so splitByWords paints both
+     * strings at the same origin for 450ms (the overlap in the record).
+     */
+    private void setBarText(CharSequence text) {
+        textView.cancelAnimation();
+        textView.setText(text, false);
+    }
+
     public void updateText() {
         final TranslateController translateController = MessagesController.getInstance(currentAccount).getTranslateController();
         final TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-dialogId);
@@ -421,9 +432,9 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
             String detectedLanguage = translateController.getDialogDetectedLanguage(dialogId);
             detectedLanguage = TranslateAlert2.languageName(detectedLanguage);
             if (!TextUtils.isEmpty(detectedLanguage)) {
-                textView.setText(TextUtils.concat(translateIcon, " ", LocaleController.formatString(R.string.ShowOriginalButtonLanguage, detectedLanguage)));
+                setBarText(TextUtils.concat(translateIcon, " ", LocaleController.formatString(R.string.ShowOriginalButtonLanguage, detectedLanguage)));
             } else {
-                textView.setText(TextUtils.concat(translateIcon, " ", getString(R.string.ShowOriginalButton)));
+                setBarText(TextUtils.concat(translateIcon, " ", getString(R.string.ShowOriginalButton)));
             }
         } else {
             String lng = translateController.getDialogTranslateTo(dialogId);
@@ -443,7 +454,7 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
             } else {
                 text = LocaleController.formatString(R.string.TranslateToButtonOther, lang);
             }
-            textView.setText(TextUtils.concat(translateIcon, " ", text));
+            setBarText(TextUtils.concat(translateIcon, " ", text));
         }
         menuView.setImageResource(true || UserConfig.getInstance(currentAccount).isPremium() || chat != null && chat.autotranslation ? R.drawable.msg_mini_customize : R.drawable.msg_close);
     }
