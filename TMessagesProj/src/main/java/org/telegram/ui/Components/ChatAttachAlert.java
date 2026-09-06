@@ -7362,6 +7362,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
     private ViewPositionWatcher glassFrostedPositionWatcher;
     private ViewPositionWatcher fadePositionWatcher;
     private boolean selectionChromeAnimating;
+    private boolean photoViewerTransitionAnimating;
 
     private final @Nullable DownscaleScrollableNoiseSuppressor scrollableViewNoiseSuppressor;
     private final @Nullable BlurredBackgroundSourceRenderNode iBlur3SourceGlassFrosted;
@@ -7386,21 +7387,42 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
     private final ArrayList<RectF> iBlur3PositionsMerged = new ArrayList<>();
 
 
+    private boolean isHeavyGlassPaused() {
+        return selectionChromeAnimating || photoViewerTransitionAnimating;
+    }
+
     private void setSelectionChromeAnimating(boolean animating) {
         if (selectionChromeAnimating == animating) {
             return;
         }
         selectionChromeAnimating = animating;
+        applyHeavyGlassPause();
+    }
+
+    /**
+     * Pause liquid-glass capture / ViewPositionWatcher while PhotoViewer open/close
+     * morph runs over the attach sheet (channel + light wallpaper flash/jank).
+     */
+    public void setPhotoViewerTransitionAnimating(boolean animating) {
+        if (photoViewerTransitionAnimating == animating) {
+            return;
+        }
+        photoViewerTransitionAnimating = animating;
+        applyHeavyGlassPause();
+    }
+
+    private void applyHeavyGlassPause() {
+        final boolean paused = isHeavyGlassPaused();
         if (glassPositionWatcher != null) {
-            glassPositionWatcher.setPaused(animating);
+            glassPositionWatcher.setPaused(paused);
         }
         if (glassFrostedPositionWatcher != null) {
-            glassFrostedPositionWatcher.setPaused(animating);
+            glassFrostedPositionWatcher.setPaused(paused);
         }
         if (fadePositionWatcher != null) {
-            fadePositionWatcher.setPaused(animating);
+            fadePositionWatcher.setPaused(paused);
         }
-        if (!animating) {
+        if (!paused) {
             blur3_InvalidateBlur();
             if (containerView != null) {
                 containerView.invalidate();
@@ -7412,8 +7434,8 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
             return;
         }
-        if (selectionChromeAnimating) {
-            // First-select caption/tabs slide invalidates glass every frame; skip capture.
+        if (isHeavyGlassPaused()) {
+            // Selection chrome or PhotoViewer open/close: skip per-frame capture.
             return;
         }
 
