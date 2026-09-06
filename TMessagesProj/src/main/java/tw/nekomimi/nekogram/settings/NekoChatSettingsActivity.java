@@ -950,8 +950,9 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
             if (rightBubbleDrawable != null) {
                 rightBubbleDrawable.setColorProvider(ActionButtonStyle.resolveBubbleColorProvider(whiteColorProvider, colorProvider, accentColorProvider));
             }
+            // Match SendButton open/closed plane: contrast with ActionButtonStyle fill (all three styles).
             sendIconView.setColorFilter(new PorterDuffColorFilter(
-                    ActionButtonStyle.resolveIconColor(resourcesProvider),
+                    ActionButtonStyle.resolveOnFillIconColor(resourcesProvider),
                     PorterDuff.Mode.SRC_IN));
 
             invalidate();

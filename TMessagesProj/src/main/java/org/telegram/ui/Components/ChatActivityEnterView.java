@@ -17127,13 +17127,18 @@ public class ChatActivityEnterView extends FrameLayout implements
 
         public void updateColors() {
             int color = resolveSendIconColor(Theme.getColor(Theme.key_chat_messagePanelSend, resourcesProvider));
+            // Open-state plane uses drawableInverse; must contrast with the circle fill.
+            // ActionButtonStyle light fills (WHITE / NEUTRAL) need a dark/accent plane — not VoicePressed white.
+            int inverseColor = shouldUseActionStyleColors()
+                    ? ActionButtonStyle.resolveOnFillIconColor(resourcesProvider)
+                    : Color.WHITE;
             if (color != drawableColor) {
                 drawableColor = color;
                 drawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
                 int c = Theme.getColor(Theme.key_glass_defaultIcon, resourcesProvider);
                 inactiveDrawable.setColorFilter(new PorterDuffColorFilter(Color.argb(0xb4, Color.red(c), Color.green(c), Color.blue(c)), PorterDuff.Mode.SRC_IN));
-                drawableInverse.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chat_messagePanelVoicePressed, resourcesProvider), PorterDuff.Mode.SRC_IN));
             }
+            drawableInverse.setColorFilter(new PorterDuffColorFilter(inverseColor, PorterDuff.Mode.SRC_IN));
             if (ActionButtonStyle.getCurrentStyle() != ActionButtonStyle.ACCENT && shouldUseActionStyleColors()) {
                 backgroundPaint.setColor(ActionButtonStyle.resolveBackgroundColor(resourcesProvider));
             } else if (isNewDesignSendButton) {
