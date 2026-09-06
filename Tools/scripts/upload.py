@@ -132,12 +132,31 @@ def get_commit_info():
     return commit_id, commit_url, commit_message
 
 
+def get_user_release_notes() -> str:
+    """User-facing changelog for the public APK caption only.
+
+    Prefer RELEASE_NOTES env (multiline, each line typically "- …"),
+    else docs/RELEASE_NOTES.txt. Never fall back to COMMIT_MESSAGE.
+    """
+    notes = (os.environ.get("RELEASE_NOTES") or "").strip()
+    if notes:
+        return notes
+    notes_path = Path("docs/RELEASE_NOTES.txt")
+    if notes_path.is_file():
+        file_notes = notes_path.read_text(encoding="utf-8").strip()
+        if file_notes:
+            return file_notes
+    return ""
+
+
 def get_caption() -> str:
     version, version_code = resolve_version()
-    _, _, commit_message = get_commit_info()
-    headline = next((line.strip() for line in commit_message.splitlines() if line.strip()), "Release")
     title = "NixgramX Beta" if beta_version else "NixgramX"
-    return f"{title} · {version} ({version_code})\n{headline}"
+    line1 = f"{title} · {version} ({version_code})"
+    notes = get_user_release_notes()
+    if notes:
+        return f"{line1}\n\n{notes}"
+    return line1
 
 
 def get_documents_with_abis() -> list[tuple[str, "InputMediaDocument"]]:
@@ -406,10 +425,10 @@ async def main():
     if metadata_chat_id and not str(metadata_chat_id).lstrip("-").isdigit():
         print(
             f"WARN: metadata ref is {describe_chat_ref(metadata_chat_id)}; "
-            f"using APK chat id instead.",
+            f"leaving unset so public APK chat never receives #update* JSON.",
             flush=True,
         )
-        metadata_chat_id = chat_id
+        metadata_chat_id = None
     print(
         f"Using APK chat={describe_chat_ref(chat_id)} metadata={describe_chat_ref(metadata_chat_id)}",
         flush=True,
@@ -432,16 +451,13 @@ async def main():
             flush=True,
         )
     else:
-        # Do not upload stickers or invent public-channel sticker posts.
-        # Prefer private HELPER_BOT_CANARY_TARGET; without it, skip sticker (id=0).
-        meta_target = metadata_chat_id or chat_id
+        # Public APK channel must never receive #update* JSON or canary hash logs.
         print(
-            "INFO: posting #update* JSON to the APK/public chat "
-            f"(APK chat={chat_id}, metadata={metadata_chat_id}); sticker skipped (public chat).",
+            "WARN: HELPER_BOT_CANARY_TARGET missing or same as APK chat; "
+            "skipping #update* JSON and canary hash log. "
+            "Public channel gets APK media group only.",
             flush=True,
         )
-        await send_update_json(client, meta_target, document_ids, sticker_message_id=0)
-        await send_canary_metadata(client, meta_target)
     await client.log_out()
 
 
