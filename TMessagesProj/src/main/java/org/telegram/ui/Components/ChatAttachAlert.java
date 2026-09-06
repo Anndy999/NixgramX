@@ -4183,7 +4183,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             .setBackgroundColor((r, isDark) -> {
                 final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
                 final int colorBg = Theme.getColor(isDark ? Theme.key_windowBackgroundGray : Theme.key_dialogBackgroundGray, r);
-                final int colorTarget = Theme.getColor(Theme.key_windowBackgroundWhite, r);
+                // Prefer glass_target with dark clamp — windowBackgroundWhite alone can still be
+                // bright on broken/custom dark themes and paints white header capsules.
+                final int colorTarget = BlurredBackgroundProviderImpl.resolveGlassTargetColor(
+                        r, isDark, Theme.key_glass_targetMainTopPanel);
                 if (hasOverridenWebviewBackgroundColor) {
                     return //overridenWebviewBackgroundColor;
                              ColorUtils.blendARGB(colorTarget, overridenWebviewBackgroundColor, 0.75f);
@@ -5623,12 +5626,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
     }
 
     private void applyAttachButtonColors(View view) {
-        if (view instanceof AttachButton) {
-            AttachButton button = (AttachButton) view;
-            //button.textView.setTextColor(ColorUtils.blendARGB(getThemedColor(Theme.key_dialogTextGray2), getThemedColor(button.textKey), button.animatorChecked.getFloatValue()));
-        } else if (view instanceof AttachBotButton) {
-            AttachBotButton button = (AttachBotButton) view;
-            //button.nameTextView.setTextColor(ColorUtils.blendARGB(getThemedColor(Theme.key_dialogTextGray2), button.textColor, button.animatorChecked.getFloatValue()));
+        if (view instanceof AttachButtonBase) {
+            AttachButtonBase button = (AttachButtonBase) view;
+            if (button.glassTabView != null) {
+                button.glassTabView.updateColorsLottie();
+            }
         }
     }
 
@@ -5654,6 +5656,16 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         int count = buttonsRecyclerView.getChildCount();
         for (int a = 0; a < count; a++) {
             applyAttachButtonColors(buttonsRecyclerView.getChildAt(a));
+        }
+        if (buttonsRecyclerViewWrapper != null && buttonsRecyclerViewWrapper.getBackground() instanceof BlurredBackgroundDrawable) {
+            ((BlurredBackgroundDrawable) buttonsRecyclerViewWrapper.getBackground()).updateColors();
+            buttonsRecyclerViewWrapper.invalidate();
+        }
+        if (actionBar != null) {
+            actionBar.updateColors();
+        }
+        if (writeButton != null) {
+            writeButton.updateColors();
         }
         selectedTextView.setTextColor(forceDarkTheme ? getThemedColor(Theme.key_voipgroup_actionBarItems) : getThemedColor(Theme.key_dialogTextBlack));
         mediaPreviewTextView.setTextColor(forceDarkTheme ? getThemedColor(Theme.key_voipgroup_actionBarItems) : getThemedColor(Theme.key_dialogTextBlack));

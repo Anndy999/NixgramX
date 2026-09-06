@@ -23,6 +23,7 @@ import org.telegram.messenger.utils.ViewOutlineProviderImpl;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
+import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
 
 import java.util.ArrayList;
@@ -152,7 +153,10 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             imageView.setColorFilter(Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider), PorterDuff.Mode.SRC_IN);
             progressView.setProgressColor(Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider));
 
-            iBlur3SourceColor.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            // Prefer dark glass target when theme is dark so sub-FABs are not solid white.
+            final boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
+            iBlur3SourceColor.setColor(BlurredBackgroundProviderImpl.resolveGlassTargetColor(
+                    resourcesProvider, isDark, Theme.key_glass_targetMainTopPanel));
             iBlur3ColorProviderTabs.updateColors();
             iBlur3Background.updateColors();
             invalidate();

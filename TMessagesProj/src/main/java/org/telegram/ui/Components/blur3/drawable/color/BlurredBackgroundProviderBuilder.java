@@ -131,8 +131,13 @@ public class BlurredBackgroundProviderBuilder implements BlurredBackgroundProvid
     }
 
     private boolean isDark() {
-        return resourcesProvider instanceof DarkThemeResourceProvider ||
-            resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
+        if (resourcesProvider instanceof DarkThemeResourceProvider) {
+            return true;
+        }
+        if (resourcesProvider != null) {
+            return resourcesProvider.isDark();
+        }
+        return Theme.isCurrentThemeDark();
     }
 
     private static ColorProvider create(@ColorInt int colorInLightMode, @ColorInt int colorInDarkMode) {

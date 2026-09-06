@@ -7,6 +7,7 @@ import android.graphics.Color;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
 
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
@@ -18,12 +19,31 @@ import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundProvider
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundProviderBuilder;
 
 public class BlurredBackgroundProviderImpl {
+    /**
+     * Glass fill target for main tabs / top panel. Dark themes that omit glass_target*
+     * (or still carry the light default 0xFFFFFFFF) would otherwise paint solid white chrome.
+     * Clamp bright targets to dialogBackground when the UI is dark.
+     */
+    public static int resolveGlassTargetColor(Theme.ResourcesProvider resourcesProvider, boolean isDark, int glassTargetKey) {
+        int colorTarget = Theme.getColor(glassTargetKey, resourcesProvider);
+        if (isDark && AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
+            colorTarget = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
+            if (AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
+                colorTarget = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+            }
+            if (AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
+                colorTarget = 0xFF232324; // night.attheme glass_target
+            }
+        }
+        return colorTarget;
+    }
+
     public static BlurredBackgroundProvider mainTabs(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
                 final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
-                final int colorTarget = Theme.getColor(Theme.key_glass_targetMainTabs, r);
+                final int colorTarget = resolveGlassTargetColor(r, isDark, Theme.key_glass_targetMainTabs);
                 return solveSrcColor(colorBg, colorTarget, alpha);
             })
             .setStrokeColorTop(0x11000000, 0x06FFFFFF)
@@ -39,7 +59,7 @@ public class BlurredBackgroundProviderImpl {
             .setBackgroundColor((r, isDark) -> {
                 final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
-                final int colorTarget = Theme.getColor(Theme.key_glass_targetMainTopPanel, r);
+                final int colorTarget = resolveGlassTargetColor(r, isDark, Theme.key_glass_targetMainTopPanel);
                 return solveSrcColor(colorBg, colorTarget, alpha);
             })
             .setStrokeColorTop(0x11000000, 0x06FFFFFF)
@@ -54,7 +74,7 @@ public class BlurredBackgroundProviderImpl {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
                     final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
-                    final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
+                    final int colorBg = resolveGlassTargetColor(r, isDark, Theme.key_glass_targetMainTopPanel);
                     return Theme.multAlpha(colorBg, alpha);
                 })
                 .setStrokeColorTop(0xFFFFFFFF, 0x28FFFFFF)
@@ -116,7 +136,7 @@ public class BlurredBackgroundProviderImpl {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
                     final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
-                    final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
+                    final int colorBg = resolveGlassTargetColor(r, isDark, Theme.key_glass_targetMainTopPanel);
                     return Theme.multAlpha(colorBg, alpha);
                 })
                 .setStrokeColorTop(0x17000000, 0x17FFFFFF)

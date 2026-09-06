@@ -45655,6 +45655,11 @@ public class ChatActivity extends BaseFragment implements
         }
 
         @Override
+        public boolean isDark() {
+            return isDark;
+        }
+
+        @Override
         public int getColor(int key) {
             if (animatingColors != null) {
                 int index = animatingColors.indexOfKey(key);

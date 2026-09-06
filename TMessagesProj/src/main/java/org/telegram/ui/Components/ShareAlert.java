@@ -1758,6 +1758,17 @@ public class ShareAlert extends BottomSheet implements NotificationCenter.Notifi
             public int getFillColor() {
                 return getThemedColor(Theme.key_dialogFloatingButton);
             }
+
+            @Override
+            protected boolean shouldUseActionStyleColors() {
+                // Keep dialogFloatingButton fill + white plane (same as ChatAttachAlert / DialogsActivity).
+                return false;
+            }
+
+            @Override
+            public int resolveSendIconColor(int themeColor) {
+                return Color.WHITE;
+            }
         };
         writeButton.setCircleSize(dp(52), dp(38));
         writeButton.setCirclePadding(dp(1), dp(6));
