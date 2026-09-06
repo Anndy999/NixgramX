@@ -1,0 +1,2 @@
+# Only the workflow parser tests need this; publisher tests use the standard library.
+PyYAML==6.0.3

@@ -29,13 +29,13 @@ jobs:
             exit 0
           }
           sha=$(echo "$json" | python3 -c "import json,sys,re
-commits=json.load(sys.stdin)
-for c in commits:
-  msg=c['commit']['message'].split('\n',1)[0]
-  if re.search(r'^update to ', msg, re.I):
-    print(c['sha']); print(msg, file=sys.stderr); break
-else:
-  sys.exit(2)") || {
+          commits=json.load(sys.stdin)
+          for c in commits:
+            msg=c['commit']['message'].split('\n',1)[0]
+            if re.search(r'^update to ', msg, re.I):
+              print(c['sha']); print(msg, file=sys.stderr); break
+          else:
+            sys.exit(2)") || {
             echo "::warning::No update-to commit found (or parse failed); exiting soft."
             echo "sha=" >> "$GITHUB_OUTPUT"
             echo "msg=" >> "$GITHUB_OUTPUT"
