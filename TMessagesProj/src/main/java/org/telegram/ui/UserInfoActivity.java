@@ -802,6 +802,13 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
                 }
             }), ConnectionsManager.RequestFlagDoNotWaitFloodWait);
         }
+        // Keep MessagesController / userFull.user in sync with UserConfig so
+        // account switch → reconnect does not show the previous display name.
+        if (userFull.user != null) {
+            userFull.user.first_name = user.first_name;
+            userFull.user.last_name = user.last_name;
+        }
+        getMessagesController().putUser(user, false);
         getMessagesStorage().updateUserInfo(userFull, false);
         getUserConfig().saveConfig(true);
 
