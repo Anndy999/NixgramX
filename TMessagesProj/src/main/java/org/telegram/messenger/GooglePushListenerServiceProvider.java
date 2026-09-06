@@ -52,10 +52,11 @@ public class GooglePushListenerServiceProvider implements PushListenerController
 
     @Override
     public void onRequestPushToken() {
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.TOKEN_REQUEST, 0);
         String currentPushString = SharedConfig.pushString;
         if (!TextUtils.isEmpty(currentPushString)) {
             if (BuildVars.DEBUG_PRIVATE_VERSION) {
-                FileLog.d("FCM regId = " + currentPushString);
+                FileLog.d("FCM token present (value omitted)");
             }
         } else {
             FileLog.d("FCM Registration not found.");
@@ -70,13 +71,13 @@ public class GooglePushListenerServiceProvider implements PushListenerController
                             if (!task.isSuccessful()) {
                                 Exception exception = task.getException();
                                 if (exception != null) {
-                                    FileLog.e(exception);
-                                    String message = exception.getMessage();
-                                    SharedConfig.pushStringLastError = !TextUtils.isEmpty(message) ? message : exception.toString();
+                                    FileLog.e("FCM token request failed");
+                                    SharedConfig.pushStringLastError = exception.getClass().getSimpleName();
                                 } else {
                                     FileLog.e("Failed to get FCM regid (no exception)");
                                     SharedConfig.pushStringLastError = "getToken failed (no exception)";
                                 }
+                                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.TOKEN_FAILED, 0);
                                 SharedConfig.pushStringStatus = "__FIREBASE_FAILED__";
                                 PushListenerController.sendRegistrationToServer(getPushType(), null);
                                 return;
@@ -86,13 +87,14 @@ public class GooglePushListenerServiceProvider implements PushListenerController
                             SharedConfig.pushStringStatus = "";
                             String token = task.getResult();
                             if (!TextUtils.isEmpty(token)) {
+                                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.TOKEN_OK, token.length());
                                 PushListenerController.sendRegistrationToServer(getPushType(), token);
                             }
                         });
             } catch (Throwable e) {
-                FileLog.e(e);
-                String message = e.getMessage();
-                SharedConfig.pushStringLastError = !TextUtils.isEmpty(message) ? message : e.toString();
+                FileLog.e("FCM token request failed (details omitted)");
+                SharedConfig.pushStringLastError = e.getClass().getSimpleName();
+                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.TOKEN_FAILED, 0);
                 SharedConfig.pushStringStatus = "__FIREBASE_FAILED__";
             }
         });

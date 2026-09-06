@@ -22,12 +22,12 @@ public class GcmPushListenerService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(RemoteMessage message) {
         if (isGooglePushDisabled()) return;
+        org.telegram.messenger.diagnostics.Diagnostics.received(PushListenerController.PUSH_TYPE_FIREBASE);
 
-        String from = message.getFrom();
         Map<String, String> data = message.getData();
         long time = message.getSentTime();
 
-        FileLog.d("FCM received data: " + data + " from: " + from);
+        FileLog.d("FCM received (payload omitted)");
 
         PushListenerController.processRemoteMessage(PushListenerController.PUSH_TYPE_FIREBASE, data.get("p"), time);
     }
@@ -37,7 +37,7 @@ public class GcmPushListenerService extends FirebaseMessagingService {
         if (isGooglePushDisabled()) return;
         AndroidUtilities.runOnUIThread(() -> {
             if (BuildVars.LOGS_ENABLED) {
-                FileLog.d("Refreshed FCM token: " + token);
+                FileLog.d("Refreshed FCM token (value omitted)");
             }
             ApplicationLoader.postInitApplication();
             PushListenerController.sendRegistrationToServer(PushListenerController.PUSH_TYPE_FIREBASE, token);

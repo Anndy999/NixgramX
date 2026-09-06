@@ -16472,7 +16472,11 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (response instanceof TLRPC.TL_boolTrue && currentToken) {
                     FileLog.d("account " + currentAccount + " registered for push, push type: " + pushType);
                     getUserConfig().registeredForPush = true;
+                    org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PUSH_REGISTERED, 0);
                     getUserConfig().saveConfig(false);
+                }
+                if (currentToken && !(response instanceof TLRPC.TL_boolTrue)) {
+                    org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PUSH_REGISTRATION_FAILED, error == null ? 0 : error.code);
                 }
                 registeringForPush = false;
                 if (!currentToken && !TextUtils.isEmpty(SharedConfig.pushString)) {

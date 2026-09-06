@@ -8,6 +8,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Response
+import org.telegram.messenger.diagnostics.Diagnostics
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.FileLog
 import org.telegram.messenger.LocaleController
@@ -336,7 +337,18 @@ interface Translator {
                 else -> throw IllegalArgumentException()
             }
 
-            return translator.doTranslate("auto", language, query, entities)
+            Diagnostics.event(Diagnostics.Event.TRANSLATION_REQUEST, provider)
+            try {
+                val result = translator.doTranslate("auto", language, query, entities)
+                Diagnostics.event(Diagnostics.Event.TRANSLATION_OK, provider)
+                return result
+            } catch (error: Exception) {
+                if (error !is kotlinx.coroutines.CancellationException) {
+                    Diagnostics.event(if (error is java.net.SocketTimeoutException)
+                        Diagnostics.Event.TRANSLATION_TIMEOUT else Diagnostics.Event.TRANSLATION_FAILED, provider)
+                }
+                throw error
+            }
         }
 
         private val availableLocaleList: Array<Locale> = Locale.getAvailableLocales().also {

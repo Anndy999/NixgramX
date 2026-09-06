@@ -140,7 +140,7 @@ public class PushListenerController {
                     if (!Arrays.equals(SharedConfig.pushAuthKeyId, inAuthKeyId)) {
                         onDecryptError(countDownLatch);
                         if (BuildVars.LOGS_ENABLED) {
-                            FileLog.d(String.format(Locale.US, tag + " DECRYPT ERROR 2 k1=%s k2=%s, key=%s", Utilities.bytesToHex(SharedConfig.pushAuthKeyId), Utilities.bytesToHex(inAuthKeyId), Utilities.bytesToHex(SharedConfig.pushAuthKey)));
+                            FileLog.d(tag + " push decryption failed (keys omitted)");
                         }
                         return;
                     }
@@ -155,7 +155,7 @@ public class PushListenerController {
                     if (!Utilities.arraysEquals(messageKey, 0, messageKeyFull, 8)) {
                         onDecryptError(countDownLatch);
                         if (BuildVars.LOGS_ENABLED) {
-                            FileLog.d(String.format(tag + " DECRYPT ERROR 3, key = %s", Utilities.bytesToHex(SharedConfig.pushAuthKey)));
+                            FileLog.d(tag + " push decryption failed (keys omitted)");
                         }
                         return;
                     }
@@ -1520,9 +1520,11 @@ public class PushListenerController {
                         onDecryptError(countDownLatch);
                     }
                     if (BuildVars.LOGS_ENABLED) {
-                        FileLog.e("error in loc_key = " + loc_key + " json " + jsonString);
+                        FileLog.e("Push parse failed (payload omitted)");
                     }
-                    FileLog.e(e);
+                    org.telegram.messenger.diagnostics.Diagnostics.lastPushError = 1;
+                    org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PUSH_PARSE_FAILED, 0);
+                    FileLog.e("Push processing failed (exception message omitted)");
                 }
             });
         });
@@ -1661,6 +1663,8 @@ public class PushListenerController {
     }
 
     private static void onDecryptError(CountDownLatch countDownLatch) {
+        org.telegram.messenger.diagnostics.Diagnostics.lastPushError = 1;
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PUSH_PARSE_FAILED, 0);
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (UserConfig.getInstance(a).isClientActivated()) {
                 ConnectionsManager.onInternalPushReceived(a);
@@ -1712,7 +1716,8 @@ public class PushListenerController {
      * when GMS is present, and does not override an explicit user "off" toggle.
      */
     public static void ensureHybridPushConnectionForFcm() {
-        if (NaConfig.INSTANCE.getPushServiceType().Int() == 0) {
+        int provider = NaConfig.INSTANCE.getPushServiceType().Int();
+        if (provider != 1 && provider != 3) {
             return;
         }
         try {
