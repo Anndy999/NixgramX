@@ -57,3 +57,10 @@ by the script above.
   message and rebinds with the item animator disabled. Same for DMs,
   groups, channels, topics. The bar is a TextView. Keep-original stacking
   and reply quote+body (two languages in one bubble) are unchanged.
+- **UB-8 follow-up translate swap animation** (`fix/translate-swap-animation`):
+  The overlap fix made 显示原文 / 翻译为中文 a hard cut. Restore the
+  first-translation feel without drawing two languages at once:
+  incoming-only text/caption fade (`animateOut* = null`), cell
+  `startChangeAnimation()` (same duration/interpolator as first
+  translate), sequential whole-label bar fade. ChatListItemAnimator MOVE
+  stays off. Keep-original stacking and reply quote+body unchanged.
