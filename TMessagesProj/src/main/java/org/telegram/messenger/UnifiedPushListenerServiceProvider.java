@@ -22,9 +22,10 @@ public class UnifiedPushListenerServiceProvider implements PushListenerControlle
 
     @Override
     public void onRequestPushToken() {
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.TOKEN_REQUEST, 0);
         String currentPushString = SharedConfig.pushString;
         if (!TextUtils.isEmpty(currentPushString)) {
-            FileLog.d("UnifiedPush endpoint = " + currentPushString);
+            FileLog.d("UnifiedPush endpoint present (value omitted)");
         } else {
             FileLog.d("No UnifiedPush string found");
         }

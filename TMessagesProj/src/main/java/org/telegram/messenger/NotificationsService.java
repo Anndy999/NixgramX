@@ -30,6 +30,8 @@ public class NotificationsService extends Service {
     public void onCreate() {
         super.onCreate();
         ApplicationLoader.postInitApplication();
+        org.telegram.messenger.diagnostics.Diagnostics.keepAliveRunning = true;
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.SERVICE_START, 0);
         if (NaConfig.INSTANCE.getPushServiceTypeInAppDialog().Bool()) {
             String CHANNEL_ID = "push_service_channel";
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -59,6 +61,11 @@ public class NotificationsService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (PushListenerController.getProvider().hasServices()) {
+            org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.KEEP_ALIVE_CONFLICT, 0);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         return START_STICKY;
     }
 
@@ -69,12 +76,14 @@ public class NotificationsService extends Service {
 
     public void onDestroy() {
         super.onDestroy();
+        org.telegram.messenger.diagnostics.Diagnostics.keepAliveRunning = false;
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.SERVICE_STOP, 0);
         try {
             stopForeground(true);
         } catch (Throwable ignore) {
         }
         SharedPreferences preferences = MessagesController.getGlobalNotificationsSettings();
-        if (preferences.getBoolean("pushService", true)) {
+        if (!PushListenerController.getProvider().hasServices() && preferences.getBoolean("pushService", true)) {
             Intent intent = new Intent("org.telegram.start");
             intent.setPackage(getPackageName());
             try {
