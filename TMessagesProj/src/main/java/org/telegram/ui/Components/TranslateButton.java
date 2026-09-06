@@ -68,7 +68,7 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
 
     private Theme.ResourcesProvider resourcesProvider;
 
-    private AnimatedTextView textView;
+    private TextView textView;
     private final Drawable translateDrawable;
     public final SpannableString translateIcon;
 
@@ -88,24 +88,13 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
         this.fragment = fragment;
         this.resourcesProvider = resourcesProvider;
 
-        textView = new AnimatedTextView(context, true, true, false) {
-            @Override
-            protected void onDraw(Canvas canvas) {
-                canvas.save();
-                canvas.clipRect(0, 0, getWidth(), getHeight());
-                canvas.translate(dp(17), 0);
-                super.onDraw(canvas);
-                canvas.restore();
-            }
-        };
-        textView.setAnimationProperties(.3f, 0, 450, CubicBezierInterpolator.EASE_OUT_QUINT);
-
-        textView.setTextSize(dp(14));
+        textView = new TextView(context);
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, dp(14));
         textView.setTypeface(AndroidUtilities.bold());
-        textView.setPadding(dp(4), 0, dp(4), 0);
-        textView.setGravity(Gravity.CENTER_HORIZONTAL);
-        textView.setIgnoreRTL(!LocaleController.isRTL);
-        textView.adaptWidth = false;
+        textView.setPadding(dp(21), 0, dp(4), 0);
+        textView.setGravity(Gravity.CENTER);
+        textView.setSingleLine(true);
+        textView.setEllipsize(TextUtils.TruncateAt.END);
         textView.setOnClickListener(e -> onButtonClick());
         addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT, 0, 0, 34, 0));
 
@@ -415,14 +404,8 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
         popupWindow.showAsDropDown(menuView, 0, -menuView.getMeasuredHeight() - dp(8));
     }
 
-    /**
-     * Swap the bar label without AnimatedTextView's word-diff.
-     * 翻译为中文 / 显示原文 share almost no Latin words, so splitByWords paints both
-     * strings at the same origin for 450ms (the overlap in the record).
-     */
     private void setBarText(CharSequence text) {
-        textView.cancelAnimation();
-        textView.setText(text, false);
+        textView.setText(text);
     }
 
     public void updateText() {

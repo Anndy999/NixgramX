@@ -28911,10 +28911,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     sameText = false;
                 }
                 if (!sameText) {
-                    animateMessageText = true;
-                    animateOutTextBlocks = lastDrawingTextBlocks;
-                    animateOutTextXOffset = lastTextXOffset;
-                    animateOutAnimateEmoji = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animateOutAnimateEmoji, lastDrawingTextBlocks, true);
+                    // Content swap (translate/edit): never keep outgoing glyphs.
+                    // Crossfading two layouts at the same textX/textY is the overlap.
+                    animateMessageText = false;
+                    animateOutTextBlocks = null;
                     animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animatedEmojiStack, currentMessageObject.textLayoutBlocks);
                     changed = true;
                 } else {
@@ -28967,9 +28967,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 CharSequence oldText = lastDrawnReplyTextLayout != null ? lastDrawnReplyTextLayout.getText() : null;
                 if (!TextUtils.equals(newText, oldText)) {
                     animateFromReplyTextHeight = lastDrawingReplyTextHeight;
-                    animateReplyTextLayout = lastDrawnReplyTextLayout;
-                    animateReplyTextOffset = lastReplyTextXOffset;
-                    animateOutAnimateEmojiReply = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, false, animateOutAnimateEmojiReply, true, lastDrawnReplyTextLayout);
+                    animateReplyTextLayout = null;
                     changed = true;
                 }
             }
@@ -29111,9 +29109,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     (currentCaption == null) != (oldCaption == null) ||
                     (oldCaption != null && !oldCaption.equals(currentCaption))
                 ) {
-                    animateReplaceCaptionLayout = true;
-                    animateOutCaptionLayout = lastDrawingCaptionLayout;
-                    animateOutAnimateEmoji = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, null, animateOutCaptionLayout == null ? null : animateOutCaptionLayout.textLayoutBlocks);
+                    animateReplaceCaptionLayout = false;
+                    animateOutCaptionLayout = null;
                     animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animatedEmojiStack, captionLayout == null ? null : captionLayout.textLayoutBlocks);
                     if (lastDrawingSideMenuEnabled != isSideMenuEnabled || lastDrawingSummarized != summarized) {
                         moveCaption = true;

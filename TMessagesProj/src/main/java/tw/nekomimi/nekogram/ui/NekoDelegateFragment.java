@@ -940,10 +940,7 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
     }
 
     private boolean shouldCaptureSnapshot(@NonNull ChatMessageCell messageCell) {
-        if (!MessagesController.getGlobalMainSettings().getBoolean("view_animations", true)) {
-            return false;
-        }
-        return messageCell.getParent() instanceof RecyclerView;
+        return false;
     }
 
     private void prepareMessageCellForSnapshot(@NonNull ChatMessageCell messageCell) {
