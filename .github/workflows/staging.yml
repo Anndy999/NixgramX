@@ -15,6 +15,11 @@ on:
         required: true
         type: boolean
         default: false
+      release_notes:
+        description: 'Optional public APK caption notes (multiline, one "- item" per line). Empty = version line only; never uses git commit title.'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -129,6 +134,7 @@ jobs:
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Beta release' }}
           BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes || '' }}
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
           export COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"

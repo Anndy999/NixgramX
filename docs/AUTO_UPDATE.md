@@ -8,17 +8,17 @@ NixgramX reuses NagramX `UpdateHelper` / `BaseRemoteHelper` (metadata channel po
 
 | Channel | Role |
 | --- | --- |
-| Public [@NixgramX](https://t.me/NixgramX) | Stable and Beta APK media groups. Stable uses `NixgramX · <version> (<code>)`; Beta uses `NixgramX Beta · <version> (<code>)`; both add only the commit title. Never post `#updateRelease` / `#updateBeta` JSON here. |
+| Public [@NixgramX](https://t.me/NixgramX) | Stable/Beta APK media groups only. Caption is `NixgramX · <version> (<code>)` or `NixgramX Beta · <version> (<code>)`, optional blank line + user notes from `RELEASE_NOTES` / `docs/RELEASE_NOTES.txt`. **Never** post `#updateRelease` / `#updateBeta` JSON, canary hash lines, commit titles, or CI metadata here. |
 | Private metadata channel | Receives `#update*` JSON (+ optional canary line) for in-app updates. |
 
 `Tools/scripts/upload.py`:
 
 1. Always uploads APKs to `HELPER_BOT_TARGET` (argv[2], e.g. `@NixgramX`).
 2. Posts `#updateRelease` / `#updateBeta` JSON **only** to `HELPER_BOT_CANARY_TARGET` (argv[4]) when that chat is **different** from the APK chat.
-3. If both secrets are the same public channel: **skips** JSON, prints a warning, and still ships APKs with caption only.
+3. If canary is unset or the same chat as the APK channel: **skips** JSON and canary hash log, prints a warning, APK-only on public. **Public channel never receives `#update*`.**
 4. When JSON goes to a private metadata chat, the `document` map is left empty (APK message IDs are not in that chat); `url` stays `https://t.me/NixgramX` so the updater can open the public channel.
 
-`stable` uploads use the `NixgramX` title and `beta` uploads use `NixgramX Beta`; both use the commit title as their only second line. The tag sent to the private metadata channel remains `#updateRelease` or `#updateBeta`, so each user only sees the channel selected in Settings.
+`stable` / `beta` public captions never fall back to `COMMIT_MESSAGE`. Private metadata (when `HELPER_BOT_CANARY_TARGET` ≠ APK chat) still gets `#updateRelease` / `#updateBeta` for the in-app updater. Same chat or unset canary → skip JSON entirely (public channel never gets `#update*`).
 
 ## App constants
 
