@@ -25,7 +25,7 @@ public abstract class BaseRemoteHelper {
     // ID=0 → updater_not_configured (isMetadataChannelConfigured). After the first successful
     // publish to @NixgramXMetadata, paste the positive CHANNEL_METADATA_ID candidate from upload.py log.
     // Do NOT use 3819693045 (that is the public APK channel). Do not point at NagramX author endpoints.
-    public static final long CHANNEL_METADATA_ID = 0L;
+    public static final long CHANNEL_METADATA_ID = 4419000687L;
     public static final String CHANNEL_METADATA_NAME = "NixgramXMetadata";
 
     protected static final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoremoteconfig", Activity.MODE_PRIVATE);
