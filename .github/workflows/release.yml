@@ -15,6 +15,11 @@ on:
         required: true
         type: boolean
         default: false
+      stability_evidence:
+        description: 'JSON attestation for this SHA: commit, reviewer, checks (compile/device/core_regression/fcm/crash_blockers/data_correctness), each with status and evidence. All must PASS.'
+        required: false
+        type: string
+        default: ''
       release_notes:
         description: 'Optional 「日志」 body for public APK caption (multiline, one "- item" per line). Empty falls back to docs/RELEASE_NOTES.txt then commit subject; rendered as NagramX Commit Message blockquote.'
         required: false
@@ -96,7 +101,7 @@ jobs:
           path: TMessagesProj/build/outputs/apk/release/*-universal.apk
   upload:
     name: Publish Stable
-    if: github.event_name == 'push' || inputs.publish
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
     environment: stable
     needs:
@@ -104,6 +109,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Enforce Stable evidence
+        env:
+          STABILITY_EVIDENCE: ${{ inputs.stability_evidence }}
+        run: python3 Tools/stability/release_gate.py
+      - name: Verify commit belongs to main
+        run: |
+          git fetch origin main --unshallow
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - name: Download Artifacts
         uses: actions/download-artifact@v8
         with:
