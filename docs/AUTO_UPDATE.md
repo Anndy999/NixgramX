@@ -76,11 +76,11 @@ Settings → long-press version row → **Auto-check updates**:
 
 | Value | Meaning |
 | --- | --- |
-| OFF (default) | No background check. Manual "Check update" still runs once `CHANNEL_METADATA_ID` is set |
+| OFF (default) | No background check. Manual "Check update" still runs once `CHANNEL_METADATA_ID` is set. The metadata tag follows the installed APK: beta/staging APKs search `#updateBeta`, stable APKs search `#updateRelease` (same idea as official Telegram beta always hitting the beta endpoint). |
 | Release | `#updateRelease` posts |
 | Beta | `#updateBeta` posts |
 
-`BuildVars.CHECK_UPDATES` is `false` (no Play/official Telegram updater).
+`BuildVars.CHECK_UPDATES` is `false` (no Play / `TL_help_getAppUpdate` against Telegram's servers). `ApplicationLoader.checkUpdate()` is wired to `UpdateHelper` so the official standalone/beta hook (`LaunchActivity.checkAppUpdate` → `applicationLoaderInstance.checkUpdate`) can fill `SharedConfig.pendingAppUpdate` and show `UpdateLayout`. `isBeta()` is true for `BuildConfig.NIXGRAMX_CHANNEL=beta` as well as debug, not only `BuildConfig.DEBUG`. `#updateDebug` is never queried — that tag is not published.
 
 ## Enable in-app checks
 

@@ -17,6 +17,7 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 | 2026-09-04 | — | Auto-update default OFF + NixgramX release keystore | `cc67431ba6` (integrated) |
 | 2026-09-06 | `4e63d17d` (exteraless/exteraless) | Memory leak cleanup: VideoAds LruCache, mention adapters, ChatAvatarContainer observers, PhotoViewer blur watcher / animator (manual port; original PR had compile not run / device NOT TESTED) | `33b4dde726` (#27, integrated) |
 | 2026-09-06 | — | UB-8 follow-up: incoming-only translate swap animation (no EN/ZH overlay; item MOVE still off) | `a5058361c8` (#28, integrated) |
+| 2026-09-06 | DrKLO/Telegram ChatListItemAnimator + ApplicationLoaderImpl | Official MOVE for 显示原文/翻译为中文 (incoming-only glyphs); beta in-app check uses `#updateBeta` like official `checkUpdate` / `isBeta` | `fix/official-translate-anim` (#30) |
 
 ## Stability Phase v1 source/adaptation review
 
@@ -36,7 +37,3 @@ Rejected/deferred intelligence: 8543f0a0f3e0dbdfd206911f8dd59779080c2d8d (plugin
 is plugin-coupled; no port. 5c3993e63591c872ab6fa5d51b145668e0a6b7c0 (deduplicate push connection updates)
 requires native behavior evidence; no native semantics port. Other forks are intelligence sources,
 not approval to import features. No new claims of exhaustive fork review.
-
-Latest main integration retained:
-
-| 2026-09-06 | — | UB-8 follow-up: incoming-only translate swap animation (no EN/ZH overlay; item MOVE still off) | `a5058361c8` (#28, integrated) |

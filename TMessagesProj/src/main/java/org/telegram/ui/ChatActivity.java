@@ -25510,7 +25510,7 @@ public class ChatActivity extends BaseFragment implements
             }
 
             updateTopPanel(true);
-            applyDialogTranslationWithoutOverlap();
+            applyDialogTranslation();
             checkTranslation(true);
             updateTranslateItemVisibility();
         } else if (id == NotificationCenter.messageTranslated) {
@@ -25927,33 +25927,17 @@ public class ChatActivity extends BaseFragment implements
         return chatListView.getMeasuredHeight() - v.getBottom() - chatListView.getPaddingBottom();
     }
 
-    private void runWithoutChatListAnimator(Runnable action) {
-        if (chatListView == null) {
-            action.run();
-            return;
-        }
-        if (chatListItemAnimator != null) {
-            chatListItemAnimator.endAnimations();
-        }
-        RecyclerView.ItemAnimator was = chatListView.getItemAnimator();
-        chatListView.setItemAnimator(null);
-        try {
-            action.run();
-        } finally {
-            chatListView.setItemAnimator(was);
-        }
-    }
-
     /**
      * Chat-level translate is shared by DMs, groups, channels and topics.
-     * Rebind every loaded message without list-item moves: neighboring bubbles
-     * sliding over each other is the remaining EN/ZH overlap.
+     * Update every loaded message (including off-screen), then rebind visible
+     * cells through ChatListItemAnimator MOVE — the official bubble-morph +
+     * neighbor-slide. Incoming-only glyph fade (animateOut* = null) keeps
+     * EN/ZH from sharing pixels.
      */
-    private void applyDialogTranslationWithoutOverlap() {
+    private void applyDialogTranslation() {
         if (chatListView == null || chatAdapter == null) {
             return;
         }
-        saveGeneralScroll();
         ArrayList<Long> groupChecked = new ArrayList<>();
         if (messages != null) {
             for (int i = 0; i < messages.size(); ++i) {
@@ -25996,26 +25980,48 @@ public class ChatActivity extends BaseFragment implements
         if (updatedPinned) {
             updatePinnedMessageView(true, 1);
         }
-        runWithoutChatListAnimator(() -> {
-            for (int i = 0; i < chatListView.getChildCount(); ++i) {
-                View child = chatListView.getChildAt(i);
-                if (!(child instanceof ChatMessageCell)) {
-                    continue;
+        boolean notifiedAll = false;
+        ArrayList<Long> notifiedGroups = new ArrayList<>();
+        for (int i = 0; i < chatListView.getChildCount(); ++i) {
+            View child = chatListView.getChildAt(i);
+            if (!(child instanceof ChatMessageCell)) {
+                continue;
+            }
+            ChatMessageCell cell = (ChatMessageCell) child;
+            MessageObject messageObject = cell.getMessageObject();
+            if (messageObject == null) {
+                continue;
+            }
+            messageObject.forceUpdate = true;
+            cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+            MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();
+            if (group != null) {
+                if (!notifiedGroups.contains(group.groupId)) {
+                    notifiedGroups.add(group.groupId);
+                    if (chatListItemAnimator != null) {
+                        chatListItemAnimator.groupWillChanged(group);
+                    }
+                    for (int j = 0; j < group.messages.size(); j++) {
+                        group.messages.get(j).forceUpdate = true;
+                    }
+                    if (!notifiedAll) {
+                        chatAdapter.notifyDataSetChanged(true);
+                        notifiedAll = true;
+                    }
                 }
-                ChatMessageCell cell = (ChatMessageCell) child;
-                MessageObject messageObject = cell.getMessageObject();
-                if (messageObject == null) {
-                    continue;
+            } else if (!notifiedAll) {
+                int pos = chatListView.getChildAdapterPosition(child);
+                if (pos != RecyclerView.NO_POSITION) {
+                    chatAdapter.updateRowAtPosition(pos);
                 }
-                messageObject.forceUpdate = true;
-                cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+            }
+            if (chatListView.getItemAnimator() == null) {
                 cell.startChangeAnimation();
                 cell.requestLayout();
                 cell.invalidate();
             }
-            chatListView.requestLayout();
-            chatListView.invalidate();
-        });
+        }
+        chatListView.invalidate();
     }
 
     private boolean updateMessageTranslation(MessageObject messageObject, boolean scroll) {
@@ -26038,12 +26044,6 @@ public class ChatActivity extends BaseFragment implements
         if (chatListView == null) {
             return updated;
         }
-        if (chatListItemAnimator != null) {
-            chatListItemAnimator.endAnimations();
-        }
-        RecyclerView.ItemAnimator wasAnimator = chatListView.getItemAnimator();
-        chatListView.setItemAnimator(null);
-        try {
         ArrayList<Long> groupChecked = new ArrayList<>();
         for (int i = 0; i < chatListView.getChildCount(); ++i) {
             View child = chatListView.getChildAt(i);
@@ -26092,14 +26092,9 @@ public class ChatActivity extends BaseFragment implements
                 if (update) {
                     if (scroll) {
                         chatLayoutManager.scrollToPositionWithOffset(chatListView.getChildAdapterPosition(child), cell.getTop() - (int) chatListViewPaddingTop, false);
-                    } else {
-                        saveGeneralScroll();
                     }
                     cellMessageObject.forceUpdate = true;
                     cell.setMessageObject(cellMessageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
-                    cell.startChangeAnimation();
-                    cell.requestLayout();
-                    cell.invalidate();
                     if (group != null) {
                         if (chatListItemAnimator != null) {
                             chatListItemAnimator.groupWillChanged(group);
@@ -26111,12 +26106,14 @@ public class ChatActivity extends BaseFragment implements
                     } else {
                         chatAdapter.updateRowAtPosition(chatListView.getChildAdapterPosition(child));
                     }
+                    if (chatListView.getItemAnimator() == null) {
+                        cell.startChangeAnimation();
+                        cell.requestLayout();
+                        cell.invalidate();
+                    }
                     updated = true;
                 }
             }
-        }
-        } finally {
-            chatListView.setItemAnimator(wasAnimator);
         }
         return updated;
     }
@@ -26127,12 +26124,6 @@ public class ChatActivity extends BaseFragment implements
         if (chatListView == null) {
             return false;
         }
-        if (chatListItemAnimator != null) {
-            chatListItemAnimator.endAnimations();
-        }
-        RecyclerView.ItemAnimator wasAnimator = chatListView.getItemAnimator();
-        chatListView.setItemAnimator(null);
-        try {
         for (int i = 0; i < chatListView.getChildCount(); ++i) {
             View child = chatListView.getChildAt(i);
             if (child instanceof ChatMessageCell) {
@@ -26149,16 +26140,15 @@ public class ChatActivity extends BaseFragment implements
                 if (update) {
                     cellMessageObject.forceUpdate = true;
                     cell.setMessageObject(cellMessageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
-                    cell.startChangeAnimation();
-                    cell.requestLayout();
-                    cell.invalidate();
                     chatAdapter.updateRowAtPosition(chatListView.getChildAdapterPosition(child));
+                    if (chatListView.getItemAnimator() == null) {
+                        cell.startChangeAnimation();
+                        cell.requestLayout();
+                        cell.invalidate();
+                    }
                     updated = true;
                 }
             }
-        }
-        } finally {
-            chatListView.setItemAnimator(wasAnimator);
         }
         return updated;
     }

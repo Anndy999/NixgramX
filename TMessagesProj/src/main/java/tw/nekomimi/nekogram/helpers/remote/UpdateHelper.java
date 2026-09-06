@@ -68,11 +68,25 @@ public class UpdateHelper extends BaseRemoteHelper {
         }
     }
 
+    /**
+     * Official Telegram beta always hits the beta endpoint. NixgramX mirrors that:
+     * a beta/staging APK looks at {@code #updateBeta} unless the user explicitly
+     * picked the Release auto-check lane. {@code #updateDebug} is never published.
+     */
+    public static boolean isBetaApk() {
+        return BuildConfig.DEBUG || "beta".equals(BuildConfig.NIXGRAMX_CHANNEL);
+    }
+
     @Override
     protected String getTag() {
-        if (BuildConfig.DEBUG) return "updateDebug";
-        // OFF (and Release) → #updateRelease so long-press manual checks still find stable metadata.
-        return NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_CHANNEL_BETA ? "updateBeta" : "updateRelease";
+        int channel = NaConfig.INSTANCE.getAutoUpdateChannel().Int();
+        if (channel == UPDATE_CHANNEL_BETA) {
+            return "updateBeta";
+        }
+        if (channel == UPDATE_CHANNEL_RELEASE) {
+            return "updateRelease";
+        }
+        return isBetaApk() ? "updateBeta" : "updateRelease";
     }
 
     @SuppressWarnings("ConstantConditions")
