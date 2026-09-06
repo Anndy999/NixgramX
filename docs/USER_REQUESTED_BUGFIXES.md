@@ -48,3 +48,11 @@ by the script above.
   `HintView2.measureCorrectly`, refresh `timeMore` after re-measure, use
   `getLastLineWidthForTime` on the early text path, and put time on a new line
   when translated metadata cannot clearly share the last glyph line.
+- **UB-8 translate toggle original+translated overlap** (`fix/translate-text-overlap`):
+  Pointing 翻译为中文 left EN and ZH (and the bar labels) on the same pixels.
+  Previous skip-outgoing / lastDrawnTranslated patches did not hold: the
+  animator still kept `animateOutTextBlocks` and AnimatedTextView still
+  word-diffed CJK. Now `animateChange()` never arms a text/caption/reply
+  crossfade when the string actually changed (instant replace; bubble size
+  can still move). The bar is a `TextView`, not `AnimatedTextView`. Manual
+  translate no longer snapshots the old cell over the new glyphs.
