@@ -33,10 +33,10 @@ upstream-sync/* ─────┘          │
 
 ```properties
 NIXGRAMX_VERSION_NAME=12.10.1
-NIXGRAMX_VERSION_CODE=1269
+NIXGRAMX_VERSION_CODE=1270
 ```
 
-Every APK that is **published** to either channel must use a never-before-published, strictly higher `NIXGRAMX_VERSION_CODE`. The previous Stable was `1268`, so this Stable promotion uses `1269`. This preserves Android upgrade paths in both directions.
+Every APK that is **published** to either channel must use a never-before-published, strictly higher `NIXGRAMX_VERSION_CODE`. The previous Stable was `1268`, so this Stable promotion uses `1270`. This preserves Android upgrade paths in both directions.
 
 The Gradle channel is supplied only by CI:
 
