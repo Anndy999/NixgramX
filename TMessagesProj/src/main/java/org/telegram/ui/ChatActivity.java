@@ -46642,7 +46642,7 @@ public class ChatActivity extends BaseFragment implements
             builder.setTitle(LocaleController.getString(R.string.ClearDeleted));
             builder.setMessage(LocaleController.getString(R.string.ClearDeletedAlertMessage));
             builder.setPositiveButton(LocaleController.getString(R.string.Clear), (dialogInterface, i) -> {
-                AyuMessagesController.getInstance().deleteCurrent(dialog_id, mergeDialogId, () -> {
+                AyuMessagesController.getInstance().deleteCurrent(getUserConfig().getClientUserId(), dialog_id, mergeDialogId, () -> {
                     AndroidUtilities.runOnUIThread(() -> {
                         getNotificationCenter().removeObserver(ChatActivity.this, NotificationCenter.closeChats);
                         getNotificationCenter().postNotificationName(NotificationCenter.closeChats);

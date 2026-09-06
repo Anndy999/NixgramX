@@ -59,6 +59,7 @@ public class UnifiedPushService extends PushService {
             ApplicationLoader.postInitApplication();
             Utilities.globalQueue.postRunnable(() -> {
                 SharedConfig.pushStringGetTimeEnd = SystemClock.elapsedRealtime();
+                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.TOKEN_OK, 0);
                 ensureWebPushKeys();
 
                 String gateway = NaConfig.getPreferences().getString(NaConfig.INSTANCE.getPushServiceTypeUnifiedGateway().getKey(), "");
@@ -93,6 +94,7 @@ public class UnifiedPushService extends PushService {
     @Override
     public void onMessage(PushMessage message, String instance) {
         if (isUnifiedPushDisabled()) return;
+        org.telegram.messenger.diagnostics.Diagnostics.received(PushListenerController.PUSH_TYPE_WEB);
 
         lastReceivedNotification = SystemClock.elapsedRealtime();
         numOfReceivedNotifications++;
@@ -117,7 +119,9 @@ public class UnifiedPushService extends PushService {
                 });
                 return;
             } catch (Exception e) {
-                FileLog.e("WP DECRYPT ERROR, falling back to wake-up: " + e.getMessage());
+                FileLog.e("WP DECRYPT ERROR, falling back to wake-up (details omitted)");
+                org.telegram.messenger.diagnostics.Diagnostics.lastPushError = 1;
+                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PUSH_PARSE_FAILED, 0);
             }
         }
 
@@ -142,7 +146,8 @@ public class UnifiedPushService extends PushService {
     @Override
     public void onRegistrationFailed(FailedReason reason, String instance) {
         if (isUnifiedPushDisabled()) return;
-        FileLog.e("Failed to get endpoint: " + reason);
+        FileLog.e("Failed to get UnifiedPush endpoint");
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.TOKEN_FAILED, 0);
         SharedConfig.pushStringStatus = UP_FAILED;
         Utilities.globalQueue.postRunnable(() -> {
             SharedConfig.pushStringGetTimeEnd = SystemClock.elapsedRealtime();

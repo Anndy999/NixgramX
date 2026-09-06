@@ -2116,6 +2116,7 @@ public class FileLoadOperation {
     }
 
     protected void onFail(boolean thread, final int reason) {
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.MEDIA_DOWNLOAD_FAILED, reason);
         cleanup();
         state = reason == 1 ? stateCanceled : stateFailed;
         if (delegate != null) {
