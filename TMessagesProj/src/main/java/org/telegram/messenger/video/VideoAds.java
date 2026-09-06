@@ -72,7 +72,6 @@ import org.telegram.ui.RevenueSharingAdsInfoBottomSheet;
 import org.telegram.ui.Stories.DarkThemeResourceProvider;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Objects;
 
 public class VideoAds {
@@ -108,11 +107,17 @@ public class VideoAds {
         }
     }
 
-//    private static LruCache<VideoAdsLocation, VideoAds> cached = new LruCache<>(3);
-    private static HashMap<VideoAdsLocation, VideoAds> cached = new HashMap<>();
+    private static LruCache<VideoAdsLocation, VideoAds> cached = new LruCache<VideoAdsLocation, VideoAds>(3) {
+        @Override
+        protected void entryRemoved(boolean evicted, VideoAdsLocation key, VideoAds oldValue, VideoAds newValue) {
+            if (oldValue != null && oldValue != newValue) {
+                oldValue.destroy();
+            }
+        }
+    };
 
     public static void dropCache() {
-        cached.clear();
+        cached.evictAll();
     }
 
     public static VideoAds make(
@@ -245,7 +250,7 @@ public class VideoAds {
     private float currentMenuTranslationY;
 
     private void show() {
-        if (ads.isEmpty()) return;
+        if (ads.isEmpty() || bulletinFactory == null) return;
         final TLRPC.TL_sponsoredMessage ad = ads.get(0);
         final long showTime = System.currentTimeMillis() - currentBulletinPassedTime;
         bulletinShowTime = showTime;
@@ -551,6 +556,7 @@ public class VideoAds {
     }
 
     public void stop() {
+        onPopupCallback = null;
         if (bulletin != null) {
             currentBulletinPassedTime = System.currentTimeMillis() - bulletinShowTime;
             if (!ads.isEmpty()) {
@@ -570,6 +576,10 @@ public class VideoAds {
             currentMenu.dismiss();
             currentMenu = null;
         }
+        if (premiumSheet != null) {
+            premiumSheet.dismiss();
+            premiumSheet = null;
+        }
         bulletin = null;
         if (loading) {
             ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
@@ -578,6 +588,13 @@ public class VideoAds {
         }
         AndroidUtilities.cancelRunOnUIThread(showRunnable);
         setWaitingPaused(true);
+        bulletinFactory = null;
+    }
+
+    private void destroy() {
+        stop();
+        ads.clear();
+        loaded = false;
     }
 
     public static class AdOptionsDrawable extends Drawable {
