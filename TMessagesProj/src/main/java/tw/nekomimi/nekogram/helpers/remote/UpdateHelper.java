@@ -179,14 +179,20 @@ public class UpdateHelper extends BaseRemoteHelper {
             return;
         }
         var ids = new HashMap<String, Integer>();
-        if (update.sticker != null) {
+        // sticker/message id 0 is a placeholder — never fetch getMessages(id=0).
+        // With a real positive sticker id, getNewVersionMessagesCallback sets
+        // update.sticker (document) and flags |= 8 so UpdateAppAlertDialog shows the duck.
+        if (update.sticker != null && update.sticker > 0) {
             ids.put("sticker", update.sticker);
         }
-        if (update.message != null) {
+        if (update.message != null && update.message > 0) {
             ids.put("message", update.message);
         }
-        if (update.document != null) {
-            ids.put("document", getPreferredAbiFile(update.document));
+        if (update.document != null && !update.document.isEmpty()) {
+            Integer documentId = getPreferredAbiFile(update.document);
+            if (documentId != null && documentId > 0) {
+                ids.put("document", documentId);
+            }
         }
         if (ids.isEmpty()) {
             getNewVersionMessagesCallback(delegate, update, null, null);
