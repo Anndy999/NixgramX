@@ -4774,9 +4774,21 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         }
 
         private void draw(@Nullable Canvas c, @NonNull RecyclerView parent, @Nullable IBlur3Hash builder, @Nullable RectF position) {
-            if (cameraAnimationInProgress || cameraOpened || !adapter.hasCamera || noCameraPermissions || noGalleryPermissions) {
+            // Live camera preview cannot be hashed → unsupported (always recapture).
+            // Denied camera/gallery permission is a static placeholder: skip without
+            // unsupported(), otherwise every blur3_InvalidateBlur forces a full grid
+            // recapture (group + light wallpaper select jank with camera denied).
+            if (cameraAnimationInProgress || cameraOpened) {
                 if (builder != null) {
                     builder.unsupported();
+                }
+                return;
+            }
+            if (!adapter.hasCamera || noCameraPermissions || noGalleryPermissions) {
+                if (builder != null) {
+                    builder.add(noCameraPermissions);
+                    builder.add(noGalleryPermissions);
+                    builder.add(adapter.hasCamera);
                 }
                 return;
             }

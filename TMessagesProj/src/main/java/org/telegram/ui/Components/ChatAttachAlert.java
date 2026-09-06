@@ -2717,9 +2717,14 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         buttonsRecyclerView.setGlowColor(getThemedColor(Theme.key_dialogScrollGlow));
         buttonsRecyclerView.setAdaptiveOverScroll();
 
-        iBlur3FactoryLiquidGlass.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
-        iBlur3FactoryFrostedLiquidGlass.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
-        iBlur3FactoryFade.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
+        // Keep watcher refs so selection-chrome animations can pause per-frame
+        // liquid-glass sourceOffset invalidates (group light wallpaper jank).
+        glassPositionWatcher = new ViewPositionWatcher(containerView);
+        glassFrostedPositionWatcher = new ViewPositionWatcher(containerView);
+        fadePositionWatcher = new ViewPositionWatcher(containerView);
+        iBlur3FactoryLiquidGlass.setSourceRootView(glassPositionWatcher, containerView);
+        iBlur3FactoryFrostedLiquidGlass.setSourceRootView(glassFrostedPositionWatcher, containerView);
+        iBlur3FactoryFade.setSourceRootView(fadePositionWatcher, containerView);
 
 
 
@@ -5197,6 +5202,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
         applyWriteButtonOpenState(show);
         if (animated) {
+            setSelectionChromeAnimating(true);
             commentsAnimator = new AnimatorSet();
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(writeButtonContainer, View.SCALE_X, show ? 1.0f : 0.2f));
@@ -5224,6 +5230,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                             }
                         }
                         commentsAnimator = null;
+                        setSelectionChromeAnimating(false);
                     }
                 }
 
@@ -5231,6 +5238,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 public void onAnimationCancel(Animator animation) {
                     if (animation.equals(commentsAnimator)) {
                         commentsAnimator = null;
+                        setSelectionChromeAnimating(false);
                     }
                 }
             });
@@ -5284,6 +5292,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         final boolean allowAbove = (currentAttachLayout == photoLayout || currentAttachLayout == photoPreviewLayout);
         final boolean above = allowAbove && captionAbove;
         if (animated) {
+            setSelectionChromeAnimating(true);
             commentsAnimator = new AnimatorSet();
             if (above) {
                 topCommentContainer.setVisibility(View.VISIBLE);
@@ -5338,6 +5347,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                             topCommentContainer.setVisibility(show ? View.VISIBLE : View.GONE);
                         }
                         commentsAnimator = null;
+                        setSelectionChromeAnimating(false);
                     }
                 }
 
@@ -5345,6 +5355,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 public void onAnimationCancel(Animator animation) {
                     if (animation.equals(commentsAnimator)) {
                         commentsAnimator = null;
+                        setSelectionChromeAnimating(false);
                     }
                 }
             });
@@ -5986,11 +5997,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             return;
         }
 
-        if (scrollableViewNoiseSuppressor != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            scrollableViewNoiseSuppressor.onScrolled(0, dy);
-            blur3_InvalidateBlur();
-        }
-
         int newOffset = layout.getCurrentItemTop();
         if (newOffset == Integer.MAX_VALUE) {
             return;
@@ -6007,7 +6013,17 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         newOffset += (layoutParams == null ? 0 : layoutParams.topMargin) - dp(11);
         int idx = currentAttachLayout == layout ? 0 : 1;
         boolean previewAnimationIsRunning = (currentAttachLayout instanceof ChatAttachAlertPhotoLayoutPreview || nextAttachLayout instanceof ChatAttachAlertPhotoLayoutPreview) && (viewChangeAnimator instanceof SpringAnimation && ((SpringAnimation) viewChangeAnimator).isRunning());
-        if (scrollOffsetY[idx] != newOffset || previewAnimationIsRunning) {
+        final boolean offsetChanged = scrollOffsetY[idx] != newOffset || previewAnimationIsRunning;
+        // Only rebuild blur on real scroll / offset change. Selection checkbox + send-count
+        // animations can trigger updateLayout(dy=0); rebuilding then janks on light wallpaper
+        // (especially groups with more glass tabs / denied-camera unsupported hash).
+        if (dy != 0 || offsetChanged) {
+            if (scrollableViewNoiseSuppressor != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                scrollableViewNoiseSuppressor.onScrolled(0, dy);
+                blur3_InvalidateBlur();
+            }
+        }
+        if (offsetChanged) {
             previousScrollOffsetY = scrollOffsetY[idx];
             scrollOffsetY[idx] = newOffset;
             updateSelectedPosition(idx);
@@ -7330,6 +7346,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     /* Blur */
 
+    private ViewPositionWatcher glassPositionWatcher;
+    private ViewPositionWatcher glassFrostedPositionWatcher;
+    private ViewPositionWatcher fadePositionWatcher;
+    private boolean selectionChromeAnimating;
+
     private final @Nullable DownscaleScrollableNoiseSuppressor scrollableViewNoiseSuppressor;
     private final @Nullable BlurredBackgroundSourceRenderNode iBlur3SourceGlassFrosted;
     private final @Nullable BlurredBackgroundSourceRenderNode iBlur3SourceGlass;
@@ -7352,8 +7373,35 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     private final ArrayList<RectF> iBlur3PositionsMerged = new ArrayList<>();
 
+
+    private void setSelectionChromeAnimating(boolean animating) {
+        if (selectionChromeAnimating == animating) {
+            return;
+        }
+        selectionChromeAnimating = animating;
+        if (glassPositionWatcher != null) {
+            glassPositionWatcher.setPaused(animating);
+        }
+        if (glassFrostedPositionWatcher != null) {
+            glassFrostedPositionWatcher.setPaused(animating);
+        }
+        if (fadePositionWatcher != null) {
+            fadePositionWatcher.setPaused(animating);
+        }
+        if (!animating) {
+            blur3_InvalidateBlur();
+            if (containerView != null) {
+                containerView.invalidate();
+            }
+        }
+    }
+
     public void blur3_InvalidateBlur() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
+            return;
+        }
+        if (selectionChromeAnimating) {
+            // First-select caption/tabs slide invalidates glass every frame; skip capture.
             return;
         }
 
