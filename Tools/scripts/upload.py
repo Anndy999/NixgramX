@@ -163,13 +163,15 @@ def get_canary_metadata() -> str:
     return build_timestamp + " " + commit_id + "\n" + commit_message
 
 
-def build_update_payload(document_ids: dict[str, int]) -> str:
+def build_update_payload(document_ids: dict[str, int], sticker_message_id: int = 0) -> str:
     version, version_code = resolve_version()
     build_timestamp_raw = os.environ.get("BUILD_TIMESTAMP") or "0"
     try:
         build_timestamp = int(build_timestamp_raw)
     except ValueError:
         build_timestamp = 0
+    # Never treat 0 as a real sticker message id (UpdateHelper skips fetch for 0).
+    sticker_id = int(sticker_message_id) if sticker_message_id and int(sticker_message_id) > 0 else 0
     url = os.environ.get("UPDATE_URL") or DEFAULT_UPDATE_URL
     tag = "#updateBeta" if beta_version else "#updateRelease"
     body = {
@@ -177,13 +179,61 @@ def build_update_payload(document_ids: dict[str, int]) -> str:
         "version": version,
         "version_code": version_code,
         "build_timestamp": build_timestamp,
-        "sticker": 0,
+        "sticker": sticker_id,
         "message": 0,
         "document": document_ids,
         "url": url,
     }
     # Compact JSON after the tag (UpdateHelper strips tag then parses JSON)
     return f"{tag} {json.dumps(body, separators=(',', ':'))}"
+
+
+def find_repo_update_duck_asset() -> Path | None:
+    """Locate an existing update-duck sticker asset (.tgs/.webm/.webp) in the repo.
+
+    Does not invent new assets; only matches update/duck-oriented names outside
+    ordinary Android drawable density folders.
+    """
+    skip_parts = {".git", "jni", "build", ".gradle", "node_modules", "drawable",
+                  "drawable-hdpi", "drawable-mdpi", "drawable-xhdpi", "drawable-xxhdpi",
+                  "drawable-xxxhdpi", "drawable-night-hdpi", "drawable-night-mdpi",
+                  "drawable-night-xhdpi", "drawable-night-xxhdpi", "drawable-night-xxxhdpi",
+                  "mipmap-hdpi", "mipmap-mdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"}
+    exts = {".tgs", ".webm", ".webp"}
+    preferred: list[Path] = []
+    for p in REPO_ROOT.rglob("*"):
+        if not p.is_file():
+            continue
+        if any(part in skip_parts for part in p.parts):
+            continue
+        if p.suffix.lower() not in exts:
+            continue
+        name = p.name.lower()
+        if ("update" in name and "duck" in name) or name.startswith("update_duck") or name.startswith("updateduck"):
+            preferred.append(p)
+        elif "duck" in name and ("update" in name or "sticker" in name):
+            preferred.append(p)
+    if not preferred:
+        # Narrow Tools/ + top-level assets folders for any *duck*.{tgs,webm,webp}
+        for base in (REPO_ROOT / "Tools", REPO_ROOT / "tools", REPO_ROOT / "assets", REPO_ROOT / "stickers"):
+            if not base.is_dir():
+                continue
+            for p in base.rglob("*"):
+                if p.is_file() and p.suffix.lower() in exts and "duck" in p.name.lower():
+                    preferred.append(p)
+    preferred.sort(key=lambda x: (0 if "update" in x.name.lower() else 1, str(x)))
+    return preferred[0] if preferred else None
+
+
+def parse_positive_message_id(raw: str | None) -> int | None:
+    if raw is None:
+        return None
+    s = str(raw).strip().strip('"').strip("'")
+    if not s or not s.isdigit():
+        return None
+    value = int(s)
+    return value if value > 0 else None
+
 
 
 def channel_id_for_app(chat_id) -> int:
@@ -211,6 +261,67 @@ def retry(func):
 
     return wrapper
 
+
+@retry
+async def send_sticker_file(client: "Client", cid, path: Path) -> int:
+    """Upload a sticker-like file to the metadata channel; return message id."""
+    with contextlib.suppress(ValueError):
+        cid = int(cid)
+    path = Path(path)
+    suffix = path.suffix.lower()
+    print(f"Uploading update duck sticker to metadata chat: {path}", flush=True)
+    if suffix == ".webm":
+        # Video stickers: send as sticker when possible; fall back to document.
+        try:
+            msg = await client.send_sticker(chat_id=cid, sticker=str(path))
+        except Exception as e:
+            print(f"send_sticker failed for .webm ({e}); trying send_document", flush=True)
+            msg = await client.send_document(chat_id=cid, document=str(path))
+    elif suffix in {".tgs", ".webp"}:
+        msg = await client.send_sticker(chat_id=cid, sticker=str(path))
+    else:
+        raise ValueError(f"Unsupported sticker asset type: {path}")
+    print(f"Update duck sticker message_id={msg.id}", flush=True)
+    return msg.id
+
+
+async def obtain_sticker_message_id(client: "Client", metadata_cid) -> int:
+    """Resolve sticker message id for private #update* JSON only.
+
+    Priority:
+      a) UPDATE_STICKER_MESSAGE_ID env (existing message in metadata channel)
+      b) UPDATE_STICKER_PATH env pointing at .tgs/.webm/.webp — upload to metadata
+      c) existing update-duck asset in repo — upload to metadata if found
+    Returns 0 when none available (never a valid fetch id).
+    """
+    env_id = parse_positive_message_id(os.environ.get("UPDATE_STICKER_MESSAGE_ID"))
+    if env_id is not None:
+        print(f"Using UPDATE_STICKER_MESSAGE_ID={env_id}", flush=True)
+        return env_id
+
+    env_path_raw = (os.environ.get("UPDATE_STICKER_PATH") or "").strip().strip('"').strip("'")
+    if env_path_raw:
+        env_path = Path(env_path_raw)
+        if not env_path.is_file():
+            env_path = (REPO_ROOT / env_path_raw).resolve()
+        if env_path.is_file() and env_path.suffix.lower() in {".tgs", ".webm", ".webp"}:
+            return await send_sticker_file(client, metadata_cid, env_path)
+        print(
+            f"WARN: UPDATE_STICKER_PATH set but not a usable .tgs/.webm/.webp file: {env_path_raw}",
+            flush=True,
+        )
+
+    asset = find_repo_update_duck_asset()
+    if asset is not None:
+        print(f"Found repo update-duck asset: {asset}", flush=True)
+        return await send_sticker_file(client, metadata_cid, asset)
+
+    print(
+        "No UPDATE_STICKER_MESSAGE_ID / UPDATE_STICKER_PATH / repo update-duck asset; "
+        "JSON sticker=0 (app local RLottie fallback).",
+        flush=True,
+    )
+    return 0
 
 async def resolve_and_print_chat(client: "Client", cid):
     with contextlib.suppress(ValueError):
@@ -243,10 +354,10 @@ async def send_to_channel(client: "Client", cid) -> dict[str, int]:
 
 
 @retry
-async def send_update_json(client: "Client", cid, document_ids: dict[str, int]):
+async def send_update_json(client: "Client", cid, document_ids: dict[str, int], sticker_message_id: int = 0):
     with contextlib.suppress(ValueError):
         cid = int(cid)
-    text = build_update_payload(document_ids)
+    text = build_update_payload(document_ids, sticker_message_id=sticker_message_id)
     print(f"Posting updater metadata ({text.split(' ', 1)[0]}):", flush=True)
     print(text, flush=True)
     msg = await client.send_message(chat_id=cid, text=text)
@@ -309,24 +420,27 @@ async def main():
     document_ids = await send_to_channel(client, chat_id)
     if metadata_chat_id and not same_chat(metadata_chat_id, chat_id):
         await resolve_and_print_chat(client, metadata_chat_id)
-        # Private metadata chat: url-only JSON (APK message IDs are not in that chat).
+        # Private metadata chat only: sticker + url-only JSON (never public APK chat).
+        sticker_message_id = await obtain_sticker_message_id(client, metadata_chat_id)
         url_only_docs: dict[str, int] = {}
-        await send_update_json(client, metadata_chat_id, url_only_docs)
+        await send_update_json(client, metadata_chat_id, url_only_docs, sticker_message_id)
         await send_canary_metadata(client, metadata_chat_id)
         print(
             "Posted #update* JSON to private metadata chat only "
-            f"(APK chat={chat_id}, metadata chat={metadata_chat_id}); document map empty (url-only).",
+            f"(APK chat={chat_id}, metadata chat={metadata_chat_id}); "
+            f"sticker={sticker_message_id}; document map empty (url-only).",
             flush=True,
         )
     else:
-        # Same chat / canary unset: post #update* on the public APK channel (labeled via caption).
+        # Do not upload stickers or invent public-channel sticker posts.
+        # Prefer private HELPER_BOT_CANARY_TARGET; without it, skip sticker (id=0).
         meta_target = metadata_chat_id or chat_id
         print(
             "INFO: posting #update* JSON to the APK/public chat "
-            f"(APK chat={chat_id}, metadata={metadata_chat_id}).",
+            f"(APK chat={chat_id}, metadata={metadata_chat_id}); sticker skipped (public chat).",
             flush=True,
         )
-        await send_update_json(client, meta_target, document_ids)
+        await send_update_json(client, meta_target, document_ids, sticker_message_id=0)
         await send_canary_metadata(client, meta_target)
     await client.log_out()
 

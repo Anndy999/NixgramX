@@ -249,6 +249,13 @@ public class UpdateAppAlertDialog extends BottomSheet {
                 imageView.setImage(ImageLocation.getForDocument(appUpdate.sticker), "250_250", imageLocation, null, 0, "update");
             }
             linearLayout.addView(imageView, LayoutHelper.createLinear(160, 160, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 17, 8, 17, 0));
+        } else {
+            // Local duck fallback when metadata sticker id is missing/0 (official path uses appUpdate.sticker).
+            RLottieImageView imageView = new RLottieImageView(context);
+            imageView.setAutoRepeat(true);
+            imageView.setAnimation(R.raw.utyan_newborn, 160, 160);
+            imageView.playAnimation();
+            linearLayout.addView(imageView, LayoutHelper.createLinear(160, 160, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 17, 8, 17, 0));
         }
 
         TextView textView = new TextView(context);
