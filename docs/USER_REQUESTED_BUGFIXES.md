@@ -50,9 +50,10 @@ by the script above.
   when translated metadata cannot clearly share the last glyph line.
 - **UB-8 translate toggle original+translated overlap** (`fix/translate-text-overlap`):
   Pointing 翻译为中文 left EN and ZH (and the bar labels) on the same pixels.
-  Previous skip-outgoing / lastDrawnTranslated patches did not hold: the
-  animator still kept `animateOutTextBlocks` and AnimatedTextView still
-  word-diffed CJK. Now `animateChange()` never arms a text/caption/reply
-  crossfade when the string actually changed (instant replace; bubble size
-  can still move). The bar is a `TextView`, not `AnimatedTextView`. Manual
-  translate no longer snapshots the old cell over the new glyphs.
+  Glyph crossfade is off; the remaining overlap was ChatListItemAnimator
+  sliding neighboring bubbles over each other while heights changed, and
+  only currently attached cells were rebound (older/off-screen + channels
+  used the same ChatActivity path). Toggle now updates every loaded
+  message and rebinds with the item animator disabled. Same for DMs,
+  groups, channels, topics. The bar is a TextView. Keep-original stacking
+  and reply quote+body (two languages in one bubble) are unchanged.

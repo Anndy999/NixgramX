@@ -25510,81 +25510,7 @@ public class ChatActivity extends BaseFragment implements
             }
 
             updateTopPanel(true);
-            if (chatListView != null && chatAdapter != null) {
-                boolean updatedPinned = false;
-                saveGeneralScroll();
-                ArrayList<Long> groupChecked = new ArrayList<>();
-                for (int i = 0; i < chatListView.getChildCount(); ++i) {
-                    View child = chatListView.getChildAt(i);
-                    if (child instanceof ChatMessageCell) {
-                        ChatMessageCell cell = (ChatMessageCell) child;
-                        MessageObject messageObject = cell.getMessageObject();
-                        boolean update = false;
-                        if (messageObject != null && messageObject.updateTranslation(false)) {
-                            update = true;
-
-                            MessageObject pinnedMessageObject = pinnedMessageObjects.get(messageObject.getId());
-                            if (pinnedMessageObject != null) {
-                                pinnedMessageObject.messageOwner.translatedText = messageObject.messageOwner.translatedText;
-                                pinnedMessageObject.messageOwner.translatedToLanguage = messageObject.messageOwner.translatedToLanguage;
-                                if (pinnedMessageObject.updateTranslation(currentPinnedMessageId == messageObject.getId())) {
-                                    updatedPinned = true;
-                                }
-                            }
-                        }
-                        MessageObject.GroupedMessages group = groupedMessagesMap.get(messageObject.getGroupId());
-                        if (group != null && !groupChecked.contains(group.groupId)) {
-                            for (int j = 0; j < group.messages.size(); ++j) {
-                                MessageObject groupMessageObject = group.messages.get(j);
-                                if (groupMessageObject != null && groupMessageObject.updateTranslation(false)) {
-                                    update = true;
-                                }
-                            }
-                            groupChecked.add(group.groupId);
-                        }
-                        if (messageObject != null && messageObject.replyMessageObject != null) {
-                            MessageObject translatedReplyMessageObject = getMessagesController().getTranslateController().findReplyMessageObject(dialogId, messageObject.replyMessageObject.getId());
-                            if (translatedReplyMessageObject != null) {
-                                messageObject.replyMessageObject.messageOwner.translatedText = translatedReplyMessageObject.messageOwner.translatedText;
-                                messageObject.replyMessageObject.messageOwner.translatedToLanguage = translatedReplyMessageObject.messageOwner.translatedToLanguage;
-                                if (messageObject.replyMessageObject.updateTranslation(true)) {
-                                    update = true;
-                                }
-                            }
-                        }
-
-                        if (update) {
-                            messageObject.forceUpdate = true;
-                            cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
-                            if (group != null) {
-                                if (chatListItemAnimator != null) {
-                                    chatListItemAnimator.groupWillChanged(group);
-                                }
-                                for (int j = 0; j < group.messages.size(); j++) {
-                                    group.messages.get(j).forceUpdate = true;
-                                }
-                                if (chatAdapter != null) {
-                                    chatAdapter.notifyDataSetChanged(true);
-                                }
-                            } else if (chatAdapter != null) {
-                                chatAdapter.updateRowAtPosition(chatListView.getChildAdapterPosition(child));
-                            }
-                        } else {
-                            cell.invalidate();
-                        }
-                    }
-                }
-                if (!updatedPinned) {
-                    for (MessageObject pinnedMessageObject : pinnedMessageObjects.values()) {
-                        if (pinnedMessageObject != null && pinnedMessageObject.updateTranslation(currentPinnedMessageId == pinnedMessageObject.getId())) {
-                            updatedPinned = true;
-                        }
-                    }
-                }
-                if (updatedPinned) {
-                    updatePinnedMessageView(true, 1);
-                }
-            }
+            applyDialogTranslationWithoutOverlap();
             checkTranslation(true);
             updateTranslateItemVisibility();
         } else if (id == NotificationCenter.messageTranslated) {
@@ -26001,6 +25927,96 @@ public class ChatActivity extends BaseFragment implements
         return chatListView.getMeasuredHeight() - v.getBottom() - chatListView.getPaddingBottom();
     }
 
+    private void runWithoutChatListAnimator(Runnable action) {
+        if (chatListView == null) {
+            action.run();
+            return;
+        }
+        if (chatListItemAnimator != null) {
+            chatListItemAnimator.endAnimations();
+        }
+        RecyclerView.ItemAnimator was = chatListView.getItemAnimator();
+        chatListView.setItemAnimator(null);
+        try {
+            action.run();
+        } finally {
+            chatListView.setItemAnimator(was);
+        }
+    }
+
+    /**
+     * Chat-level translate is shared by DMs, groups, channels and topics.
+     * Rebind every loaded message without list-item moves: neighboring bubbles
+     * sliding over each other is the remaining EN/ZH overlap.
+     */
+    private void applyDialogTranslationWithoutOverlap() {
+        if (chatListView == null || chatAdapter == null) {
+            return;
+        }
+        saveGeneralScroll();
+        ArrayList<Long> groupChecked = new ArrayList<>();
+        if (messages != null) {
+            for (int i = 0; i < messages.size(); ++i) {
+                MessageObject messageObject = messages.get(i);
+                if (messageObject == null) {
+                    continue;
+                }
+                messageObject.updateTranslation(false);
+                if (messageObject.replyMessageObject != null && messageObject.replyMessageObject != messageObject) {
+                    MessageObject translatedReplyMessageObject = getMessagesController().getTranslateController().findReplyMessageObject(getDialogId(), messageObject.replyMessageObject.getId());
+                    if (translatedReplyMessageObject != null) {
+                        messageObject.replyMessageObject.messageOwner.translatedText = translatedReplyMessageObject.messageOwner.translatedText;
+                        messageObject.replyMessageObject.messageOwner.translatedToLanguage = translatedReplyMessageObject.messageOwner.translatedToLanguage;
+                    }
+                    messageObject.replyMessageObject.updateTranslation(true);
+                }
+                if (messageObject.getGroupId() != 0) {
+                    MessageObject.GroupedMessages group = groupedMessagesMap.get(messageObject.getGroupId());
+                    if (group != null && !groupChecked.contains(group.groupId)) {
+                        groupChecked.add(group.groupId);
+                        for (int j = 0; j < group.messages.size(); ++j) {
+                            MessageObject groupMessageObject = group.messages.get(j);
+                            if (groupMessageObject != null) {
+                                groupMessageObject.updateTranslation(false);
+                                groupMessageObject.forceUpdate = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        boolean updatedPinned = false;
+        if (pinnedMessageObjects != null) {
+            for (MessageObject pinnedMessageObject : pinnedMessageObjects.values()) {
+                if (pinnedMessageObject != null && pinnedMessageObject.updateTranslation(currentPinnedMessageId == pinnedMessageObject.getId())) {
+                    updatedPinned = true;
+                }
+            }
+        }
+        if (updatedPinned) {
+            updatePinnedMessageView(true, 1);
+        }
+        runWithoutChatListAnimator(() -> {
+            for (int i = 0; i < chatListView.getChildCount(); ++i) {
+                View child = chatListView.getChildAt(i);
+                if (!(child instanceof ChatMessageCell)) {
+                    continue;
+                }
+                ChatMessageCell cell = (ChatMessageCell) child;
+                MessageObject messageObject = cell.getMessageObject();
+                if (messageObject == null) {
+                    continue;
+                }
+                messageObject.forceUpdate = true;
+                cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+                cell.requestLayout();
+                cell.invalidate();
+            }
+            chatListView.requestLayout();
+            chatListView.invalidate();
+        });
+    }
+
     private boolean updateMessageTranslation(MessageObject messageObject, boolean scroll) {
         if (messageObject == null || messageObject.messageOwner == null) {
             return false;
@@ -26021,6 +26037,12 @@ public class ChatActivity extends BaseFragment implements
         if (chatListView == null) {
             return updated;
         }
+        if (chatListItemAnimator != null) {
+            chatListItemAnimator.endAnimations();
+        }
+        RecyclerView.ItemAnimator wasAnimator = chatListView.getItemAnimator();
+        chatListView.setItemAnimator(null);
+        try {
         ArrayList<Long> groupChecked = new ArrayList<>();
         for (int i = 0; i < chatListView.getChildCount(); ++i) {
             View child = chatListView.getChildAt(i);
@@ -26091,12 +26113,24 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
         }
+        } finally {
+            chatListView.setItemAnimator(wasAnimator);
+        }
         return updated;
     }
 
 
     private boolean updateMessagesReplyTranslation(ArrayList<Integer> messageIds, MessageObject translatedReplyMessageObject) {
         boolean updated = false;
+        if (chatListView == null) {
+            return false;
+        }
+        if (chatListItemAnimator != null) {
+            chatListItemAnimator.endAnimations();
+        }
+        RecyclerView.ItemAnimator wasAnimator = chatListView.getItemAnimator();
+        chatListView.setItemAnimator(null);
+        try {
         for (int i = 0; i < chatListView.getChildCount(); ++i) {
             View child = chatListView.getChildAt(i);
             if (child instanceof ChatMessageCell) {
@@ -26119,6 +26153,9 @@ public class ChatActivity extends BaseFragment implements
                     updated = true;
                 }
             }
+        }
+        } finally {
+            chatListView.setItemAnimator(wasAnimator);
         }
         return updated;
     }
