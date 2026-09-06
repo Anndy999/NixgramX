@@ -70,11 +70,12 @@ The watcher directly calls `upstream-sync-ci.yml` on the exact prepared SHA,
 because PRs created with GITHUB_TOKEN do not trigger ordinary pull_request runs.
 Later human pushes/reopens trigger the same dedicated CI through pull_request.
 No path filter skips resource-only changes. Generic PR CI skips upstream-sync
-branches to avoid duplicate builds and exposing its signing/environment secrets.
+branches to avoid duplicate builds; ordinary PRs now reuse this same secret-free compile workflow.
 
-Checks: Gradle configuration, Java/Kotlin compileDebugSources, resource merge,
+Checks: YAML/XML/privacy and host regressions, git diff check, Android lint,
+Gradle configuration, Java/Kotlin compileDebugSources, resource merge,
 manifest merge, externalNativeBuildDebug, arm64-v8a assembleDebug, adaptation gate.
-Each step records Passed / Failed / Not tested in the Actions summary. Failures
+Each build step records Passed / Failed / Not tested in the Actions summary. Failures
 keep the PR open. The initial PR report says Not tested and links to the actual
 run. Debug signing is changed only in the disposable CI checkout; credentials
 are dummy compile-only values and no APK is uploaded. Universal and device
@@ -94,10 +95,12 @@ Current pending upstream PRs: use the live
 Each generated branch holds its own report and prepared target; do not treat
 this document as a frozen list of open PR numbers.
 
-For scheduled operation, merge the reviewed automation files into **main**, the
-repository default branch, and into beta (the preferred sync base). GitHub only
+The automation is already integrated into **main** and beta. GitHub only
 schedules workflows present on the default branch. Enable Settings → Actions →
 General → “Allow GitHub Actions to create and approve pull requests”. The watcher
 needs contents:write and pull-requests:write; it does not approve PRs. No PAT,
 bot token, Firebase secret, or signing secret is required. The former upstream-watch
 Issue is no longer the endpoint; reports live in the PR and CI.
+
+Stability Phase v1: after every official major sync, reset and execute all permanent
+R-series cases in TEST_MATRIX.md; compilation alone cannot satisfy Stable evidence.
