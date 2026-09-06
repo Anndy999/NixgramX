@@ -34,7 +34,7 @@ gh workflow run "Beta Build" --ref beta -f publish=true
 gh workflow run "Stable Release" --ref main -f publish=false
 ```
 
-Both workflows upload APKs to [@NixgramX](https://t.me/NixgramX). Stable captions are `NixgramX · <version> (<code>)` plus optional `RELEASE_NOTES`; Beta captions use `NixgramX Beta` instead (never `COMMIT_MESSAGE`). Updater JSON is sent only to the second public metadata channel `@NixgramXMetadata` (`HELPER_BOT_CANARY_TARGET`).
+Both workflows upload APKs to [@NixgramX](https://t.me/NixgramX) with a NagramX-style **「日志」** caption (`Commit Message:` + `<blockquote expandable>` from `RELEASE_NOTES` / `docs/RELEASE_NOTES.txt` / `COMMIT_MESSAGE`). Do not call this 「人话说明」. The same APKs, a 「日志」 text message, and `#updateRelease` / `#updateBeta` JSON go to `@NixgramXMetadata` (`HELPER_BOT_CANARY_TARGET`) so in-app Update can FileLoader-download via non-empty `document` ids.
 
 ## Required GitHub Secrets
 
@@ -44,4 +44,4 @@ Values must remain in GitHub Secrets and never be committed or echoed:
 - `APP_ID`, `APP_HASH`
 - `LOCAL_PROPERTIES` and the existing signing-secret inputs
 
-After publishing, verify the APK channel label/notes, APK version code, signature, and the matching public `#updateRelease` or `#updateBeta` post on `@NixgramXMetadata` only. Paste the upload log `CHANNEL_METADATA_ID candidate` into `BaseRemoteHelper` after the first successful metadata publish.
+After publishing, verify: public `@NixgramX` shows APK + 「日志」 blockquote caption; `@NixgramXMetadata` has APKs + 「日志」 text + `#update*` JSON with non-empty `document` and `message`; APK version code/signature. Paste the upload log `CHANNEL_METADATA_ID candidate` into `BaseRemoteHelper` after the first successful metadata publish.
