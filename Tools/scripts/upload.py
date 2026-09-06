@@ -1,3 +1,4 @@
+import html
 import os
 import re
 import json
@@ -6,6 +7,7 @@ from pathlib import Path
 from sys import argv
 
 from pyrogram import Client
+from pyrogram.enums import ParseMode
 from pyrogram.types import InputMediaDocument
 
 api_id = os.environ.get("APP_ID")
@@ -65,6 +67,7 @@ ABIS = ["arm64-v8a", "universal"]
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_UPDATE_URL = "https://t.me/NixgramX"
 FALLBACK_RELEASES_URL = "https://github.com/Anndy999/NixgramX/releases"
+DEFAULT_COMMITS_URL = "https://github.com/Anndy999/NixgramX/commits"
 
 
 def find_apk(abi: str) -> Path | None:
@@ -127,79 +130,193 @@ def resolve_version() -> tuple[str, int]:
 def get_commit_info():
     commit_id_raw = os.environ.get("COMMIT_ID") or "unknown"
     commit_id = commit_id_raw[:7]
-    commit_url = os.environ.get("COMMIT_URL") or "https://github.com/Anndy999/NixgramX/commits"
+    commit_url = os.environ.get("COMMIT_URL") or DEFAULT_COMMITS_URL
     commit_message = os.environ.get("COMMIT_MESSAGE") or "unknown"
     return commit_id, commit_url, commit_message
 
 
-def get_user_release_notes() -> str:
-    """User-facing changelog for the public APK caption only.
+def normalize_message(text: str) -> str:
+    return (text or "").replace("\\n", "\n")
+
+
+def get_log_text() -> str:
+    """User-facing 日志 body for public caption / metadata changelog message.
 
     Prefer RELEASE_NOTES env (multiline, each line typically "- …"),
-    else docs/RELEASE_NOTES.txt. Never fall back to COMMIT_MESSAGE.
+    else docs/RELEASE_NOTES.txt, else COMMIT_MESSAGE (NagramX-style fallback).
+    Never use hash-only spam lines as the sole caption.
     """
     notes = (os.environ.get("RELEASE_NOTES") or "").strip()
     if notes:
-        return notes
+        return normalize_message(notes)
     notes_path = Path("docs/RELEASE_NOTES.txt")
     if notes_path.is_file():
         file_notes = notes_path.read_text(encoding="utf-8").strip()
         if file_notes:
-            return file_notes
-    return ""
+            return normalize_message(file_notes)
+    _, _, commit_message = get_commit_info()
+    return normalize_message(commit_message) or "Bug fixes and improvements."
+
+
+# Back-compat alias used by older comments / callers
+get_user_release_notes = get_log_text
+
+
+def build_changelog_blockquote(max_length: int) -> str:
+    """Escape 日志 text to fit inside an HTML <blockquote> budget (NagramXTurbo-style)."""
+    text = html.escape(get_log_text(), quote=False)
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return html.escape("Bug fixes and improvements.", quote=False)
+    kept: list[str] = []
+    used = 0
+    for line in reversed(lines):
+        if used + len(line) + 1 > max_length:
+            break
+        kept.append(line)
+        used += len(line) + 1
+    kept.reverse()
+    dropped = len(lines) - len(kept)
+    if dropped > 0:
+        kept.insert(0, html.escape("… and %d earlier changes" % dropped, quote=False))
+    return "\n".join(kept) if kept else lines[0][:max_length]
+
+
+def build_full_changelog_tail() -> str:
+    """Optional Full Changelog compare link when PREV_COMMIT_ID / FULL_CHANGELOG_URL exists."""
+    full_url = (os.environ.get("FULL_CHANGELOG_URL") or "").strip()
+    prev_raw = (os.environ.get("PREV_COMMIT_ID") or "").strip()
+    commit_id, _, _ = get_commit_info()
+    if not full_url and prev_raw and commit_id and commit_id != "unknown":
+        prev = prev_raw[:7]
+        full_url = (
+            "https://github.com/Anndy999/NixgramX/compare/"
+            + prev_raw
+            + "..."
+            + (os.environ.get("COMMIT_ID") or commit_id)
+        )
+        label = f"{prev}...{commit_id}"
+    elif full_url:
+        label = full_url.rsplit("/", 1)[-1] or "changelog"
+    else:
+        return ""
+    return (
+        "\n\nFull Changelog:\n"
+        '<a href="' + html.escape(full_url, quote=False) + '">'
+        + html.escape(label, quote=False)
+        + "</a>"
+    )
 
 
 def get_caption() -> str:
+    """NagramX CI-style public APK caption: version + Commit Message blockquote + commit links.
+
+    Terminology: this block is 「日志」 (not 「人话说明」).
+    """
+    version, version_code = resolve_version()
+    commit_id, commit_url, _ = get_commit_info()
+    title = "NixgramX Beta" if beta_version else "NixgramX"
+    # Keep product line, then NagramX-style Commit Message block.
+    pre = f"{title} · {version} ({version_code})"
+    if beta_version:
+        pre = f"Dev version. {pre}"
+    else:
+        pre = f"Release version. {pre}"
+
+    caption = html.escape(pre) + "\n\n"
+    caption += "Commit Message:\n"
+    # Reserve room for closing tags + See commit details + optional Full Changelog.
+    see = (
+        'See commit details <a href="'
+        + html.escape(commit_url, quote=False)
+        + '">'
+        + html.escape(commit_id)
+        + "</a>"
+    )
+    full = build_full_changelog_tail()
+    open_tag = "<blockquote expandable>"
+    close_tag = "</blockquote>\n\n"
+    budget = 1024 - len(caption) - len(open_tag) - len(close_tag) - len(see) - len(full) - 8
+    if budget < 32:
+        budget = 32
+    body = build_changelog_blockquote(budget)
+    caption += open_tag + body + close_tag + see + full
+    if len(caption) > 1024:
+        caption = caption[:1020] + "..."
+    return caption
+
+
+def get_changelog_message_html() -> str:
+    """Standalone 「日志」 HTML for metadata channel (fetched by UpdateHelper → UpdateAppAlertDialog)."""
+    commit_id, commit_url, _ = get_commit_info()
     version, version_code = resolve_version()
     title = "NixgramX Beta" if beta_version else "NixgramX"
-    line1 = f"{title} · {version} ({version_code})"
-    notes = get_user_release_notes()
-    if notes:
-        return f"{line1}\n\n{notes}"
-    return line1
+    head = html.escape(f"{title} · {version} ({version_code})") + "\n\n"
+    head += "Commit Message:\n"
+    see = (
+        'See commit details <a href="'
+        + html.escape(commit_url, quote=False)
+        + '">'
+        + html.escape(commit_id)
+        + "</a>"
+    )
+    full = build_full_changelog_tail()
+    open_tag = "<blockquote expandable>"
+    close_tag = "</blockquote>\n\n"
+    budget = 4096 - len(head) - len(open_tag) - len(close_tag) - len(see) - len(full) - 8
+    if budget < 64:
+        budget = 64
+    body = build_changelog_blockquote(budget)
+    return head + open_tag + body + close_tag + see + full
 
 
-def get_documents_with_abis() -> list[tuple[str, "InputMediaDocument"]]:
+def get_documents_with_abis(*, with_caption: bool = True) -> list[tuple[str, "InputMediaDocument"]]:
     items: list[tuple[str, InputMediaDocument]] = []
     for abi in ABIS:
         if apk := find_apk(abi):
             items.append((abi, InputMediaDocument(media=str(apk))))
     if not items:
         raise FileNotFoundError("No APK artifacts found")
-    base_caption = get_caption()
-    if base_caption and len(base_caption) > 1024:
-        base_caption = base_caption[:1020] + "..."
-    items[-1][1].caption = base_caption
+    if with_caption:
+        base_caption = get_caption()
+        items[-1][1].caption = base_caption
+        items[-1][1].parse_mode = ParseMode.HTML
     return items
 
 
 def get_canary_metadata() -> str:
-    import html
-
-    commit_id = "<code>" + (os.environ.get("COMMIT_ID") or "unknown")[:7] + "</code>"
+    commit_id = "<code>" + html.escape((os.environ.get("COMMIT_ID") or "unknown")[:7]) + "</code>"
     commit_message = "<code>" + html.escape(os.environ.get("COMMIT_MESSAGE") or "unknown") + "</code>"
-    build_timestamp = "<code>" + (os.environ.get("BUILD_TIMESTAMP") or "-1") + "</code>"
+    build_timestamp = "<code>" + html.escape(os.environ.get("BUILD_TIMESTAMP") or "-1") + "</code>"
     return build_timestamp + " " + commit_id + "\n" + commit_message
 
 
-def build_update_payload(document_ids: dict[str, int], sticker_message_id: int = 0) -> str:
+def build_update_payload(
+    document_ids: dict[str, int],
+    sticker_message_id: int = 0,
+    changelog_message_id: int = 0,
+) -> str:
     version, version_code = resolve_version()
     build_timestamp_raw = os.environ.get("BUILD_TIMESTAMP") or "0"
     try:
         build_timestamp = int(build_timestamp_raw)
     except ValueError:
         build_timestamp = 0
-    # Never treat 0 as a real sticker message id (UpdateHelper skips fetch for 0).
+    # Never treat 0 as a real sticker/message id (UpdateHelper skips fetch for 0).
     sticker_id = int(sticker_message_id) if sticker_message_id and int(sticker_message_id) > 0 else 0
+    message_id = int(changelog_message_id) if changelog_message_id and int(changelog_message_id) > 0 else 0
     url = os.environ.get("UPDATE_URL") or DEFAULT_UPDATE_URL
     tag = "#updateBeta" if beta_version else "#updateRelease"
+    # document must point at APK message ids in the *metadata* chat so FileLoader can download in-app.
+    # message points at the 「日志」 text message so UpdateAppAlertDialog can show changelog via getMessages.
+    # url remains https://t.me/NixgramX as fallback when document fetch fails.
     body = {
         "can_not_skip": False,
         "version": version,
         "version_code": version_code,
         "build_timestamp": build_timestamp,
         "sticker": sticker_id,
-        "message": 0,
+        "message": message_id,
         "document": document_ids,
         "url": url,
     }
@@ -354,10 +471,10 @@ async def resolve_and_print_chat(client: "Client", cid):
 
 
 @retry
-async def send_to_channel(client: "Client", cid) -> dict[str, int]:
+async def send_to_channel(client: "Client", cid, *, with_caption: bool = True) -> dict[str, int]:
     with contextlib.suppress(ValueError):
         cid = int(cid)
-    items = get_documents_with_abis()
+    items = get_documents_with_abis(with_caption=with_caption)
     print("Uploading to Telegram:", flush=True)
     for abi, document in items:
         print(f"- [{abi}] {document.media}", flush=True)
@@ -373,10 +490,33 @@ async def send_to_channel(client: "Client", cid) -> dict[str, int]:
 
 
 @retry
-async def send_update_json(client: "Client", cid, document_ids: dict[str, int], sticker_message_id: int = 0):
+async def send_changelog_message(client: "Client", cid) -> int:
+    """Post 「日志」 text on metadata channel; return message id for JSON `message` field."""
     with contextlib.suppress(ValueError):
         cid = int(cid)
-    text = build_update_payload(document_ids, sticker_message_id=sticker_message_id)
+    text = get_changelog_message_html()
+    print("Posting 「日志」 changelog message to metadata chat:", flush=True)
+    print(text[:500] + ("…" if len(text) > 500 else ""), flush=True)
+    msg = await client.send_message(chat_id=cid, text=text, parse_mode=ParseMode.HTML)
+    print(f"日志 message_id={msg.id}", flush=True)
+    return msg.id
+
+
+@retry
+async def send_update_json(
+    client: "Client",
+    cid,
+    document_ids: dict[str, int],
+    sticker_message_id: int = 0,
+    changelog_message_id: int = 0,
+):
+    with contextlib.suppress(ValueError):
+        cid = int(cid)
+    text = build_update_payload(
+        document_ids,
+        sticker_message_id=sticker_message_id,
+        changelog_message_id=changelog_message_id,
+    )
     print(f"Posting updater metadata ({text.split(' ', 1)[0]}):", flush=True)
     print(text, flush=True)
     msg = await client.send_message(chat_id=cid, text=text)
@@ -438,27 +578,42 @@ async def main():
     client = get_client(bot_token)
     await client.start()
     await resolve_and_print_chat(client, chat_id)
-    document_ids = await send_to_channel(client, chat_id)
+    # Public @NixgramX: APK media group + NagramX-style 「日志」 caption only (never #update*).
+    await send_to_channel(client, chat_id, with_caption=True)
     if metadata_chat_id and not same_chat(metadata_chat_id, chat_id):
         await resolve_and_print_chat(client, metadata_chat_id)
-        # Second public metadata channel: sticker + url-only JSON (never APK chat).
-        # document map may be empty; url stays https://t.me/NixgramX.
+        # Metadata chat must host its own APK copies so document message ids are valid
+        # for channels.getMessages(CHANNEL_METADATA_ID) → FileLoader in-app download.
+        metadata_document_ids = await send_to_channel(client, metadata_chat_id, with_caption=False)
+        if not metadata_document_ids:
+            raise RuntimeError(
+                "Metadata APK upload returned empty document map; "
+                "in-app download would fall back to url only."
+            )
+        # 「日志」 text message → JSON message id for UpdateAppAlertDialog changelog.
+        changelog_message_id = await send_changelog_message(client, metadata_chat_id)
         sticker_message_id = await obtain_sticker_message_id(client, metadata_chat_id)
-        url_only_docs: dict[str, int] = {}
-        await send_update_json(client, metadata_chat_id, url_only_docs, sticker_message_id)
-        await send_canary_metadata(client, metadata_chat_id)
+        await send_update_json(
+            client,
+            metadata_chat_id,
+            metadata_document_ids,
+            sticker_message_id=sticker_message_id,
+            changelog_message_id=changelog_message_id,
+        )
         print(
-            "Posted #update* JSON to second public metadata channel only "
+            "Posted metadata APKs + 「日志」 + #update* JSON "
             f"(APK chat={chat_id}, metadata chat={metadata_chat_id}); "
-            f"sticker={sticker_message_id}; document map empty (url-only).",
+            f"sticker={sticker_message_id}; message={changelog_message_id}; "
+            f"document={metadata_document_ids}.",
             flush=True,
         )
     else:
         # Public APK channel must never receive #update* JSON or canary hash logs.
         print(
             "WARN: HELPER_BOT_CANARY_TARGET missing or same as APK chat; "
-            "skipping #update* JSON and canary hash log. "
-            "Public channel gets APK media group only.",
+            "skipping metadata APKs / 「日志」 / #update* JSON. "
+            "Public channel gets APK media group + 日志 caption only; "
+            "in-app Update will only have url fallback until metadata is configured.",
             flush=True,
         )
     await client.log_out()

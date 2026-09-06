@@ -10,23 +10,31 @@ There is **no server update API** — the app only `messages.search`es the metad
 
 | Channel | Role |
 | --- | --- |
-| Public [@NixgramX](https://t.me/NixgramX) | Stable/Beta **APK** media groups only. Caption is `NixgramX · <version> (<code>)` or `NixgramX Beta · <version> (<code>)`, optional blank line + user notes from `RELEASE_NOTES` / `docs/RELEASE_NOTES.txt`. **Never** post `#updateRelease` / `#updateBeta` JSON, canary hash lines, commit titles, or CI metadata here. |
-| Second public [@NixgramXMetadata](https://t.me/NixgramXMetadata) | Receives `#update*` JSON (+ optional sticker / canary line) for in-app updates. **Must stay PUBLIC** so logged-in user accounts can `messages.search`. A private metadata channel breaks checks. |
+| Public [@NixgramX](https://t.me/NixgramX) | Stable/Beta **APK** media groups only. Caption is NagramX CI-style **「日志」**: `Release version.` / `Dev version.` + product line, then `Commit Message:` + HTML `<blockquote expandable>` with the log text, plus `See commit details <hash>` (and optional Full Changelog). **Never** post `#updateRelease` / `#updateBeta` JSON or hash-only spam lines here. Do **not** call this 「人话说明」. |
+| Second public [@NixgramXMetadata](https://t.me/NixgramXMetadata) | Receives **APK copies** (so `document` message IDs live in this chat), a **「日志」** text message, `#update*` JSON, and optional sticker. **Must stay PUBLIC** so logged-in user accounts can `messages.search`. A private metadata channel breaks checks. |
 
 `Tools/scripts/upload.py`:
 
-1. Always uploads APKs to `HELPER_BOT_TARGET` (argv[2], e.g. `@NixgramX`).
-2. Posts `#updateRelease` / `#updateBeta` JSON **only** to `HELPER_BOT_CANARY_TARGET` (argv[4]) when that chat is **different** from the APK chat.
-3. If canary is unset or the same chat as the APK channel: **skips** JSON and canary hash log, prints a warning, APK-only on public. **Public APK channel never receives `#update*`.**
-4. When JSON goes to the second public metadata chat, the `document` map is left empty (APK message IDs are not in that chat); `url` stays `https://t.me/NixgramX` so the updater can open the public APK channel.
-5. `@username` refs for the metadata chat are **resolved** (do not null them). After each publish, the log prints a `CHANNEL_METADATA_ID candidate` — paste a positive id into `BaseRemoteHelper` once confirmed.
+1. Always uploads APKs to `HELPER_BOT_TARGET` (argv[2], e.g. `@NixgramX`) with the NagramX-style **「日志」** caption.
+2. When `HELPER_BOT_CANARY_TARGET` (argv[4]) is **different** from the APK chat:
+   - Uploads the same APKs again to the metadata chat (no public-style caption required).
+   - Posts a **「日志」** text message (Commit Message + blockquote + commit links).
+   - Posts `#updateRelease` / `#updateBeta` JSON with:
+     - `document`: abi → metadata APK `message_id` (**non-empty** — required for in-app FileLoader download)
+     - `message`: id of the 「日志」 text message (UpdateAppAlertDialog loads changelog via `channels.getMessages`)
+     - `url`: `https://t.me/NixgramX` fallback
+     - `sticker`: existing duck-sticker logic
+3. If canary is unset or the same chat as the APK channel: **skips** metadata APKs / 「日志」 / JSON, prints a warning, APK+日志 caption only on public. **Public APK channel never receives `#update*`.**
+4. `@username` refs for the metadata chat are **resolved** (do not null them). After each publish, the log prints a `CHANNEL_METADATA_ID candidate` — paste a positive id into `BaseRemoteHelper` once confirmed.
 
-`stable` / `beta` public APK captions never fall back to `COMMIT_MESSAGE`. Metadata (when `HELPER_BOT_CANARY_TARGET` ≠ APK chat) still gets `#updateRelease` / `#updateBeta` for the in-app updater.
+**Direct download:** Update dialog uses `FileLoader` when `pendingAppUpdate.document` is set. That requires non-empty `document` ids that resolve in `@NixgramXMetadata`. Empty `document` maps force the url-only path (`Browser.openUrl` → t.me/NixgramX).
+
+「日志」 body prefers `RELEASE_NOTES` / `docs/RELEASE_NOTES.txt`, else `COMMIT_MESSAGE` (NagramX-style). Never use hash-only canary lines as the sole public caption.
 
 ## App constants
 
 - `BaseRemoteHelper.CHANNEL_METADATA_NAME` = `"NixgramXMetadata"` (metadata channel, **not** `@NixgramX`).
-- `BaseRemoteHelper.CHANNEL_METADATA_ID` is `4419000687L` → `updater_not_configured` until you paste the positive candidate from `upload.py`.
+- `BaseRemoteHelper.CHANNEL_METADATA_ID` is `4419000687L` (paste the positive candidate from `upload.py` if it changes).
 - **Do not** set ID to `3819693045` (that is the public APK channel — searching it for `#update*` is wrong once JSON lives on metadata only).
 - Do not point these at NagramX author endpoints.
 - Metadata channel must remain **public**.
@@ -37,13 +45,13 @@ Already expected on the repo (do not commit values):
 
 | Secret | Role |
 | --- | --- |
-| `HELPER_BOT_TOKEN` | Bot that posts APKs; also posts `#update*` only to the metadata chat |
+| `HELPER_BOT_TOKEN` | Bot that posts APKs to both chats; posts `#update*` only to the metadata chat |
 | `HELPER_BOT_TARGET` | Public APK chat (`@NixgramX`) |
 | `HELPER_BOT_CANARY_TARGET` | Second **public** metadata chat (`@NixgramXMetadata`; must differ from `HELPER_BOT_TARGET`) |
 | `APP_ID` / `APP_HASH` | Telegram API credentials for Pyrogram |
 | `LOCAL_PROPERTIES` | Base64 (or raw) `local.properties` including signing passwords |
 
-Bot must be an **admin** of `@NixgramX` (post APKs) and of `@NixgramXMetadata` (post JSON).
+Bot must be an **admin** of `@NixgramX` (post APKs) and of `@NixgramXMetadata` (post APKs + 「日志」 + JSON).
 
 NixgramX release fields come from `NIXGRAMX_VERSION_NAME` / `NIXGRAMX_VERSION_CODE`; `APP_VERSION_*` remains Telegram upstream metadata. `BUILD_TIMESTAMP` comes from the workflow env. APK filename `(verCode)` is preferred for `version_code` in JSON.
 
@@ -76,7 +84,7 @@ Settings → long-press version row → **Auto-check updates**:
 
 1. Ensure [@NixgramXMetadata](https://t.me/NixgramXMetadata) is **public**; add the helper bot as admin.
 2. Set secret `HELPER_BOT_CANARY_TARGET=@NixgramXMetadata` (must ≠ `@NixgramX`). Keep `HELPER_BOT_TARGET=@NixgramX`.
-3. Run a Release/Beta upload; confirm JSON appears **only** on metadata. Copy the printed positive id into `BaseRemoteHelper.java`:
+3. Run a Release/Beta upload; confirm metadata has **APKs + 「日志」 + `#update*`**. Copy the printed positive id into `BaseRemoteHelper.java`:
 
 ```java
 public static final long CHANNEL_METADATA_ID = 4419000687;
@@ -85,19 +93,22 @@ public static final String CHANNEL_METADATA_NAME = "NixgramXMetadata";
 
 4. Rebuild/ship that follow-up commit. Users can long-press version → Check update, or flip Auto-check to Release/Beta.
 
-JSON post body after the tag, example (url-only while APKs live on the public APK channel):
+JSON post body after the tag, example (direct-download ready):
 
 ```json
 {
   "can_not_skip": false,
   "version": "12.10.1",
-  "version_code": 1270,
+  "version_code": 1273,
   "build_timestamp": 0,
   "sticker": 0,
-  "message": 0,
-  "document": {},
+  "message": 42,
+  "document": {
+    "arm64-v8a": 40,
+    "universal": 41
+  },
   "url": "https://t.me/NixgramX"
 }
 ```
 
-Until `CHANNEL_METADATA_ID` is a positive id pointing at `@NixgramXMetadata`, checks return `updater_not_configured`.
+`message` is the 「日志」 text message id; `document` ids are the metadata-channel APK messages. Until `CHANNEL_METADATA_ID` points at `@NixgramXMetadata`, checks return `updater_not_configured`.

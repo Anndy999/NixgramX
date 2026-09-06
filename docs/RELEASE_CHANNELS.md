@@ -6,8 +6,8 @@ NixgramX has two user-visible distribution channels:
 
 | Channel | Branch | Build type | Public APK caption | Public metadata tag |
 | --- | --- | --- | --- | --- |
-| Stable | `main` | `release` | `NixgramX · <version> (<code>)` + optional `RELEASE_NOTES` | `#updateRelease` on `@NixgramXMetadata` only |
-| Beta | `beta` | `staging` | `NixgramX Beta · <version> (<code>)` + optional `RELEASE_NOTES` | `#updateBeta` on `@NixgramXMetadata` only |
+| Stable | `main` | `release` | NagramX-style **「日志」** (`Commit Message:` + `<blockquote>`) from `RELEASE_NOTES` / commit | `#updateRelease` on `@NixgramXMetadata` (APK + 日志 + JSON) |
+| Beta | `beta` | `staging` | Same **「日志」** caption with Beta / Dev label | `#updateBeta` on `@NixgramXMetadata` (APK + 日志 + JSON) |
 
 Both use `app.nixgramx.android` and the same release signing identity. A Beta APK therefore replaces the installed Stable APK; it is an update channel, not a second installable app.
 
@@ -49,8 +49,8 @@ Before publishing, bump the two `NIXGRAMX_VERSION_*` values in the same reviewed
 
 - **Stable Release** runs only from a `v*` tag, or manually from `main` with `publish=true`. A tag is the explicit decision to post a Stable build.
 - **Beta Build** builds artifacts on every push to `beta`, but posts to the channel only when manually dispatched from `beta` with `publish=true`. This prevents unreviewed commits from spamming users.
-- Both upload APKs to the existing public `@NixgramX` channel. Public caption is product/version only (plus optional user `RELEASE_NOTES`); never commit title / hash / `#update*`. Only Beta includes the `Beta` label. **Public APK channel never receives `#update*`.**
-- The second **public** metadata channel `@NixgramXMetadata` receives the matching `#updateRelease` or `#updateBeta` JSON. Never put that JSON into `@NixgramX`. Metadata must stay public (private breaks in-app `messages.search`). Secrets: `HELPER_BOT_TARGET=@NixgramX`, `HELPER_BOT_CANARY_TARGET=@NixgramXMetadata`.
+- Both upload APKs to the existing public `@NixgramX` channel with a NagramX CI-style **「日志」** caption (`Commit Message:` + HTML blockquote + commit links). Do not call this 「人话说明」. **Public APK channel never receives `#update*`.**
+- The second **public** metadata channel `@NixgramXMetadata` also receives APK copies (for in-app `document` download), a **「日志」** text message, and the matching `#updateRelease` / `#updateBeta` JSON. Never put that JSON into `@NixgramX`. Metadata must stay public (private breaks in-app `messages.search`). Secrets: `HELPER_BOT_TARGET=@NixgramX`, `HELPER_BOT_CANARY_TARGET=@NixgramXMetadata`.
 
 After this configuration is merged to `main`, create the Beta branch once:
 
