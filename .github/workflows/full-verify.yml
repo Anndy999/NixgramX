@@ -1,10 +1,10 @@
-name: Full Build
+name: Full Verify
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Git ref / branch / SHA to build (arm64-v8a Debug)'
+        description: 'Git branch, tag, or SHA to verify (arm64-v8a Debug)'
         required: true
         type: string
         default: main
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  full-build:
+  full-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -45,6 +45,17 @@ jobs:
         with:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
 
+      - name: YAML, regression and diff checks
+        run: |
+          python3 -m pip install 'PyYAML==6.0.2'
+          python3 Tools/stability/static_checks.py
+          python3 -m unittest discover -s Tools/stability -p 'test_*.py'
+          mkdir -p /tmp/diagnostic-tests
+          javac -d /tmp/diagnostic-tests TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java Tools/stability/DiagnosticStoreTest.java
+          java -cp /tmp/diagnostic-tests DiagnosticStoreTest
+          git fetch origin main --depth=1
+          git diff --check FETCH_HEAD HEAD
+
       - name: Prepare disposable Debug configuration
         run: |
           set -euo pipefail
@@ -64,49 +75,90 @@ jobs:
           PY
 
       - name: Gradle config
+        id: config
         run: ./gradlew help --no-daemon
 
       - name: Java/Kotlin compile
+        id: compile
         run: ./gradlew :TMessagesProj:compileDebugSources --no-daemon
 
       - name: Resource merge
+        id: resources
         run: ./gradlew :TMessagesProj:mergeDebugResources --no-daemon
 
       - name: Manifest merge
+        id: manifest
         run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
 
       - name: Android lint
+        id: lint
         run: ./gradlew :TMessagesProj:lintDebug --no-daemon
 
       - name: Native build
+        id: native
         run: ./gradlew :TMessagesProj:externalNativeBuildDebug --no-daemon
 
       - name: arm64 Debug APK
+        id: apk
         run: |
           set -euo pipefail
           ./gradlew :TMessagesProj:assembleDebug --no-daemon
           APK="$(find TMessagesProj/build/outputs/apk -name '*arm64-v8a*.apk' -print -quit)"
           test -n "$APK"
-          mkdir -p /tmp/full-build-apk
-          cp "$APK" /tmp/full-build-apk/
+          mkdir -p /tmp/full-verify-apk
+          cp "$APK" /tmp/full-verify-apk/
           echo "APK=$APK"
 
       - name: Upload arm64-v8a Debug APK
-        uses: actions/upload-artifact@v7
+        id: artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: QuickFull-arm64-v8a-debug
-          path: /tmp/full-build-apk/*.apk
+          name: NixgramX-arm64-v8a-debug
+          path: /tmp/full-verify-apk/*.apk
           if-no-files-found: error
 
       - name: Summary
         if: always()
+        env:
+          RESULTS: ${{ toJSON(steps) }}
         run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'MD'
-          ## NixgramX Full Build (manual)
+          python3 - <<'PY'
+          import json, os
+          steps = json.loads(os.environ['RESULTS'])
 
-          - Scope: arm64-v8a Debug — Java/Kotlin, resources, manifest, native, assembleDebug
-          - Artifact: uploaded (CI artifact only)
-          - Telegram publish: NOT RUN
-          - GitHub Release: NOT RUN
-          - Merge / version bump: NOT RUN
-          MD
+          def status(step_id):
+              outcome = steps.get(step_id, {}).get('outcome')
+              return {'success': 'PASS', 'failure': 'FAIL'}.get(outcome, 'FAIL')
+
+          rows = [
+              ('Gradle config', 'config'),
+              ('Java/Kotlin compile', 'compile'),
+              ('Resources', 'resources'),
+              ('Manifest', 'manifest'),
+              ('Full Android lint', 'lint'),
+              ('Native', 'native'),
+              ('APK build', 'apk'),
+          ]
+          ok = True
+          lines = ['NixgramX Full Verify', '']
+          for label, key in rows:
+              value = status(key)
+              ok &= value == 'PASS'
+              lines.append(f'{label}: {value}')
+          artifact = status('artifact')
+          lines.append(f'Artifact upload: {artifact}')
+          ok &= artifact == 'PASS'
+          lines.extend([
+              '',
+              'Telegram publish: NOT RUN',
+              'GitHub Release: NOT RUN',
+              'Merge / version bump: NOT RUN',
+              'Device test: NOT TESTED',
+              '',
+          ])
+          summary = '\n'.join(lines)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write(summary)
+          print(summary)
+          raise SystemExit(0 if ok else 1)
+          PY
