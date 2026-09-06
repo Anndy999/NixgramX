@@ -1663,6 +1663,8 @@ public class PushListenerController {
     }
 
     private static void onDecryptError(CountDownLatch countDownLatch) {
+        org.telegram.messenger.diagnostics.Diagnostics.lastPushError = 1;
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PUSH_PARSE_FAILED, 0);
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (UserConfig.getInstance(a).isClientActivated()) {
                 ConnectionsManager.onInternalPushReceived(a);
