@@ -6,8 +6,6 @@ on:
       source_sha:
         required: true
         type: string
-  pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
   contents: read

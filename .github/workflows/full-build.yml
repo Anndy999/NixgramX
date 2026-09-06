@@ -1,0 +1,112 @@
+name: Full Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref / branch / SHA to build (arm64-v8a Debug)'
+        required: true
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  full-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      COMMIT_ID: ${{ github.sha }}
+      NATIVE_TARGET: arm64-v8a
+      # Non-production compile-only placeholders, no repository secrets exposed.
+      TELEGRAM_APP_ID: '123456'
+      TELEGRAM_APP_HASH: '00000000000000000000000000000000'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Record checked-out commit
+        run: |
+          echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Building ref=${{ inputs.ref }} sha=$(git rev-parse HEAD)"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
+
+      - name: Prepare disposable Debug configuration
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes nasm
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          # Only this disposable CI checkout changes; release keystore is untouched.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('TMessagesProj/build.gradle')
+          text = p.read_text()
+          start = text.index('        debug {')
+          end = text.index('        staging {', start)
+          block = text[start:end]
+          assert block.count('signingConfig = signingConfigs.release') == 1
+          p.write_text(text[:start] + block.replace('signingConfig = signingConfigs.release', 'signingConfig = signingConfigs.debug') + text[end:])
+          PY
+
+      - name: Gradle config
+        run: ./gradlew help --no-daemon
+
+      - name: Java/Kotlin compile
+        run: ./gradlew :TMessagesProj:compileDebugSources --no-daemon
+
+      - name: Resource merge
+        run: ./gradlew :TMessagesProj:mergeDebugResources --no-daemon
+
+      - name: Manifest merge
+        run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
+
+      - name: Android lint
+        run: ./gradlew :TMessagesProj:lintDebug --no-daemon
+
+      - name: Native build
+        run: ./gradlew :TMessagesProj:externalNativeBuildDebug --no-daemon
+
+      - name: arm64 Debug APK
+        run: |
+          set -euo pipefail
+          ./gradlew :TMessagesProj:assembleDebug --no-daemon
+          APK="$(find TMessagesProj/build/outputs/apk -name '*arm64-v8a*.apk' -print -quit)"
+          test -n "$APK"
+          mkdir -p /tmp/full-build-apk
+          cp "$APK" /tmp/full-build-apk/
+          echo "APK=$APK"
+
+      - name: Upload arm64-v8a Debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: QuickFull-arm64-v8a-debug
+          path: /tmp/full-build-apk/*.apk
+          if-no-files-found: error
+
+      - name: Summary
+        if: always()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'MD'
+          ## NixgramX Full Build (manual)
+
+          - Scope: arm64-v8a Debug — Java/Kotlin, resources, manifest, native, assembleDebug
+          - Artifact: uploaded (CI artifact only)
+          - Telegram publish: NOT RUN
+          - GitHub Release: NOT RUN
+          - Merge / version bump: NOT RUN
+          MD
