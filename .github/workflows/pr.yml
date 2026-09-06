@@ -9,6 +9,7 @@ on:
 
 jobs:
   build:
+    if: ${{ !startsWith(github.head_ref, 'upstream-sync/') }}
     name: Gradle Build
     runs-on: ubuntu-latest
     env:
