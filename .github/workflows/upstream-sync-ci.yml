@@ -1,0 +1,112 @@
+name: Upstream Sync CI
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'upstream-sync/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      NATIVE_TARGET: arm64-v8a
+      # Non-production compile-only placeholders, no repository secrets exposed.
+      TELEGRAM_APP_ID: '123456'
+      TELEGRAM_APP_HASH: '00000000000000000000000000000000'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha }}
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
+      - name: Prepare disposable Debug configuration
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes nasm
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          # Only this disposable CI checkout changes; release keystore is untouched.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('TMessagesProj/build.gradle')
+          text = p.read_text()
+          start = text.index('        debug {')
+          end = text.index('        staging {', start)
+          block = text[start:end]
+          assert block.count('signingConfig = signingConfigs.release') == 1
+          p.write_text(text[:start] + block.replace('signingConfig = signingConfigs.release', 'signingConfig = signingConfigs.debug') + text[end:])
+          PY
+      - name: Gradle config
+        id: config
+        continue-on-error: true
+        run: ./gradlew help --no-daemon
+      - name: Java/Kotlin compile
+        id: compile
+        continue-on-error: true
+        run: ./gradlew :TMessagesProj:compileDebugSources --no-daemon
+      - name: Resource merge
+        id: resources
+        continue-on-error: true
+        run: ./gradlew :TMessagesProj:mergeDebugResources --no-daemon
+      - name: Manifest merge
+        id: manifest
+        continue-on-error: true
+        run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
+      - name: Native build
+        id: native
+        continue-on-error: true
+        run: ./gradlew :TMessagesProj:externalNativeBuildDebug --no-daemon
+      - name: arm64 Debug APK (CI only; never uploaded or published)
+        id: apk
+        continue-on-error: true
+        run: |
+          ./gradlew :TMessagesProj:assembleDebug --no-daemon
+          test -n "$(find TMessagesProj/build/outputs/apk -name '*arm64-v8a*.apk' -print -quit)"
+      - name: Adaptation review gate
+        id: adaptation
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          state = json.loads(Path('docs/upstream-base.json').read_text())
+          assert not state.get('pending'), 'Unresolved upstream adaptation: see docs/upstream-sync-report.md'
+          PY
+      - name: Record actual results and enforce failure
+        if: always()
+        env:
+          RESULTS: ${{ toJSON(steps) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          steps = json.loads(os.environ['RESULTS'])
+          checks = {'config': 'Gradle config', 'compile': 'Java/Kotlin compile', 'resources': 'resource merge', 'manifest': 'manifest merge', 'native': 'native build', 'apk': 'arm64 Debug APK', 'adaptation': 'Adaptation review gate'}
+          ok = True
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('## Telegram Upstream Sync — actual CI results\n\n')
+              for key, label in checks.items():
+                  outcome = steps.get(key, {}).get('outcome', 'skipped')
+                  status = {'success': 'Passed', 'failure': 'Failed'}.get(outcome, 'Not tested')
+                  ok &= outcome == 'success'
+                  f.write(f'- {label}: {status}\n')
+              f.write('- Universal build: Not tested (runner budget)\n- Device/manual checks: Not tested\n\nPR waiting for review. No APK publication, merge or release.\n')
+          raise SystemExit(0 if ok else 1)
+          PY
