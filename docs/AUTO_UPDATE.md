@@ -6,6 +6,8 @@ NixgramX reuses NagramX `UpdateHelper` / `BaseRemoteHelper` (metadata channel po
 
 There is **no server update API** — the app only `messages.search`es the metadata channel.
 
+App auto-joins the public metadata channel (`@NixgramXMetadata`) on check; users need not join manually.
+
 ## Publish channels (important)
 
 | Channel | Role |
