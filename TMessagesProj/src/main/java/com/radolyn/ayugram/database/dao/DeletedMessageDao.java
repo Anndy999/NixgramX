@@ -49,8 +49,8 @@ public interface DeletedMessageDao {
     List<DeletedMessageFull> getMessagesGroupedIn(long userId, long dialogId, List<Long> groupedIds);
 
     @Transaction
-    @Query("SELECT * FROM deletedmessage WHERE dialogId = :dialogId")
-    List<DeletedMessageFull> getMessagesByDialog(long dialogId);
+    @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId")
+    List<DeletedMessageFull> getMessagesByDialog(long userId, long dialogId);
 
     @Transaction
     @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId ORDER BY messageId DESC LIMIT :limit")
@@ -83,8 +83,8 @@ public interface DeletedMessageDao {
     @Query("DELETE FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId = :msgId")
     void delete(long userId, long dialogId, int msgId);
 
-    @Query("DELETE FROM deletedmessage WHERE dialogId = :dialogId")
-    void delete(long dialogId);
+    @Query("DELETE FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId")
+    void delete(long userId, long dialogId);
 
     @Query("DELETE FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId IN (:messageIds)")
     void deleteMessages(long userId, long dialogId, List<Integer> messageIds);
