@@ -52,6 +52,7 @@ import org.telegram.ui.ChatActivity;
 import org.telegram.ui.RestrictedLanguagesSelectActivity;
 import org.telegram.ui.Stories.recorder.ButtonWithCounterView;
 import org.telegram.ui.Stories.recorder.HintView2;
+import org.telegram.ui.recyclerview.ChatListItemAnimator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -117,6 +118,13 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
         addView(menuView, LayoutHelper.createFrame(30, 30, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 7, 0));
 
         updateColors();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        textView.animate().cancel();
+        textView.setAlpha(1f);
     }
 
     @Override
@@ -405,7 +413,30 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
     }
 
     private void setBarText(CharSequence text) {
-        textView.setText(text);
+        if (TextUtils.equals(textView.getText(), text) && textView.getAlpha() > 0.99f) {
+            return;
+        }
+        textView.animate().cancel();
+        if (!isAttachedToWindow() || TextUtils.isEmpty(textView.getText())) {
+            textView.setText(text);
+            textView.setAlpha(1f);
+            return;
+        }
+        final CharSequence next = text;
+        // Sequential whole-label fade: never draw both 翻译为中文 and 显示原文.
+        textView.animate()
+                .alpha(0f)
+                .setDuration(ChatListItemAnimator.DEFAULT_DURATION / 2)
+                .setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR)
+                .withEndAction(() -> {
+                    textView.setText(next);
+                    textView.animate()
+                            .alpha(1f)
+                            .setDuration(ChatListItemAnimator.DEFAULT_DURATION / 2)
+                            .setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR)
+                            .start();
+                })
+                .start();
     }
 
     public void updateText() {

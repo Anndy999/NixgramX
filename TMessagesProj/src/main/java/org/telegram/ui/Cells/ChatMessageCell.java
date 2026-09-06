@@ -237,6 +237,7 @@ import org.telegram.ui.MultiLayoutTypingAnimator;
 import org.telegram.ui.PhotoViewer;
 import org.telegram.ui.PinchToZoomHelper;
 import org.telegram.ui.SecretMediaViewer;
+import org.telegram.ui.recyclerview.ChatListItemAnimator;
 import org.telegram.ui.Stars.StarGiftPatterns;
 import org.telegram.ui.Stars.StarGiftSheet;
 import org.telegram.ui.Stars.StarsController;
@@ -1862,6 +1863,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private float alphaInternal = 1f;
 
     public final TransitionParams transitionParams = new TransitionParams();
+    private ValueAnimator changeAnimator;
     private boolean edited;
     private boolean ayuDeleted;
     private boolean imageDrawn;
@@ -6421,6 +6423,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.userInfoDidLoad);
 
         cancelShakeAnimation();
+        if (changeAnimator != null) {
+            changeAnimator.cancel();
+            changeAnimator = null;
+        }
         if (checkBox != null) {
             checkBox.onDetachedFromWindow();
         }
@@ -6923,12 +6929,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (lastTranslated != nowTranslated) {
             lastTranslated = nowTranslated;
             transChanged = true;
-            if (transitionParams != null) {
-                transitionParams.deltaLeft = 0;
-                transitionParams.deltaRight = 0;
-                transitionParams.animateBackgroundBoundsInner = false;
-                transitionParams.animateBackgroundWidth = false;
-            }
         }
 
         ayuDeleted = messageObject.isAyuDeleted();
@@ -16854,9 +16854,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (botDraftTypingAnimator != null && botDraftTypingAnimator.isRunning()) {
                 drawMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, 1, true, false, false);
             } else {
-                // Outgoing+incoming at the same textX/textY is the EN/ZH overlay in the recording.
-                // Alpha does not save it: CJK and Latin occupy the same pixels.
-                drawMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, 1f, true, false, false);
+                // Incoming-only fade: outgoing blocks stay null so EN/ZH never share textX/textY.
+                drawMessageText(textX, textY, canvas, transitionParams.animateOutTextBlocks, transitionParams.animateOutTextXOffset, false, (1.0f - transitionParams.animateChangeProgress), true, false, false);
+                drawMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, transitionParams.animateChangeProgress, true, false, false);
             }
             canvas.restore();
         } else if (transitionParams.animateLinkAbove && currentBackgroundDrawable != null) {
@@ -21746,7 +21746,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     );
                 }
             }
-            drawAnimatedEmojiMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, animatedEmojiStack, true, alpha, currentMessageObject.textXOffset, false);
+            drawAnimatedEmojiMessageText(textX, textY, canvas, transitionParams.animateOutTextBlocks, transitionParams.animateOutAnimateEmoji, false, alpha * (1.0f - transitionParams.animateChangeProgress), currentMessageObject.textXOffset, false);
+            drawAnimatedEmojiMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, animatedEmojiStack, true, alpha * transitionParams.animateChangeProgress, currentMessageObject.textXOffset, false);
             canvas.restore();
         } else {
             drawAnimatedEmojiMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, animatedEmojiStack, true, alpha, currentMessageObject.textXOffset, false);
@@ -21870,7 +21871,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
         if (transitionParams.animateReplaceCaptionLayout && transitionParams.animateChangeProgress != 1f) {
-            drawAnimatedEmojiMessageText(captionX, captionY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha, captionLayout != null ? captionLayout.textXOffset : 0, true);
+            drawAnimatedEmojiMessageText(captionX, captionY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha * transitionParams.animateChangeProgress, captionLayout != null ? captionLayout.textXOffset : 0, true);
         } else {
             drawAnimatedEmojiMessageText(captionX, captionY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha, captionLayout != null ? captionLayout.textXOffset : 0, true);
         }
@@ -23483,7 +23484,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             animatedEmojiStack.clearPositions();
         }
         if (transitionParams.animateReplaceCaptionLayout && transitionParams.animateChangeProgress != 1f) {
-            drawCaptionLayout(canvas, captionLayout, true, selectionOnly, alpha);
+            drawCaptionLayout(canvas, captionLayout, true, selectionOnly, alpha * transitionParams.animateChangeProgress);
         } else {
             drawCaptionLayout(canvas, captionLayout, true, selectionOnly, alpha);
         }
@@ -28434,6 +28435,45 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return transitionParams;
     }
 
+    /**
+     * Run the cell's internal change animation (incoming-only text/caption fade)
+     * without RecyclerView item MOVE, which stacks neighboring bubbles.
+     */
+    public void startChangeAnimation() {
+        if (transitionParams == null || !transitionParams.supportChangeAnimation()) {
+            return;
+        }
+        if (changeAnimator != null) {
+            changeAnimator.cancel();
+            changeAnimator = null;
+        }
+        if (!transitionParams.animateChange()) {
+            return;
+        }
+        transitionParams.animateChange = true;
+        transitionParams.animateChangeProgress = 0f;
+        final ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(ChatListItemAnimator.DEFAULT_DURATION);
+        animator.setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR);
+        animator.addUpdateListener(animation -> {
+            transitionParams.animateChangeProgress = (float) animation.getAnimatedValue();
+            invalidate();
+        });
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (changeAnimator != animator) {
+                    return;
+                }
+                changeAnimator = null;
+                transitionParams.resetAnimation();
+                invalidate();
+            }
+        });
+        changeAnimator = animator;
+        animator.start();
+    }
+
     public float getDeltaTop()    { return transitionParams.deltaTop; }
     public float getDeltaLeft()   { return transitionParams.deltaLeft; }
     public float getDeltaRight()  { return transitionParams.deltaRight; }
@@ -28911,9 +28951,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     sameText = false;
                 }
                 if (!sameText) {
-                    // Content swap (translate/edit): never keep outgoing glyphs.
-                    // Crossfading two layouts at the same textX/textY is the overlap.
-                    animateMessageText = false;
+                    // Fade incoming glyphs only. Never keep outgoing blocks: two layouts at
+                    // the same textX/textY is the EN/ZH overlay.
+                    animateMessageText = true;
                     animateOutTextBlocks = null;
                     animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animatedEmojiStack, currentMessageObject.textLayoutBlocks);
                     changed = true;
@@ -29109,7 +29149,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     (currentCaption == null) != (oldCaption == null) ||
                     (oldCaption != null && !oldCaption.equals(currentCaption))
                 ) {
-                    animateReplaceCaptionLayout = false;
+                    animateReplaceCaptionLayout = true;
                     animateOutCaptionLayout = null;
                     animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animatedEmojiStack, captionLayout == null ? null : captionLayout.textLayoutBlocks);
                     if (lastDrawingSideMenuEnabled != isSideMenuEnabled || lastDrawingSummarized != summarized) {

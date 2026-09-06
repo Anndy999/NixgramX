@@ -26009,6 +26009,7 @@ public class ChatActivity extends BaseFragment implements
                 }
                 messageObject.forceUpdate = true;
                 cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+                cell.startChangeAnimation();
                 cell.requestLayout();
                 cell.invalidate();
             }
@@ -26096,6 +26097,7 @@ public class ChatActivity extends BaseFragment implements
                     }
                     cellMessageObject.forceUpdate = true;
                     cell.setMessageObject(cellMessageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+                    cell.startChangeAnimation();
                     cell.requestLayout();
                     cell.invalidate();
                     if (group != null) {
@@ -26147,6 +26149,7 @@ public class ChatActivity extends BaseFragment implements
                 if (update) {
                     cellMessageObject.forceUpdate = true;
                     cell.setMessageObject(cellMessageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+                    cell.startChangeAnimation();
                     cell.requestLayout();
                     cell.invalidate();
                     chatAdapter.updateRowAtPosition(chatListView.getChildAdapterPosition(child));
