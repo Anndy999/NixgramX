@@ -62,7 +62,9 @@ public class UpdateHelper extends BaseRemoteHelper {
     @Override
     protected void onError(String text, Delegate delegate) {
         manualCheckPending = false;
-        delegate.onTLResponse(null, text);
+        if (delegate != null) {
+            delegate.onTLResponse(null, text);
+        }
     }
 
     @Override

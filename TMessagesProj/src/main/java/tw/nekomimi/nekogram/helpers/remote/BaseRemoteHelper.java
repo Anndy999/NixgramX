@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessagesController;
@@ -25,6 +26,7 @@ public abstract class BaseRemoteHelper {
     // ID=0 → updater_not_configured (isMetadataChannelConfigured). After the first successful
     // publish to @NixgramXMetadata, paste the positive CHANNEL_METADATA_ID candidate from upload.py log.
     // Do NOT use 3819693045 (that is the public APK channel). Do not point at NagramX author endpoints.
+    // On check, the app resolveUsername + auto-joins this public channel when needed (users need not join manually).
     public static final long CHANNEL_METADATA_ID = 4419000687L;
     public static final String CHANNEL_METADATA_NAME = "NixgramXMetadata";
 
@@ -66,6 +68,12 @@ public abstract class BaseRemoteHelper {
         }
     }
 
+    private void reportError(String text, Delegate delegate) {
+        if (delegate != null) {
+            onError(text, delegate);
+        }
+    }
+
     private void onGetMessageSuccess(TLObject response, Delegate delegate) {
         var tag = "#" + getTag();
         final var res = (TLRPC.messages_Messages) response;
@@ -97,10 +105,15 @@ public abstract class BaseRemoteHelper {
     }
 
     private void load(boolean forceRefreshAccessHash, Delegate delegate) {
+        load(forceRefreshAccessHash, false, delegate);
+    }
+
+    /**
+     * @param accessEnsured true after one resolve+join retry this check (avoids loops)
+     */
+    private void load(boolean forceRefreshAccessHash, boolean accessEnsured, Delegate delegate) {
         if (!isMetadataChannelConfigured()) {
-            if (delegate != null) {
-                onError("updater_not_configured", delegate);
-            }
+            reportError("updater_not_configured", delegate);
             return;
         }
         var tag = "#" + getTag();
@@ -110,42 +123,115 @@ public abstract class BaseRemoteHelper {
         req.filter = new TLRPC.TL_inputMessagesFilterEmpty();
         req.q = tag;
         req.peer = getMessagesController().getInputPeer(-CHANNEL_METADATA_ID);
+
+        Runnable search = () -> getConnectionsManager().sendRequest(req, (response, error) -> {
+            if (error != null) {
+                if (!accessEnsured) {
+                    // Stale access_hash / no membership → resolve, join public metadata, retry once
+                    load(true, true, delegate);
+                    return;
+                }
+                reportError(error.text, delegate);
+                return;
+            }
+            final var res = (TLRPC.messages_Messages) response;
+            boolean empty = res.messages == null || res.messages.isEmpty();
+            if (empty && !accessEnsured) {
+                // Non-members often get an empty search → join + refresh access_hash + retry once.
+                // Skip retry when we already know the account is a participant (genuine "latest").
+                TLRPC.Chat known = getMessagesController().getChat(CHANNEL_METADATA_ID);
+                if (known == null || ChatObject.isNotInChat(known)) {
+                    load(true, true, delegate);
+                    return;
+                }
+            }
+            onGetMessageSuccess(response, delegate);
+        });
+
         if (req.peer == null || req.peer.access_hash == 0 || forceRefreshAccessHash) {
-            TLRPC.TL_contacts_resolveUsername req1 = new TLRPC.TL_contacts_resolveUsername();
-            req1.username = CHANNEL_METADATA_NAME;
-            getConnectionsManager().sendRequest(req1, (response1, error1) -> {
+            TLRPC.TL_contacts_resolveUsername resolve = new TLRPC.TL_contacts_resolveUsername();
+            resolve.username = CHANNEL_METADATA_NAME;
+            getConnectionsManager().sendRequest(resolve, (response1, error1) -> {
                 if (error1 != null) {
+                    reportError(error1.text, delegate);
                     return;
                 }
                 if (!(response1 instanceof TLRPC.TL_contacts_resolvedPeer resolvedPeer)) {
+                    reportError("USERNAME_NOT_RESOLVED", delegate);
                     return;
                 }
                 getMessagesController().putUsers(resolvedPeer.users, false);
                 getMessagesController().putChats(resolvedPeer.chats, false);
                 getMessagesStorage().putUsersAndChats(resolvedPeer.users, resolvedPeer.chats, false, true);
-                if ((resolvedPeer.chats == null || resolvedPeer.chats.size() == 0)) {
+                if (resolvedPeer.chats == null || resolvedPeer.chats.isEmpty()) {
+                    reportError("CHANNEL_INVALID", delegate);
                     return;
                 }
+                TLRPC.Chat chat = resolvedPeer.chats.get(0);
                 req.peer = new TLRPC.TL_inputPeerChannel();
-                req.peer.channel_id = resolvedPeer.chats.get(0).id;
-                req.peer.access_hash = resolvedPeer.chats.get(0).access_hash;
-                getConnectionsManager().sendRequest(req, (response, error) -> {
-                    if (error == null) {
-                        onGetMessageSuccess(response, delegate);
-                    } else {
-                        onError(error.text, delegate);
-                    }
-                });
-            });
-        } else {
-            getConnectionsManager().sendRequest(req, (response, error) -> {
-                if (error == null) {
-                    onGetMessageSuccess(response, delegate);
+                req.peer.channel_id = chat.id;
+                req.peer.access_hash = chat.access_hash;
+                if (accessEnsured || ChatObject.isNotInChat(chat)) {
+                    joinPublicMetadataChannel(chat, search, delegate);
                 } else {
-                    load(true, delegate);
+                    search.run();
                 }
             });
+        } else {
+            TLRPC.Chat chat = getMessagesController().getChat(CHANNEL_METADATA_ID);
+            if (accessEnsured || (chat != null && ChatObject.isNotInChat(chat))) {
+                if (chat == null) {
+                    load(true, accessEnsured, delegate);
+                    return;
+                }
+                joinPublicMetadataChannel(chat, search, delegate);
+            } else {
+                search.run();
+            }
         }
+    }
+
+    /**
+     * Auto-join the public metadata channel only. Never attempts private channels.
+     */
+    private void joinPublicMetadataChannel(TLRPC.Chat chat, Runnable onJoined, Delegate delegate) {
+        if (chat == null || !ChatObject.isChannel(chat)) {
+            reportError("CHANNEL_INVALID", delegate);
+            return;
+        }
+        if (!ChatObject.isNotInChat(chat)) {
+            onJoined.run();
+            return;
+        }
+        // Public metadata only — never auto-join a private channel
+        if (chat.id != CHANNEL_METADATA_ID && !ChatObject.isPublic(chat)) {
+            reportError("CHANNEL_PRIVATE", delegate);
+            return;
+        }
+        TLRPC.TL_channels_joinChannel join = new TLRPC.TL_channels_joinChannel();
+        join.channel = MessagesController.getInputChannel(chat);
+        if (join.channel == null || join.channel.access_hash == 0) {
+            reportError("CHANNEL_INVALID", delegate);
+            return;
+        }
+        getConnectionsManager().sendRequest(join, (response, error) -> {
+            if (error != null) {
+                if ("USER_ALREADY_PARTICIPANT".equals(error.text)) {
+                    chat.left = false;
+                    getMessagesController().putChat(chat, false);
+                    onJoined.run();
+                    return;
+                }
+                reportError(error.text, delegate);
+                return;
+            }
+            if (response instanceof TLRPC.Updates) {
+                getMessagesController().processUpdates((TLRPC.Updates) response, false);
+            }
+            chat.left = false;
+            getMessagesController().putChat(chat, false);
+            onJoined.run();
+        });
     }
 
     public interface Delegate {
