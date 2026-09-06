@@ -11226,4 +11226,7 @@
     <string name="UnsupportedMessageTitle">Unsupported Message</string>
     <string name="UnsupportedMessageMessage">Update Telegram to view this message</string>
     <string name="UnsupportedUpdate">Update</string>
+    <string name="NixDiagnostics">Diagnostics</string>
+    <string name="NixLastCrash">NixgramX crashed last time</string>
+    <string name="NixCrashPrivacy">Copy a local report with device information and sanitized stack frames. No chat text or tokens.</string>
 </resources>
