@@ -19,12 +19,14 @@ import org.telegram.tgnet.TLRPC;
 import java.util.ArrayList;
 
 public abstract class BaseRemoteHelper {
-    // CHANNEL_METADATA_* must eventually point at a *private* metadata channel that receives
+    // CHANNEL_METADATA_* = second PUBLIC metadata channel (@NixgramXMetadata) that receives
     // #updateRelease / #updateBeta JSON (HELPER_BOT_CANARY_TARGET). Public @NixgramX is for APKs only.
-    // ID below is still the public channel until a private metadata channel exists — then switch both.
-    // Do not point these at NagramX author endpoints.
-    public static final long CHANNEL_METADATA_ID = 3819693045L;
-    public static final String CHANNEL_METADATA_NAME = "NixgramX";
+    // Must stay PUBLIC so logged-in user accounts can messages.search; a private channel breaks checks.
+    // ID=0 → updater_not_configured (isMetadataChannelConfigured). After the first successful
+    // publish to @NixgramXMetadata, paste the positive CHANNEL_METADATA_ID candidate from upload.py log.
+    // Do NOT use 3819693045 (that is the public APK channel). Do not point at NagramX author endpoints.
+    public static final long CHANNEL_METADATA_ID = 0L;
+    public static final String CHANNEL_METADATA_NAME = "NixgramXMetadata";
 
     protected static final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoremoteconfig", Activity.MODE_PRIVATE);
 

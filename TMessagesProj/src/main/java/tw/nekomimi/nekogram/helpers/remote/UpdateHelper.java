@@ -27,6 +27,8 @@ public class UpdateHelper extends BaseRemoteHelper {
     public static final int UPDATE_CHANNEL_RELEASE = 1;
     public static final int UPDATE_CHANNEL_BETA = 2;
     private boolean updateAlways = false;
+    /** Survives getShouldUpdateVersion clearing updateAlways; lets manual checks show dialog when AutoUpdateChannel==OFF. */
+    private boolean manualCheckPending = false;
 
     public static boolean isChannelConfigured() {
         return CHANNEL_METADATA_ID != 0L;
@@ -59,13 +61,15 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     @Override
     protected void onError(String text, Delegate delegate) {
+        manualCheckPending = false;
         delegate.onTLResponse(null, text);
     }
 
     @Override
     protected String getTag() {
         if (BuildConfig.DEBUG) return "updateDebug";
-        return NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_CHANNEL_RELEASE ? "updateRelease" : "updateBeta";
+        // OFF (and Release) → #updateRelease so long-press manual checks still find stable metadata.
+        return NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_CHANNEL_BETA ? "updateBeta" : "updateRelease";
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -135,10 +139,13 @@ public class UpdateHelper extends BaseRemoteHelper {
             update.url = json.url;
             update.flags |= 4;
         }
-        if (NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_OFF && !update.can_not_skip) {
+        // Manual long-press check must still show the dialog when AutoUpdateChannel is OFF.
+        // updateAlways is cleared earlier in getShouldUpdateVersion; use manualCheckPending instead.
+        if (NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_OFF && !update.can_not_skip && !manualCheckPending) {
             delegate.onTLResponse(null, null);
             return;
         }
+        manualCheckPending = false;
         if (response != null) {
             var res = (TLRPC.messages_Messages) response;
             getMessagesController().removeDeletedMessagesFromArray(CHANNEL_METADATA_ID, res.messages);
@@ -175,6 +182,7 @@ public class UpdateHelper extends BaseRemoteHelper {
     protected void onLoadSuccess(ArrayList<JSONObject> responses, Delegate delegate) {
         var update = getShouldUpdateVersion(responses);
         if (update == null) {
+            manualCheckPending = false;
             delegate.onTLResponse(null, null);
             return;
         }
@@ -215,19 +223,29 @@ public class UpdateHelper extends BaseRemoteHelper {
     }
 
     public void checkNewVersionAvailable(Delegate delegate, boolean updateAlways) {
+        checkNewVersionAvailable(delegate, updateAlways, false);
+    }
+
+    /**
+     * @param updateAlways show dialog even when remote is not newer
+     * @param manualUserCheck user-initiated check (e.g. long-press); must not be swallowed when AutoUpdateChannel==OFF
+     */
+    public void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck) {
         if (!isChannelConfigured()) {
             if (delegate != null) {
                 delegate.onTLResponse(null, "updater_not_configured");
             }
             return;
         }
-        if (!updateAlways && NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_OFF) {
+        if (!updateAlways && !manualUserCheck && NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_OFF) {
             if (delegate != null) {
                 delegate.onTLResponse(null, null);
             }
             return;
         }
         this.updateAlways = updateAlways;
+        // Preserve through getShouldUpdateVersion (which clears updateAlways) into getNewVersionMessagesCallback.
+        this.manualCheckPending = updateAlways || manualUserCheck;
         load(delegate);
     }
 

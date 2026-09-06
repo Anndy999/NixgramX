@@ -305,7 +305,7 @@ async def send_sticker_file(client: "Client", cid, path: Path) -> int:
 
 
 async def obtain_sticker_message_id(client: "Client", metadata_cid) -> int:
-    """Resolve sticker message id for private #update* JSON only.
+    """Resolve sticker message id for metadata-channel #update* JSON only.
 
     Priority:
       a) UPDATE_STICKER_MESSAGE_ID env (existing message in metadata channel)
@@ -422,13 +422,15 @@ async def main():
             flush=True,
         )
         chat_id = DEFAULT_APK_CHAT_ID
+    # BUGFIX: do NOT null metadata_chat_id when it is a @username.
+    # Second public metadata channel (@NixgramXMetadata) must resolve by username.
     if metadata_chat_id and not str(metadata_chat_id).lstrip("-").isdigit():
         print(
-            f"WARN: metadata ref is {describe_chat_ref(metadata_chat_id)}; "
-            f"leaving unset so public APK chat never receives #update* JSON.",
+            f"INFO: metadata ref is {describe_chat_ref(metadata_chat_id)}; "
+            f"will resolve @username for the second public metadata channel "
+            f"(APK chat still never receives #update* JSON).",
             flush=True,
         )
-        metadata_chat_id = None
     print(
         f"Using APK chat={describe_chat_ref(chat_id)} metadata={describe_chat_ref(metadata_chat_id)}",
         flush=True,
@@ -439,13 +441,14 @@ async def main():
     document_ids = await send_to_channel(client, chat_id)
     if metadata_chat_id and not same_chat(metadata_chat_id, chat_id):
         await resolve_and_print_chat(client, metadata_chat_id)
-        # Private metadata chat only: sticker + url-only JSON (never public APK chat).
+        # Second public metadata channel: sticker + url-only JSON (never APK chat).
+        # document map may be empty; url stays https://t.me/NixgramX.
         sticker_message_id = await obtain_sticker_message_id(client, metadata_chat_id)
         url_only_docs: dict[str, int] = {}
         await send_update_json(client, metadata_chat_id, url_only_docs, sticker_message_id)
         await send_canary_metadata(client, metadata_chat_id)
         print(
-            "Posted #update* JSON to private metadata chat only "
+            "Posted #update* JSON to second public metadata channel only "
             f"(APK chat={chat_id}, metadata chat={metadata_chat_id}); "
             f"sticker={sticker_message_id}; document map empty (url-only).",
             flush=True,
