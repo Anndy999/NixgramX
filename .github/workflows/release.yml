@@ -96,6 +96,9 @@ jobs:
           path: TMessagesProj/build/outputs/apk/release/*-universal.apk
   upload:
     name: Publish Stable
+    concurrency:
+      group: nixgramx-telegram-publish
+      cancel-in-progress: false
     if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-latest
     environment: stable
@@ -121,6 +124,7 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Stable release' }}
           BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
           RELEASE_NOTES: ${{ github.event.inputs.release_notes || '' }}
+          UPDATE_METADATA_MESSAGE_ID: ${{ vars.UPDATE_RELEASE_MESSAGE_ID }}
           UPDATE_URL: https://t.me/NixgramX
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
@@ -132,5 +136,4 @@ jobs:
           python Tools/scripts/upload.py \
             "${{ secrets.HELPER_BOT_TOKEN }}" \
             "${{ secrets.HELPER_BOT_TARGET }}" \
-            stable \
-            "${{ secrets.HELPER_BOT_CANARY_TARGET }}"
+            stable

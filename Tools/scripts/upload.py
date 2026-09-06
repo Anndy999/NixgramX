@@ -6,6 +6,8 @@ from pathlib import Path
 from sys import argv
 
 from pyrogram import Client
+from pyrogram.enums import ParseMode
+from pyrogram.errors import MessageNotModified
 from pyrogram.types import InputMediaDocument
 
 api_id = os.environ.get("APP_ID")
@@ -15,7 +17,6 @@ distribution = argv[3].strip().lower() if len(argv) > 3 else "release"
 if distribution not in {"release", "stable", "test", "beta", "canary"}:
     raise SystemExit(f"Unknown distribution channel: {distribution}")
 beta_version = distribution in {"test", "beta", "canary"}
-metadata_chat_id = argv[4] if len(argv) > 4 else None
 
 
 # Known public APK channel Bot API id (from prior successful uploads).
@@ -152,7 +153,8 @@ def get_user_release_notes() -> str:
 def get_caption() -> str:
     version, version_code = resolve_version()
     title = "NixgramX Beta" if beta_version else "NixgramX"
-    line1 = f"{title} · {version} ({version_code})"
+    # The Beta label already identifies the track; keep build hashes off the caption.
+    line1 = f"{title} · {version.split('-', 1)[0]} ({version_code})"
     notes = get_user_release_notes()
     if notes:
         return f"{line1}\n\n{notes}"
@@ -372,16 +374,57 @@ async def send_to_channel(client: "Client", cid) -> dict[str, int]:
     return document_ids
 
 
+def metadata_message_id() -> int:
+    value = parse_positive_message_id(os.environ.get("UPDATE_METADATA_MESSAGE_ID"))
+    if value is None or value > 2147483647:
+        raise ValueError(
+            "Set UPDATE_METADATA_MESSAGE_ID to the existing track's #update* post "
+            "in @NixgramX. No APK or new metadata post was sent."
+        )
+    return value
+
+
+async def read_update_metadata(client: "Client", cid: int, message_id: int):
+    message = await client.get_messages(cid, message_id, replies=0)
+    tag = "#updateBeta" if beta_version else "#updateRelease"
+    if (not message or getattr(message, "empty", False)
+            or message.id != message_id or message.chat.id != cid
+            or not message.text or not message.text.startswith(tag + " ")):
+        raise ValueError("Metadata ID must identify this track's existing text post in @NixgramX.")
+    try:
+        body = json.loads(message.text[len(tag):].strip())
+    except (ValueError, TypeError) as e:
+        raise ValueError("Existing updater metadata is not valid JSON.") from e
+    if (not isinstance(body, dict)
+            or type(body.get("version_code")) is not int
+            or body["version_code"] <= 0
+            or not isinstance(body.get("version"), str)):
+        raise ValueError("Existing updater metadata has no valid version identity.")
+    return message, body
+
+
 @retry
-async def send_update_json(client: "Client", cid, document_ids: dict[str, int], sticker_message_id: int = 0):
-    with contextlib.suppress(ValueError):
-        cid = int(cid)
+async def send_update_json(client: "Client", cid: int, document_ids: dict[str, int],
+                           message_id: int, expected_text: str, sticker_message_id: int = 0):
+    """Edit the existing public metadata post; never append a notification."""
     text = build_update_payload(document_ids, sticker_message_id=sticker_message_id)
-    print(f"Posting updater metadata ({text.split(' ', 1)[0]}):", flush=True)
-    print(text, flush=True)
-    msg = await client.send_message(chat_id=cid, text=text)
-    print(f"Updater metadata message_id={msg.id}", flush=True)
-    return msg
+    current, _ = await read_update_metadata(client, cid, message_id)
+    if current.text == text:
+        return current  # An edit may have succeeded before a transport error.
+    if current.text != expected_text:
+        raise RuntimeError("Metadata changed during APK upload; refusing to overwrite another publication.")
+    try:
+        await client.edit_message_text(
+            chat_id=cid, message_id=message_id, text=text,
+            parse_mode=ParseMode.DISABLED, disable_web_page_preview=True,
+        )
+    except MessageNotModified:
+        pass  # Read back below; never treat a no-op response alone as success.
+    saved, _ = await read_update_metadata(client, cid, message_id)
+    if saved.text != text:
+        raise RuntimeError("Updater metadata read-back does not match this publication.")
+    print(f"Verified updater metadata edit: message_id={message_id}", flush=True)
+    return saved
 
 
 @retry
@@ -410,55 +453,38 @@ def same_chat(a, b) -> bool:
 
 
 async def main():
+    # Validate configuration before authenticating or publishing any media.
+    message_id = metadata_message_id()
     bot_token = argv[1]
     chat_id = normalize_chat_ref(argv[2]) or DEFAULT_APK_CHAT_ID
-    global metadata_chat_id
-    metadata_chat_id = normalize_chat_ref(metadata_chat_id)
-    # Prefer numeric id: username resolve has been flaky for the helper bot.
-    if chat_id and not str(chat_id).lstrip("-").isdigit():
-        print(
-            f"WARN: chat ref is {describe_chat_ref(chat_id)}; "
-            f"falling back to DEFAULT_APK_CHAT_ID for reliability.",
-            flush=True,
-        )
+    if chat_id.lower() == "@nixgramx" or chat_id == "3819693045":
         chat_id = DEFAULT_APK_CHAT_ID
-    if metadata_chat_id and not str(metadata_chat_id).lstrip("-").isdigit():
-        print(
-            f"WARN: metadata ref is {describe_chat_ref(metadata_chat_id)}; "
-            f"leaving unset so public APK chat never receives #update* JSON.",
-            flush=True,
-        )
-        metadata_chat_id = None
-    print(
-        f"Using APK chat={describe_chat_ref(chat_id)} metadata={describe_chat_ref(metadata_chat_id)}",
-        flush=True,
-    )
+    if chat_id != DEFAULT_APK_CHAT_ID:
+        raise ValueError("Publish target must match the app's existing @NixgramX update channel.")
+    chat_id = int(chat_id)
+    if len(argv) > 4 and argv[4].strip():
+        print("Ignoring obsolete private metadata target; only @NixgramX is used.", flush=True)
+    _, version_code = resolve_version()
+    if version_code <= 0:
+        raise ValueError("A positive NixgramX version code is required before publication.")
     client = get_client(bot_token)
     await client.start()
-    await resolve_and_print_chat(client, chat_id)
-    document_ids = await send_to_channel(client, chat_id)
-    if metadata_chat_id and not same_chat(metadata_chat_id, chat_id):
-        await resolve_and_print_chat(client, metadata_chat_id)
-        # Private metadata chat only: sticker + url-only JSON (never public APK chat).
-        sticker_message_id = await obtain_sticker_message_id(client, metadata_chat_id)
-        url_only_docs: dict[str, int] = {}
-        await send_update_json(client, metadata_chat_id, url_only_docs, sticker_message_id)
-        await send_canary_metadata(client, metadata_chat_id)
-        print(
-            "Posted #update* JSON to private metadata chat only "
-            f"(APK chat={chat_id}, metadata chat={metadata_chat_id}); "
-            f"sticker={sticker_message_id}; document map empty (url-only).",
-            flush=True,
+    try:
+        await resolve_and_print_chat(client, chat_id)
+        previous, body = await read_update_metadata(client, chat_id, message_id)
+        if version_code <= body["version_code"]:
+            raise ValueError("Refusing to publish a reused or older version code for this track.")
+        # Reuse an existing same-channel sticker, or the app's local duck fallback.
+        # Never send a separate sticker/description/hash notification.
+        sticker_id = body.get("sticker", 0)
+        if type(sticker_id) is not int or sticker_id < 0:
+            raise ValueError("Existing metadata has an invalid sticker message ID.")
+        document_ids = await send_to_channel(client, chat_id)
+        await send_update_json(
+            client, chat_id, document_ids, message_id, previous.text, sticker_id,
         )
-    else:
-        # Public APK channel must never receive #update* JSON or canary hash logs.
-        print(
-            "WARN: HELPER_BOT_CANARY_TARGET missing or same as APK chat; "
-            "skipping #update* JSON and canary hash log. "
-            "Public channel gets APK media group only.",
-            flush=True,
-        )
-    await client.log_out()
+    finally:
+        await client.log_out()
 
 
 if __name__ == "__main__":

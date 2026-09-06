@@ -19,9 +19,9 @@ import org.telegram.tgnet.TLRPC;
 import java.util.ArrayList;
 
 public abstract class BaseRemoteHelper {
-    // CHANNEL_METADATA_* must eventually point at a *private* metadata channel that receives
-    // #updateRelease / #updateBeta JSON (HELPER_BOT_CANARY_TARGET). Public @NixgramX is for APKs only.
-    // ID below is still the public channel until a private metadata channel exists — then switch both.
+    // APKs and legacy #updateRelease / #updateBeta JSON share the existing @NixgramX channel.
+    // The publisher edits the configured historical metadata posts in place, without new
+    // JSON/hash notifications. Keep these constants aligned with the APK publish target.
     // Do not point these at NagramX author endpoints.
     public static final long CHANNEL_METADATA_ID = 3819693045L;
     public static final String CHANNEL_METADATA_NAME = "NixgramX";

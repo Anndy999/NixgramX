@@ -4,10 +4,10 @@
 
 NixgramX has two user-visible distribution channels:
 
-| Channel | Branch | Build type | Public caption | Private metadata tag |
+| Channel | Branch | Build type | Public caption | Existing same-channel metadata post |
 | --- | --- | --- | --- | --- |
-| Stable | `main` | `release` | `NixgramX · <version> (<code>)` + optional `RELEASE_NOTES` | `#updateRelease` (private metadata only) |
-| Beta | `beta` | `staging` | `NixgramX Beta · <version> (<code>)` + optional `RELEASE_NOTES` | `#updateBeta` (private metadata only) |
+| Stable | `main` | `release` | `NixgramX · <version> (<code>)` + optional `RELEASE_NOTES` | `#updateRelease`, edited in place |
+| Beta | `beta` | `staging` | `NixgramX Beta · <version> (<code>)` + optional `RELEASE_NOTES` | `#updateBeta`, edited in place |
 
 Both use `app.nixgramx.android` and the same release signing identity. A Beta APK therefore replaces the installed Stable APK; it is an update channel, not a second installable app.
 
@@ -49,8 +49,8 @@ Before publishing, bump the two `NIXGRAMX_VERSION_*` values in the same reviewed
 
 - **Stable Release** runs only from a `v*` tag, or manually from `main` with `publish=true`. A tag is the explicit decision to post a Stable build.
 - **Beta Build** builds artifacts on every push to `beta`, but posts to the channel only when manually dispatched from `beta` with `publish=true`. This prevents unreviewed commits from spamming users.
-- Both upload APKs to the existing public `@NixgramX` channel. Public caption is product/version only (plus optional user `RELEASE_NOTES`); never commit title / hash / `#update*`. Only Beta includes the `Beta` label. **Public channel never receives `#update*`.**
-- The private metadata channel receives the matching `#updateRelease` or `#updateBeta` JSON. Never put that JSON into the public channel.
+- Both upload APKs to the existing public `@NixgramX` channel. APK captions contain product/version only (plus optional user `RELEASE_NOTES`), not commit titles, hashes or `#update*`. Only Beta includes the `Beta` label; build hashes are omitted from its caption version.
+- The matching **historical** `#updateRelease` or `#updateBeta` post is edited in place in this same channel. No new JSON/hash/sticker notification is sent and no second channel is created. Keep these posts: already-installed clients still search for their JSON. See [AUTO_UPDATE.md](AUTO_UPDATE.md) for required message-ID Variables and fail-closed migration checks.
 
 After this configuration is merged to `main`, create the Beta branch once:
 
