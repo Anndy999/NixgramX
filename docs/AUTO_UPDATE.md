@@ -26,7 +26,7 @@ There is **no server update API** — the app only `messages.search`es the metad
 ## App constants
 
 - `BaseRemoteHelper.CHANNEL_METADATA_NAME` = `"NixgramXMetadata"` (metadata channel, **not** `@NixgramX`).
-- `BaseRemoteHelper.CHANNEL_METADATA_ID` starts at `0L` → `updater_not_configured` until you paste the positive candidate from `upload.py`.
+- `BaseRemoteHelper.CHANNEL_METADATA_ID` is `4419000687L` → `updater_not_configured` until you paste the positive candidate from `upload.py`.
 - **Do not** set ID to `3819693045` (that is the public APK channel — searching it for `#update*` is wrong once JSON lives on metadata only).
 - Do not point these at NagramX author endpoints.
 - Metadata channel must remain **public**.
@@ -79,7 +79,7 @@ Settings → long-press version row → **Auto-check updates**:
 3. Run a Release/Beta upload; confirm JSON appears **only** on metadata. Copy the printed positive id into `BaseRemoteHelper.java`:
 
 ```java
-public static final long CHANNEL_METADATA_ID = <positive_id_from_upload_log>;
+public static final long CHANNEL_METADATA_ID = 4419000687;
 public static final String CHANNEL_METADATA_NAME = "NixgramXMetadata";
 ```
 
