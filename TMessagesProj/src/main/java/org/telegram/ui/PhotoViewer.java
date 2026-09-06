@@ -4733,9 +4733,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     public void setParentAlert(ChatAttachAlert alert) {
-        if (parentAlert != null && parentAlert != alert) {
-            parentAlert.setPhotoViewerTransitionAnimating(false);
-        }
         parentAlert = alert;
         if (parentAlertWindowVisibilityController != null) {
             parentAlertWindowVisibilityController.destroy();
@@ -4744,20 +4741,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (alert != null) {
             parentAlertWindowVisibilityController = alert.obtainWindowVisibilityController();
         }
-    }
-
-    private void setParentAlertTransitionAnimating(boolean animating) {
-        if (parentAlert != null) {
-            parentAlert.setPhotoViewerTransitionAnimating(animating);
-        }
-    }
-
-    private void setAnimationInProgress(int value) {
-        if (animationInProgress == value) {
-            return;
-        }
-        animationInProgress = value;
-        setParentAlertTransitionAnimating(value == 1 || value == 2 || value == 3 || value == 4);
     }
 
     public void setParentActivity(Activity activity) {
@@ -17873,7 +17856,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     animationEndRunnable.run();
                     animationEndRunnable = null;
                 }
-                setAnimationInProgress(0);
+                animationInProgress = 0;
             }
         }
         return animationInProgress != 0;
@@ -18054,7 +18037,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         playerInjected = false;
         if (object != null) {
             disableShowCheck = true;
-            setAnimationInProgress(1);
+            animationInProgress = 1;
             if (messageObject != null) {
                 currentAnimation = object.allowTakeAnimation ? object.imageReceiver.getAnimation() : null;
                 if (currentAnimation != null) {
@@ -18245,7 +18228,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             return;
                         }
                         containerView.setLayerType(View.LAYER_TYPE_NONE, null);
-                        setAnimationInProgress(0);
+                        animationInProgress = 0;
                         invalidateBlur();
                         transitionAnimationStartTime = 0;
                         leftCropState = null;
@@ -18401,7 +18384,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     containerView.setAlpha(0);
                     backgroundDrawable.setAlpha(0);
 
-                    setAnimationInProgress(4);
+                    animationInProgress = 4;
                     containerView.invalidate();
                     AnimatorSet animatorSet = new AnimatorSet();
                     ObjectAnimator a2 = ObjectAnimator.ofFloat(pickerView, View.TRANSLATION_Y, pickerView.getTranslationY(), 0f).setDuration(220);
@@ -18425,7 +18408,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         @Override
                         public void onAnimationEnd(Animator animation) {
                             super.onAnimationEnd(animation);
-                            setAnimationInProgress(0);
+                            animationInProgress = 0;
                             invalidateBlur();
                             backgroundDrawable.setAlpha(255);
                             containerView.invalidate();
@@ -18775,7 +18758,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         if (isInline) {
             isInline = false;
-            setAnimationInProgress(0);
+            animationInProgress = 0;
             onPhotoClosed(object);
             containerView.setScaleX(1.0f);
             containerView.setScaleY(1.0f);
@@ -18948,7 +18931,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 animationEndRunnable = () -> {
                     animationEndRunnable = null;
                     containerView.setLayerType(View.LAYER_TYPE_NONE, null);
-                    setAnimationInProgress(0);
+                    animationInProgress = 0;
                     invalidateBlur();
                     onPhotoClosed(object);
                     MediaController.getInstance().tryResumePausedAudio();
@@ -18981,7 +18964,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     if (!doneButtonPressed) {
                         releasePlayer(true);
                     }
-                    setAnimationInProgress(3);
+                    animationInProgress = 3;
                     containerView.invalidate();
                     transitionAnimationStartTime = System.currentTimeMillis();
                     containerView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -19011,7 +18994,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         return;
                     }
                     containerView.setLayerType(View.LAYER_TYPE_NONE, null);
-                    setAnimationInProgress(0);
+                    animationInProgress = 0;
                     onPhotoClosed(object);
                     containerView.setScaleX(1.0f);
                     containerView.setScaleY(1.0f);
@@ -19051,7 +19034,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     if (!doneButtonPressed) {
                         releasePlayer(true);
                     }
-                    setAnimationInProgress(2);
+                    animationInProgress = 2;
                     transitionAnimationStartTime = System.currentTimeMillis();
                     containerView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
                     animatorSet.start();
@@ -19150,7 +19133,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void onPhotoClosed(PlaceProviderObject object) {
-        setParentAlertTransitionAnimating(false);
         if (doneButtonPressed) {
             releasePlayer(true);
         }
@@ -23205,15 +23187,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (stickerMakerView != null && stickerMakerView.isThanosInProgress) {
             return;
         }
-        // Open/close morph over ChatAttachAlert: skip per-frame glass rebuild.
-        // Light channel wallpaper + attach blur3 under a fading scrim was the
-        // residual jank after PR #17 (select-chrome pause).
-        if (animationInProgress == 1 || animationInProgress == 2 || animationInProgress == 3 || animationInProgress == 4) {
-            if (containerView != null) {
-                containerView.invalidate();
-            }
-            return;
-        }
+//        if (animationInProgress != 0) {
+//            return;
+//        }
 
         invalidateAllGlassAttachedViews();
 
