@@ -28436,8 +28436,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     /**
-     * Run the cell's internal change animation (incoming-only text/caption fade)
-     * without RecyclerView item MOVE, which stacks neighboring bubbles.
+     * Fallback when ChatListItemAnimator is not attached: incoming-only
+     * text/caption fade (animateOut* stays null). Official first-translate
+     * and 显示原文 / 翻译为中文 use RecyclerView MOVE instead, which already
+     * drives animateChangeProgress.
      */
     public void startChangeAnimation() {
         if (transitionParams == null || !transitionParams.supportChangeAnimation()) {

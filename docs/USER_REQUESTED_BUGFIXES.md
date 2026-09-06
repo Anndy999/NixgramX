@@ -64,3 +64,11 @@ by the script above.
   `startChangeAnimation()` (same duration/interpolator as first
   translate), sequential whole-label bar fade. ChatListItemAnimator MOVE
   stays off. Keep-original stacking and reply quote+body unchanged.
+- **UB-8 follow-up 2 official MOVE** (`fix/official-translate-anim`):
+  Incoming-only fade without list MOVE still looked like a hard cut
+  (dates/neighbors jumped). Restore official Telegram ChatListItemAnimator
+  MOVE (bubble morph + neighbor translationY) via `setMessageObject` +
+  `updateRowAtPosition` with the item animator ON. `animateOut*` stays
+  null so EN/ZH never share `textX/textY`. `startChangeAnimation()` is
+  only a fallback when the animator is missing. Keep-original stacking
+  and reply quote+body unchanged.

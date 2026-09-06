@@ -17,3 +17,4 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 | 2026-09-04 | — | Auto-update default OFF + NixgramX release keystore | `fix/user-requested-bugs` |
 | 2026-09-06 | `4e63d17d` (exteraless/exteraless) | Memory leak cleanup: VideoAds LruCache, mention adapters, ChatAvatarContainer observers, PhotoViewer blur watcher / animator (manual port; compile not run / Not device-tested) | `stability/exteraless-audit` |
 | 2026-09-06 | — | UB-8 follow-up: incoming-only translate swap animation (no EN/ZH overlay; item MOVE still off) | `fix/translate-swap-animation` |
+| 2026-09-06 | DrKLO/Telegram ChatListItemAnimator + ApplicationLoaderImpl | Official MOVE for 显示原文/翻译为中文 (incoming-only glyphs); beta in-app check uses `#updateBeta` like official `checkUpdate` / `isBeta` | `fix/official-translate-anim` |
