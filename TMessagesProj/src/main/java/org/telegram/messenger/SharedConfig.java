@@ -224,6 +224,7 @@ public class SharedConfig {
 
     @PushListenerController.PushType
     public static int pushType = PushListenerController.PUSH_TYPE_FIREBASE;
+    public static volatile long pushLastReceivedTime;
     public static String pushString = "";
     public static String pushStringStatus = "";
     /** Last FCM getToken / init exception message (runtime diagnostic; never log the token itself). */

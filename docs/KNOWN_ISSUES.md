@@ -1,20 +1,28 @@
-# Known Issues
+# Known issues
 
-| ID | Severity | Summary | Status |
+Current facts for Stability Phase v1 (post #29/#30 merge). Source audit is not a device pass.
+Resolved historical bugs are regression cases in TEST_MATRIX.md, not open tracked entries.
+
+| ID | Severity | Current issue | Validation / next action |
 | --- | --- | --- | --- |
-| KI-001 | High | Workflow files cannot be pushed without GitHub Actions workflow OAuth/scope | Stale — workflows are on the repo |
-| KI-002 | High | APK defaults to owner api_id 39764388; sample id 6 rejected at compile | Done on this branch — my.telegram.org FCM credentials still empty |
-| KI-003 | Medium | Icons still temporary NagramX assets | Accepted for Phase 0/1 |
-| KI-004 | Medium | Remote-config / updater channel ID is placeholder `0` | Framework in; switch default OFF until you own a channel |
-| KI-005 | Medium | Telegram 12.10.1 sync is on `upstream-sync/12.10.1`, not `main` | In progress |
-| KI-006 | Low | Legacy resource identifier remains `NagramX` for source compatibility | Fixed — all user-visible values now say `NixgramX` |
-| KI-007 | Medium | NixgramX release keystore generated (alias `nixgramx`) | Done — passwords not in git; see SIGNING.md |
-| UB-1 | High | Translation bubble width after EN→ZH (replace or keep-original) | Fixed on `fix/user-requested-bugs` |
-| UB-2 | High | Save deleted / edit history on full flavor | Tracked |
-| UB-3 | High | Channel message menu sometimes does not open (#392) | Tracked |
-| UB-4 | Medium | Attach-menu image pinch-zoom jank | Fixed on `fix/user-requested-bugs` — verify on device |
-| UB-5 | Medium | 32-bit download boost ineffective (#448) | Needs armeabi-v7a APK |
-| KI-008 | Medium | Passkeys need Bitwarden/KeePassDX privileged trust for `app.nixgramx.android`; Google PM fails (not in telegram.org assetlinks) | Documented in PASSKEYS.md | Passkeys (通行密钥) fail on NixgramX: telegram.org assetlinks only lists official package+certs; custom app.nixgramx.android signature → Credential Manager “browser signature mismatch”. Not fixable without Telegram listing us. SUPPORTS_PASSKEYS disabled; login menu explains phone/QR fallback. | Accepted — cryptographic / DAL binding |
-| UB-6 | Medium | URL-only updater metadata detected a new version but did not show the original update layout; the popup also dereferenced a missing APK document | Fixed on `fix/update-available-indicator` — URL updates now show the animated entry and open the published update URL |
-| UB-7 | High | Translate toggle: message text overlaps translate badge + timestamp | Fixed on `fix/translate-time-misalign` |
-| UB-8 | High | Translate toggle: original + translated glyphs overlap (bar + bubbles) | Fixed on `fix/translate-text-overlap`; incoming-only fade on `fix/translate-swap-animation`; official MOVE restored on `fix/official-translate-anim` without drawing two languages |
+| DATA-01 | P1 | main clears deleted/edit history across accounts sharing dialogId | Account filters added in this branch; host SQLite regression PASS; Android/device pending |
+| DATA-02 | P1 | Deleted-message indexes are non-unique; concurrent insert/edit/delete and restart/migration behavior unverified | Stress Room with two accounts, bulk operations and migration fixtures before schema changes |
+| DATA-03 | P2 | Bulk delete queries media after deleting its record, so cleanup can miss files | Source confirmed; defer media deletion change until shared-reference ownership tested |
+| PUSH-01 | P1 | Real Telegram → FCM → device delivery not verified for this candidate | Test login/registeredForPush, locked/background/reboot, network/proxy switches and battery saver |
+| PUSH-02 | P1 | External provider can leave stale local service/alarm running on main | Service/alarm cleanup and restart guards added; device transition tests pending |
+| PUSH-03 | P1 | Fallback repeating alarm uses broadcast PendingIntent targeting a Service class | Source audit only; correct ROM/background scheduling needs device evidence, not a blind PendingIntent swap |
+| CHAT-01 | P2 | Channel message long-press sometimes fails to open | No reproducible trace; preserve Telegram permission/selection conditions; collect channel role, message type and state sequence |
+| COMPAT-01 | P2 | Custom app passkeys require telegram.org DAL trust unavailable to this package/signature | Existing phone/QR fallback; see PASSKEYS.md |
+| COMPAT-02 | P2 | 32-bit download boost behavior unverified | Needs armeabi-v7a device/APK |
+| CI-01 | P1 | Android lint internally crashes in Kotlin/FIR analysis of TranslateController / UElementAsPsiDetector | Earlier local run FAIL; retain lint gate, final isolated run in FINAL_REPORT.md |
+| MEM-01 | P1 | Remaining lifecycle paths and existing #27 fixes lack heap/device regression evidence | No additional leak proven; repeat detach/open/close/rotation tests |
+| DIAG-01 | P2 | Native fatal signals/OS kills are outside Java uncaught exception handler | Java last-crash only; no claim of native/ANR capture |
+| UB-8 | — | Translate toggle original+translated overlap / MOVE | Official MOVE restored on #30; device NOT TESTED |
+
+No new P0 runtime issue proven by this audit. main Push logs exposed tokens/payload and push
+auth key under logging conditions; sensitive outputs removed in #29. Existing general
+Telegram FileLog/Crashlytics is separate from local diagnostics and has not received a full
+repository privacy audit. Do not export legacy logs as if sanitized diagnostics.
+
+Telegram 12.10.1 is on main; updater is configured; workflows are pushable and present;
+signing is configured (secret validity unverified). No placeholder/In progress assertions remain.

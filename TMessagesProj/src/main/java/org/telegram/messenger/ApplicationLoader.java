@@ -402,15 +402,16 @@ public class ApplicationLoader extends Application {
     }
 
     private static void startPushServiceInternal() {
-        if (PushListenerController.getProvider().hasServices()) {
-            // GMS/FCM present: do not start the in-app NotificationsService, and do not force-disable
-            // pushConnection. Keep hybrid MTProto long-poll enabled by default.
+        final boolean remotePush = PushListenerController.getProvider().hasServices();
+        if (remotePush) {
+            // Preserve the existing FCM hybrid connection; stop stale local service below.
             PushListenerController.ensureHybridPushConnectionForFcm();
-            return;
         }
         SharedPreferences preferences = MessagesController.getNotificationsSettings(UserConfig.selectedAccount);
         boolean enabled;
-        if (preferences.contains("pushService")) {
+        if (remotePush) {
+            enabled = false;
+        } else if (preferences.contains("pushService")) {
             enabled = preferences.getBoolean("pushService", true);
         } else {
             enabled = MessagesController.getMainSettings(UserConfig.selectedAccount).getBoolean("keepAliveService", false);
@@ -440,17 +441,28 @@ public class ApplicationLoader extends Application {
                     am.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 10 * 60 * 1000, pendingIntent);
                 } catch (Throwable e) {
                     Log.e("TFOSS", "Failed to start push service");
+                    org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.SERVICE_FAILED, 0);
                 }
             });
 
         } else AndroidUtilities.runOnUIThread(() -> {
-            applicationContext.stopService(new Intent(applicationContext, NotificationsService.class));
+            try {
+                applicationContext.stopService(new Intent(applicationContext, NotificationsService.class));
 
-            PendingIntent pintent = PendingIntent.getService(applicationContext, 0, new Intent(applicationContext, NotificationsService.class), PendingIntent.FLAG_MUTABLE);
-            AlarmManager alarm = (AlarmManager)applicationContext.getSystemService(Context.ALARM_SERVICE);
-            alarm.cancel(pintent);
-            if (pendingIntent != null) {
-                alarm.cancel(pendingIntent);
+                PendingIntent pintent = PendingIntent.getService(applicationContext, 0, new Intent(applicationContext, NotificationsService.class), PendingIntent.FLAG_MUTABLE);
+                AlarmManager alarm = (AlarmManager)applicationContext.getSystemService(Context.ALARM_SERVICE);
+                alarm.cancel(pintent);
+                // Reconstruct the broadcast identity too: static pendingIntent is lost on process death.
+                PendingIntent broadcast = PendingIntent.getBroadcast(applicationContext, 0,
+                        new Intent(applicationContext, NotificationsService.class), PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+                if (broadcast != null) { alarm.cancel(broadcast); broadcast.cancel(); }
+                if (pendingIntent != null) {
+                    alarm.cancel(pendingIntent);
+                    pendingIntent = null;
+                }
+            } catch (Throwable failure) {
+                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.SERVICE_FAILED, 0);
+                FileLog.e("Local push service cleanup failed (details omitted)");
             }
         });
     }
@@ -863,6 +875,11 @@ public class ApplicationLoader extends Application {
     private void installCrashReportFilter() {
         Thread.UncaughtExceptionHandler crashlyticsHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            try {
+                org.telegram.messenger.diagnostics.Diagnostics.crash(thread, error);
+            } catch (Throwable diagnosticFailure) {
+                // Even class initialization/OOM must not interrupt the original handler chain.
+            }
             if (AndroidUtil.shouldReportCrashToCrashlytics(error)) {
                 if (crashlyticsHandler != null) {
                     crashlyticsHandler.uncaughtException(thread, error);
