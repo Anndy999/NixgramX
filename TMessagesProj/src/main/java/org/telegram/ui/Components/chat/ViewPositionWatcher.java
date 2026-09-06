@@ -50,6 +50,7 @@ public final class ViewPositionWatcher implements
     private final WeakHashMap<View, List<Tracked>> tracked = new WeakHashMap<>();
     private final RectF tmpRect = new RectF(); // reused for all calculations
     private static final int[] tmpCords = new int[2];
+    private boolean paused;
 
     public ViewPositionWatcher(@NonNull View anchorView) {
         this.anchorView = anchorView;
@@ -145,8 +146,20 @@ public final class ViewPositionWatcher implements
 
     // ─────────────── OnPreDraw ───────────────
 
+    /** When paused, skip position callbacks (e.g. during attach select-chrome anim). */
+    public void setPaused(boolean paused) {
+        this.paused = paused;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
     @Override
     public boolean onPreDraw() {
+        if (paused) {
+            return true;
+        }
         // Reattach if VTO changed
         ViewTreeObserver current = anchorView.getViewTreeObserver();
         if (current != vto) {
