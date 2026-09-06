@@ -59,6 +59,7 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
 import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.helpers.remote.UpdateHelper;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
 import xyz.nextalone.nagram.NaConfig;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
@@ -178,7 +179,7 @@ public class ApplicationLoader extends Application {
     }
 
     protected boolean isBeta() {
-        return BuildConfig.DEBUG;
+        return BuildConfig.DEBUG || "beta".equals(BuildConfig.NIXGRAMX_CHANNEL);
     }
 
     protected boolean isAndroidTestEnv() {
@@ -841,7 +842,29 @@ public class ApplicationLoader extends Application {
     public float getDownloadingUpdateProgress() {
         return 0.0f;
     }
-    public void checkUpdate(boolean force, Runnable whenDone) {}
+    public void checkUpdate(boolean force, Runnable whenDone) {
+        if (!UpdateHelper.isChannelConfigured()) {
+            if (whenDone != null) {
+                AndroidUtilities.runOnUIThread(whenDone);
+            }
+            return;
+        }
+        if (!force && !UpdateHelper.isAutoCheckEnabled()) {
+            if (whenDone != null) {
+                AndroidUtilities.runOnUIThread(whenDone);
+            }
+            return;
+        }
+        UpdateHelper.getInstance().checkNewVersionAvailable((res, error) -> AndroidUtilities.runOnUIThread(() -> {
+            if (res instanceof TLRPC.TL_help_appUpdate) {
+                SharedConfig.setNewAppVersionAvailable((TLRPC.TL_help_appUpdate) res);
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
+            }
+            if (whenDone != null) {
+                whenDone.run();
+            }
+        }), false, force);
+    }
     public BetaUpdate getUpdate() {
         return null;
     }
