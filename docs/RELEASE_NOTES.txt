@@ -1,2 +1,2 @@
-- 照搬官方 attach / PhotoViewer liquid-glass 绘制
-- 去掉半屏和预览里的玻璃暂停
+- 翻译切换原文/译文不再叠字
+- 上游同步自动化（小时级 Draft PR）
