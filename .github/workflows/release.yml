@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       release_notes:
-        description: 'Optional public APK caption notes (multiline, one "- item" per line). Empty = version line only; never uses git commit title.'
+        description: 'Optional 「日志」 body for public APK caption (multiline, one "- item" per line). Empty falls back to docs/RELEASE_NOTES.txt then commit subject; rendered as NagramX Commit Message blockquote.'
         required: false
         type: string
         default: ''
