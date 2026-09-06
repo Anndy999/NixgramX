@@ -61,6 +61,7 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     @Override
     protected void onError(String text, Delegate delegate) {
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_FAILED, 0);
         manualCheckPending = false;
         if (delegate != null) {
             delegate.onTLResponse(null, text);
@@ -105,6 +106,7 @@ public class UpdateHelper extends BaseRemoteHelper {
         for (var string : responses) {
             try {
                 int remoteVersion = string.getInt("version_code");
+                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_VERSION, remoteVersion);
                 long remoteBuildTimestamp = string.optLong("build_timestamp", 0L);
                 boolean shouldUpdate = false;
                 if (remoteVersion > currentVersion) {
@@ -128,6 +130,7 @@ public class UpdateHelper extends BaseRemoteHelper {
                     break;
                 }
             } catch (JSONException ignored) {
+                org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_PARSE_FAILED, 0);
             }
         }
         return ref;
@@ -245,6 +248,7 @@ public class UpdateHelper extends BaseRemoteHelper {
             }
             return;
         }
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_CHECK, BuildConfig.VERSION_CODE);
         this.updateAlways = updateAlways;
         // Preserve through getShouldUpdateVersion (which clears updateAlways) into getNewVersionMessagesCallback.
         this.manualCheckPending = updateAlways || manualUserCheck;
