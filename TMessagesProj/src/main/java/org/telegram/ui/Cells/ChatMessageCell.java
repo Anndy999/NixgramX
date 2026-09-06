@@ -246,6 +246,7 @@ import org.telegram.ui.Stories.StoriesUtilities;
 import org.telegram.ui.Stories.StoryViewer;
 import org.telegram.ui.Stories.recorder.CaptionContainerView;
 import org.telegram.ui.Stories.recorder.DominantColors;
+import org.telegram.ui.Stories.recorder.HintView2;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -6986,7 +6987,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             photoImage.setInvalidateAll(false);
             linkPreviewY = 0;
             factCheckY = 0;
-            lastTranslated = messageObject.translated;
+            lastTranslated = messageObject.isTranslated();
             lastSendState = messageObject.messageOwner.send_state;
             lastDeleteDate = messageObject.messageOwner.destroyTime;
             lastViewsCount = messageObject.messageOwner.views;
@@ -7767,15 +7768,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     drawInstantView = false;
                 }
                 backgroundWidth = maxWidth;
-                if (hasLinkPreview && !linkPreviewAbove || hasGamePreview || hasInvoicePreview || maxWidth - messageObject.getLastLineWidth() < timeMore) {
-                    backgroundWidth = Math.max(backgroundWidth, messageObject.getLastLineWidth()) + dp(31);
+                final int lastLineWidthForTime = messageObject.getLastLineWidthForTime();
+                if (hasLinkPreview && !linkPreviewAbove || hasGamePreview || hasInvoicePreview || maxWidth - lastLineWidthForTime < timeMore) {
+                    backgroundWidth = Math.max(backgroundWidth, lastLineWidthForTime) + dp(31);
                     backgroundWidth = Math.max(backgroundWidth, timeWidth + dp(31));
                 } else {
-                    int diff = backgroundWidth - messageObject.getLastLineWidth();
+                    int diff = backgroundWidth - lastLineWidthForTime;
                     if (diff >= 0 && diff <= timeMore) {
                         backgroundWidth = backgroundWidth + timeMore - diff + dp(31);
                     } else {
-                        backgroundWidth = Math.max(backgroundWidth, messageObject.getLastLineWidth() + timeMore) + dp(31);
+                        backgroundWidth = Math.max(backgroundWidth, lastLineWidthForTime + timeMore) + dp(31);
                     }
                 }
                 availableTimeWidth = backgroundWidth - dp(31);
@@ -7784,6 +7786,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
 
                 setMessageObjectInternal(messageObject);
+                // setMessageObjectInternal() re-runs measureTime(); refresh timeMore so every
+                // later calcBackgroundWidth (link preview / plain text) matches drawTime width
+                // including translate badge / language arrow ReplacementSpans.
+                timeMore = timeWidth + dp(6);
+                if (messageObject.isQuickReply() && !messageObject.isSendError()) {
+                    timeMore -= dp(3);
+                } else if (messageObject.isOutOwner()) {
+                    timeMore += dp(20.5f);
+                }
+                timeMore += getExtraTimeX();
                 giveawayMessageCell.setMessageContent(messageObject, getParentWidth(), forwardedNameWidth);
                 giveawayResultsMessageCell.setMessageContent(messageObject, getParentWidth(), forwardedNameWidth);
 
@@ -13049,6 +13061,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         ) {
             newLineForTime = true;
             newLineForTimeDp = 18;
+        }
+        // Translate badge / "源语言 -> 目标语言" makes timeMore much wider than a plain clock.
+        // If it cannot clearly share the last glyph line, put time on its own line to avoid overlap.
+        if (!newLineForTime && currentMessageObject.isTranslated() && maxWidth - lastLineWidth < timeMore + dp(8)) {
+            newLineForTime = true;
         }
 
         if (newLineForTime) {
@@ -18713,20 +18730,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentTimeString.insert(0, prefix);
             }
         }
-        timeTextWidth = timeWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(currentTimeString, 0, currentTimeString == null ? 0 : currentTimeString.length()));
-        if (timeString instanceof SpannableStringBuilder) {
-            if (edited && NaConfig.INSTANCE.getUseEditedIcon().Bool() && TimeStringHelper.editedDrawable != null) {
-                timeTextWidth = timeWidth += TimeStringHelper.editedDrawable.getIntrinsicWidth();
-            }
-            if (ayuDeleted && NaConfig.INSTANCE.getUseDeletedIcon().Bool() && TimeStringHelper.deletedDrawable != null) {
-                timeTextWidth = timeWidth += TimeStringHelper.deletedDrawable.getIntrinsicWidth();
-            }
-            if (translated && TimeStringHelper.translatedDrawable != null) {
-                timeTextWidth = timeWidth += TimeStringHelper.translatedDrawable.getIntrinsicWidth();
-            }
-            if (showBookmarkInTime && TimeStringHelper.bookmarkDrawable != null) {
-                timeTextWidth = timeWidth += TimeStringHelper.bookmarkDrawable.getIntrinsicWidth();
-            }
+        // Paint.measureText ignores ReplacementSpans (translate/arrow/edited icons).
+        // HintView2.measureCorrectly counts them once so last-line reservation matches drawTime.
+        if (TextUtils.isEmpty(currentTimeString)) {
+            timeTextWidth = timeWidth = 0;
+        } else {
+            timeTextWidth = timeWidth = (int) Math.ceil(HintView2.measureCorrectly(currentTimeString, Theme.chat_timePaint));
         }
         if (currentMessageObject.scheduled && currentMessageObject.messageOwner.date == 0x7FFFFFFE || currentMessageObject.notime) {
             timeWidth -= dp(8);
@@ -28885,7 +28894,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             lastDrawingExpandedQuotes = getPrimaryMessageObject() != null ? getPrimaryMessageObject().expandedQuotes : null;
             lastDrawingExpandedExplanation = currentMessageObject != null && currentMessageObject.expandedExplanation;
 
-            lastDrawnTranslated = currentMessageObject != null && currentMessageObject.translated;
+            lastDrawnTranslated = currentMessageObject != null && currentMessageObject.isTranslated();
             lastDrawnTitleLayout = titleLayout;
         }
 
@@ -28996,7 +29005,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     changed = true;
                 }
             }
-            if ((((edited || ayuDeleted) && !lastDrawingEdited) || (currentMessageObject.translated && !lastTranslated)) && timeLayout != null) {
+            if ((((edited || ayuDeleted) && !lastDrawingEdited) || (currentMessageObject.isTranslated() && !lastTranslated)) && timeLayout != null) {
                 String customStr = NaConfig.INSTANCE.getCustomEditedMessage().String();
                 String customStrFin = customStr.equals("") ? getString(R.string.EditedMessage) : customStr;
                 String deletedStr = NaConfig.INSTANCE.getCustomDeletedMark().String();
@@ -29033,7 +29042,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     changed = true;
                 }
                 accessibilityText = null;
-            } else if (((!(edited || ayuDeleted) && lastDrawingEdited) || (!currentMessageObject.translated && lastTranslated)) && timeLayout != null) {
+            } else if (((!(edited || ayuDeleted) && lastDrawingEdited) || (!currentMessageObject.isTranslated() && lastTranslated)) && timeLayout != null) {
                 animateTimeLayout = lastTimeLayout;
                 animateEditedWidthDiff = timeWidth - lastTimeWidth;
                 animateEditedEnter = true;
@@ -29366,7 +29375,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 changed = true;
             }
 
-            final boolean translated = currentMessageObject != null && currentMessageObject.translated;
+            final boolean translated = currentMessageObject != null && currentMessageObject.isTranslated();
             if (translated != lastDrawnTranslated) {
                 if (titleLayout != null && lastDrawnTitleLayout != null) {
                     animateTitleLayout = lastDrawnTitleLayout;

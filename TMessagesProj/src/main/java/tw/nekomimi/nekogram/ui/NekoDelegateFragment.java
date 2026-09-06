@@ -1048,6 +1048,8 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         messageObject.forceUpdate = true;
         messageCell.setMessageObject(messageObject, messageCell.getCurrentMessagesGroup(), messageCell.isPinnedBottom(), messageCell.isPinnedTop(), messageCell.isFirstInChat(), messageCell.isLastInChatList());
         messageObject.forceUpdate = false;
+        messageCell.requestLayout();
+        messageCell.invalidate();
 
         if (animate) {
             animateCellChange(messageCell);

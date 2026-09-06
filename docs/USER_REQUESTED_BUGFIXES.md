@@ -40,3 +40,11 @@ by the script above.
 | ID | Item |
 | --- | --- |
 | UB-5 | 32-bit download boost (`armeabi-v7a`) |
+
+- **UB-7 translate toggle timestamp overlap** (`fix/translate-time-misalign`):
+  Toggling translation left message glyphs under the translate badge /
+  `英语 -> 中文` + clock because `Paint.measureText` ignored ReplacementSpans
+  and last-line reservation used a stale `timeMore`. Measure time with
+  `HintView2.measureCorrectly`, refresh `timeMore` after re-measure, use
+  `getLastLineWidthForTime` on the early text path, and put time on a new line
+  when translated metadata cannot clearly share the last glyph line.
