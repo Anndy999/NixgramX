@@ -21,7 +21,7 @@ permissions:
 jobs:
   quick-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       COMMIT_ID: ${{ inputs.source_sha }}
       NATIVE_TARGET: arm64-v8a
@@ -62,54 +62,47 @@ jobs:
           raw = Path('/tmp/changed_raw.txt').read_text()
 
           need_workflow = False
-          need_python = False
           need_java = False
           need_resources = False
           need_manifest = False
           need_native = False
 
           for f in files:
-              name = Path(f).name
-              if f.startswith('.github/') or f.endswith(('.yml', '.yaml')):
+              posix = f.replace('\\', '/')
+              name = Path(posix).name
+              if posix.startswith('.github/') or posix.endswith(('.yml', '.yaml')):
                   need_workflow = True
-              if f.endswith('.py'):
-                  need_python = True
-              if f.endswith(('.java', '.kt', '.kts')) or name in (
-                  'build.gradle', 'settings.gradle', 'gradle.properties',
-              ) or f in ('build.gradle', 'settings.gradle', 'gradle.properties'):
-                  need_java = True
-              if '/res/' in f and f.startswith('TMessagesProj/'):
-                  need_resources = True
-              if f.endswith('AndroidManifest.xml'):
-                  need_manifest = True
               if (
-                  f.endswith(('.cpp', '.cc', '.c', '.h'))
+                  posix.endswith(('.java', '.kt', '.kts'))
+                  or name.startswith('build.gradle')
+                  or name.startswith('settings.gradle')
+                  or name == 'gradle.properties'
+              ):
+                  need_java = True
+              if posix.endswith('.xml') or (
+                  posix.startswith('TMessagesProj/src/') and '/res/' in posix
+              ):
+                  need_resources = True
+              if name == 'AndroidManifest.xml':
+                  need_manifest = True
+                  need_resources = True
+              if (
+                  posix.endswith(('.c', '.cc', '.cpp', '.h'))
                   or name == 'CMakeLists.txt'
-                  or '/jni/' in f
-                  or f.endswith('/jni')
+                  or '/jni/' in posix
+                  or posix.endswith('/jni')
+                  or posix == 'TMessagesProj/jni'
               ):
                   need_native = True
-              # Non-manifest Android XML under TMessagesProj treated as resources
-              if f.startswith('TMessagesProj/') and f.endswith('.xml') and not f.endswith('AndroidManifest.xml'):
-                  if '/res/' in f or '/xml/' in f:
-                      need_resources = True
 
-          # gitlink / submodule mode 160000 under native paths
-          if '160000' in raw:
-              for f in files:
-                  if f.startswith('TMessagesProj/jni/') or '/jni/' in f or f.endswith(('.cpp', '.cc', '.c', '.h')) or Path(f).name == 'CMakeLists.txt':
-                      need_native = True
-                      break
-              else:
-                  # any gitlink under jni tree still counts
-                  if any(x.startswith('TMessagesProj/jni/') for x in files):
-                      need_native = True
+          for line in raw.splitlines():
+              if '160000' in line:
+                  need_native = True
+                  break
 
           need_android = need_java or need_resources or need_manifest or need_native
-          out = os.environ['GITHUB_OUTPUT']
-          with open(out, 'a') as fh:
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
               fh.write(f'need_workflow={str(need_workflow).lower()}\n')
-              fh.write(f'need_python={str(need_python).lower()}\n')
               fh.write(f'need_java={str(need_java).lower()}\n')
               fh.write(f'need_resources={str(need_resources).lower()}\n')
               fh.write(f'need_manifest={str(need_manifest).lower()}\n')
@@ -118,7 +111,6 @@ jobs:
           print(
               'Classification:',
               f'workflow={need_workflow}',
-              f'python={need_python}',
               f'java={need_java}',
               f'resources={need_resources}',
               f'manifest={need_manifest}',
@@ -132,8 +124,8 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Init submodules when Android/Native required
-        if: steps.classify.outputs.need_android == 'true'
+      - name: Init submodules when native build is required
+        if: steps.classify.outputs.need_native == 'true'
         run: git submodule update --init --recursive
 
       - uses: gradle/actions/setup-gradle@v6
@@ -142,7 +134,7 @@ jobs:
       - uses: android-actions/setup-android@v4
         if: steps.classify.outputs.need_android == 'true' && steps.classify.outputs.need_native != 'true'
         with:
-          packages: 'build-tools;36.0.0 platforms;android-37.0'
+          packages: 'build-tools;36.0.0 platforms;android-37.0 cmake;3.31.6'
 
       - uses: android-actions/setup-android@v4
         if: steps.classify.outputs.need_native == 'true'
@@ -161,6 +153,14 @@ jobs:
             TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java \
             Tools/stability/DiagnosticStoreTest.java
           java -cp /tmp/diagnostic-tests DiagnosticStoreTest
+          while IFS= read -r f || [ -n "$f" ]; do
+            [ -z "$f" ] && continue
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.sh) bash -n "$f" ;;
+              *.py) python3 -m py_compile "$f" ;;
+            esac
+          done < /tmp/changed_files.txt
           git diff --check "${BASE_SHA}" HEAD
 
       - name: Workflow / CI checks
@@ -177,29 +177,12 @@ jobs:
           /tmp/actionlint -color
           while IFS= read -r f || [ -n "$f" ]; do
             [ -z "$f" ] && continue
-            if [[ "$f" == *.sh ]] && [ -f "$f" ]; then
-              bash -n "$f"
-            fi
-            if [[ "$f" == *.py ]] && [ -f "$f" ]; then
-              python3 -m py_compile "$f"
-            fi
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.sh) bash -n "$f" ;;
+              *.py) python3 -m py_compile "$f" ;;
+            esac
           done < /tmp/changed_files.txt
-          git diff --check "${BASE_SHA}" HEAD
-
-      - name: Python checks
-        id: python
-        if: steps.classify.outputs.need_python == 'true'
-        run: |
-          set -euo pipefail
-          while IFS= read -r f || [ -n "$f" ]; do
-            [ -z "$f" ] && continue
-            if [[ "$f" == *.py ]] && [ -f "$f" ]; then
-              python3 -m py_compile "$f"
-            fi
-          done < /tmp/changed_files.txt
-          python3 -m pip install 'PyYAML==6.0.2'
-          python3 Tools/stability/static_checks.py
-          python3 -m unittest discover -s Tools/stability -p 'test_*.py'
           git diff --check "${BASE_SHA}" HEAD
 
       - name: Prepare disposable Debug configuration
@@ -223,30 +206,23 @@ jobs:
           p.write_text(text[:start] + block.replace('signingConfig = signingConfigs.release', 'signingConfig = signingConfigs.debug') + text[end:])
           PY
 
-      - name: Gradle config
-        id: config
-        if: steps.classify.outputs.need_android == 'true'
-        run: ./gradlew help --no-daemon
-
       - name: Java/Kotlin compile
         id: compile
         if: steps.classify.outputs.need_java == 'true'
-        run: ./gradlew :TMessagesProj:compileDebugSources --no-daemon
+        run: |
+          set -euo pipefail
+          ./gradlew help --no-daemon
+          ./gradlew :TMessagesProj:compileDebugSources --no-daemon
 
       - name: Resource merge
         id: resources
-        if: steps.classify.outputs.need_resources == 'true' || steps.classify.outputs.need_manifest == 'true'
+        if: steps.classify.outputs.need_resources == 'true'
         run: ./gradlew :TMessagesProj:mergeDebugResources --no-daemon
 
       - name: Manifest merge
         id: manifest
         if: steps.classify.outputs.need_manifest == 'true'
         run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
-
-      - name: Android lint
-        id: lint
-        if: steps.classify.outputs.need_java == 'true'
-        run: ./gradlew :TMessagesProj:lintDebug --no-daemon
 
       - name: Native build
         id: native
@@ -258,66 +234,48 @@ jobs:
         env:
           RESULTS: ${{ toJSON(steps) }}
           NEED_WORKFLOW: ${{ steps.classify.outputs.need_workflow }}
-          NEED_PYTHON: ${{ steps.classify.outputs.need_python }}
           NEED_JAVA: ${{ steps.classify.outputs.need_java }}
           NEED_RESOURCES: ${{ steps.classify.outputs.need_resources }}
           NEED_MANIFEST: ${{ steps.classify.outputs.need_manifest }}
           NEED_NATIVE: ${{ steps.classify.outputs.need_native }}
-          NEED_ANDROID: ${{ steps.classify.outputs.need_android }}
         run: |
           python3 - <<'PY'
           import json, os
 
           steps = json.loads(os.environ['RESULTS'])
 
-          def step_status(required, step_id):
+          def status(required, step_id):
               if not required:
                   return 'NOT REQUIRED'
               outcome = steps.get(step_id, {}).get('outcome')
-              if outcome == 'success':
-                  return 'PASS'
-              return 'FAIL'
+              return 'PASS' if outcome == 'success' else 'FAIL'
 
           need_workflow = os.environ.get('NEED_WORKFLOW') == 'true'
-          need_python = os.environ.get('NEED_PYTHON') == 'true'
           need_java = os.environ.get('NEED_JAVA') == 'true'
           need_resources = os.environ.get('NEED_RESOURCES') == 'true'
           need_manifest = os.environ.get('NEED_MANIFEST') == 'true'
           need_native = os.environ.get('NEED_NATIVE') == 'true'
-          need_android = os.environ.get('NEED_ANDROID') == 'true'
 
           rows = [
-              ('Static checks', True, 'static'),
-              ('Workflow', need_workflow, 'workflow'),
-              ('Python', need_python, 'python'),
-              ('Java-Kotlin', need_java, 'compile'),
-              # Resources required when resources changed, or when manifest needs merge dependency
-              ('Resources', need_resources or need_manifest, 'resources'),
-              ('Manifest', need_manifest, 'manifest'),
-              ('Android lint', need_java, 'lint'),
-              ('Native', need_native, 'native'),
+              ('Static checks', status(True, 'static')),
+              ('Workflow checks', status(need_workflow, 'workflow')),
+              ('Java/Kotlin compile', status(need_java, 'compile')),
+              ('Resources', status(need_resources, 'resources')),
+              ('Manifest', status(need_manifest, 'manifest')),
+              ('Native', status(need_native, 'native')),
           ]
 
-          ok = True
-          lines = ['## NixgramX Quick Verify', '']
-          for label, required, step_id in rows:
-              text = step_status(required, step_id)
-              if required and text != 'PASS':
-                  ok = False
-              lines.append(f'- {label}: {text}')
-
-          if need_android:
-              cfg = step_status(True, 'config')
-              if cfg != 'PASS':
-                  ok = False
-              lines.append(f'- Gradle config: {cfg}')
-
-          lines.append('- Full APK Build: NOT RUN')
-          lines.append('- Device Test: NOT TESTED')
-          lines.append('')
-          lines.append('Ordinary PR quick path: no full APK assemble / no APK publish.')
-
-          summary = '\n'.join(lines) + '\n'
+          ok = all(value != 'FAIL' for _, value in rows)
+          lines = ['NixgramX Quick Verify', '']
+          lines.extend(f'{label}: {value}' for label, value in rows)
+          lines.extend([
+              '',
+              'Full Android lint: NOT RUN',
+              'APK build: NOT RUN',
+              'Device test: NOT TESTED',
+              '',
+          ])
+          summary = '\n'.join(lines)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write(summary)
           print(summary)

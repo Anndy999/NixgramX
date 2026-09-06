@@ -20,11 +20,13 @@ See KNOWN_ISSUES.md for open risks; historical fixes belong in TEST_MATRIX.md.
 
 ## CI and Stable gate
 
-PR XML changes trigger CI. Only pure Markdown changes are ignored. The existing upstream
-compile workflow is reused for ordinary PRs with read-only access and dummy compile-only
-credentials: YAML/XML/privacy checks, host regression tests, diff check, Gradle config,
-Java/Kotlin compilation, resources, manifest, lint, native and arm64 Debug APK.
-No PR APK is published. An Android build is not feature/device validation.
+PR XML changes trigger CI. Only pure Markdown changes are ignored. Ordinary PRs run
+path-aware Quick Verify with read-only access and dummy compile-only credentials:
+YAML/XML/privacy checks, host regression tests and diff check always; Java/Kotlin
+compile, resources, manifest or native only when those paths change. Full Android
+lint and APK assemble are not required on ordinary PRs; run Actions → Full Verify
+(workflow_dispatch) for that. `upstream-sync/*` PRs keep the full upstream-sync-ci
+workflow. No PR APK is published. An Android build is not feature/device validation.
 
 Tags build artifacts but NEVER publish automatically. Stable publishing requires explicit
 workflow_dispatch publish=true, the stable environment, a commit reachable from main, a
