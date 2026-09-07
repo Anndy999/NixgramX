@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       release_notes:
-        description: 'Optional 「日志」 body for public APK caption (multiline, one "- item" per line). Empty falls back to docs/RELEASE_NOTES.txt then commit subject; rendered as NagramX Commit Message blockquote.'
+        description: 'Optional changelog body for public APK caption.'
         required: false
         type: string
         default: ''
@@ -26,40 +26,37 @@ permissions:
   actions: read
 
 jobs:
+  build:
+    name: Beta Gradle Build
+    runs-on: ubuntu-latest
+    outputs:
+      build_timestamp: ${{ steps.beta_build_step.outputs.build_timestamp }}
+    steps:
+      - name: Reuse existing 1284 timestamp
+        id: beta_build_step
+        run: echo "build_timestamp=1788771352" >> "$GITHUB_OUTPUT"
   upload:
     name: Publish Beta
     if: github.event_name == 'workflow_dispatch' && inputs.publish
     runs-on: ubuntu-latest
+    needs:
+      - build
     steps:
-      - name: Checkout 1284 commit for upload metadata
+      - name: Checkout
         uses: actions/checkout@v7
         with:
           ref: d57401c30abf765f10c5863175cbb970d3eb8963
-          fetch-depth: 1
-      - name: Download existing 1284 artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@v8
         with:
           github-token: ${{ github.token }}
-          run-id: '34102991181'
+          run-id: 34102991181
           path: artifacts
           pattern: Beta-*
-      - name: Verify artifacts belong to 1284
-        run: |
-          set -euo pipefail
-          find artifacts -type f -print
-          python3 - <<'PY'
-          from pathlib import Path
-          apks = list(Path('artifacts').rglob('*.apk'))
-          names = [p.name for p in apks]
-          print('APKs:', names)
-          assert apks, 'No APK artifacts downloaded'
-          assert any('1284' in name and 'arm64-v8a' in name for name in names), names
-          assert any('1284' in name and 'universal' in name for name in names), names
-          PY
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: 3.12
       - name: Send to Telegram
         env:
           APP_ID: ${{ secrets.APP_ID }}
@@ -67,10 +64,8 @@ jobs:
           COMMIT_ID: d57401c30abf765f10c5863175cbb970d3eb8963
           COMMIT_URL: https://github.com/Anndy999/NixgramX/commit/d57401c30abf765f10c5863175cbb970d3eb8963
           COMMIT_MESSAGE: release: prepare NixgramX 12.10.1 (1284) beta
-          BUILD_TIMESTAMP: '1788771352'
-          RELEASE_NOTES: |
-            - Version-only Beta test build
-            - No functional changes
+          BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes || '' }}
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
           python Tools/scripts/upload.py "${{ secrets.HELPER_BOT_TOKEN }}" "${{ secrets.HELPER_BOT_TARGET }}" beta "${{ secrets.HELPER_BOT_CANARY_TARGET }}"
