@@ -88,6 +88,18 @@ public class UpdateHelper extends BaseRemoteHelper {
     }
 
     @Override
+    protected boolean retrySearch(int attempt, boolean error, Runnable retry) {
+        if (error || attempt >= 3) {
+            return false;
+        }
+        // Telegram may not have indexed newly published metadata yet. The runnable
+        // retains this check's account/tag and resolves a fresh access hash each time.
+        // Bound added waiting to 3.5 seconds; RPC latency is outside this delay budget.
+        Utilities.globalQueue.postRunnable(retry, attempt == 1 ? 1000 : 2500);
+        return true;
+    }
+
+    @Override
     protected void onError(String text, Delegate delegate) {
         org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_FAILED, 0);
         manualCheckPending = false;
