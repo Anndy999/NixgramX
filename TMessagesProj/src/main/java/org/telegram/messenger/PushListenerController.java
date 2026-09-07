@@ -105,6 +105,12 @@ public class PushListenerController {
     }
 
     public static void processRemoteMessage(@PushType int pushType, String data, long time) {
+        processRemoteMessage(pushType, data, time, null);
+    }
+
+    static void processRemoteMessage(@PushType int pushType, String data, long time,
+                                     org.telegram.messenger.diagnostics.FcmTiming timing) {
+        if (timing != null) timing.processEntered();
         String tag = pushType == PUSH_TYPE_FIREBASE ? "FCM" : (pushType == PUSH_TYPE_HUAWEI ? "HCM" : "UP");
         CountDownLatch countDownLatch = new CountDownLatch(1);
         FileLog.d(tag + " PRE START PROCESSING");
@@ -113,11 +119,15 @@ public class PushListenerController {
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.d(tag + " PRE INIT APP");
             }
+            if (timing != null) timing.initStarted();
             ApplicationLoader.postInitApplication();
+            if (timing != null) timing.initCompleted();
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.d(tag + " POST INIT APP");
             }
+            if (timing != null) timing.stageQueued();
             Utilities.stageQueue.postRunnable(() -> {
+                if (timing != null) timing.stageStarted();
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d(tag + " START PROCESSING");
                 }
@@ -323,7 +333,9 @@ public class PushListenerController {
                             ArrayList<MessageObject> arrayList = new ArrayList<>();
                             arrayList.add(messageObject);
                             FileLog.d("PushListenerController push OAUTH notification to NotificationsController of " + messageOwner.dialog_id);
-                            NotificationsController.getInstance(currentAccount).processNewMessages(arrayList, true, true, countDownLatch);
+                            NotificationsController notifications = NotificationsController.getInstance(currentAccount);
+                            if (timing != null) timing.finish(true);
+                            notifications.processNewMessages(arrayList, true, true, countDownLatch);
                             return;
                         }
                     }
@@ -1497,7 +1509,9 @@ public class PushListenerController {
                                         final int mid = msg_id;
                                         AndroidUtilities.runOnUIThread(() -> MessagesController.getInstance(accountFinal).reportMessageDelivery(did, mid, true));
                                     }
-                                    NotificationsController.getInstance(currentAccount).processNewMessages(arrayList, true, true, countDownLatch);
+                                    NotificationsController notifications = NotificationsController.getInstance(currentAccount);
+                                    if (timing != null) timing.finish(true);
+                                    notifications.processNewMessages(arrayList, true, true, countDownLatch);
                                 }
                             } else if ("CONF_CALL_MISSED".equalsIgnoreCase(loc_key)) {
                                 final long call_id = custom.getLong("call_id");
@@ -1525,6 +1539,8 @@ public class PushListenerController {
                     org.telegram.messenger.diagnostics.Diagnostics.lastPushError = 1;
                     org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.PUSH_PARSE_FAILED, 0);
                     FileLog.e("Push processing failed (exception message omitted)");
+                } finally {
+                    if (timing != null) timing.finish(false);
                 }
             });
         });
