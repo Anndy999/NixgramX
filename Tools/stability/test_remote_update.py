@@ -65,13 +65,18 @@ STUBS = {
 # Additional API stubs let the same harness execute UpdateHelper itself.
 STUBS.update({
     'android/os/Build.java': 'public class Build { public static String[] SUPPORTED_ABIS={"arm64-v8a"}; }',
-    'org/telegram/messenger/BuildConfig.java': 'public class BuildConfig { public static final boolean DEBUG=false; public static final String NIXGRAMX_CHANNEL="stable"; public static final int VERSION_CODE=10; public static final long BUILD_TIMESTAMP=10; }',
+    'org/telegram/messenger/BuildConfig.java': 'public class BuildConfig { public static final boolean DEBUG=false; public static final String NIXGRAMX_CHANNEL="stable"; public static final int VERSION_CODE=1281; public static final long BUILD_TIMESTAMP=10; }',
     'org/telegram/messenger/NotificationCenter.java': 'public class NotificationCenter { public static int appUpdateAvailable; public static NotificationCenter getGlobalInstance(){return new NotificationCenter();} public void postNotificationName(int n){} }',
     'org/telegram/messenger/SharedConfig.java': '''public class SharedConfig {
         public static org.telegram.tgnet.TLRPC.TL_help_appUpdate pendingAppUpdate;
         public static boolean setNewAppVersionAvailable(org.telegram.tgnet.TLRPC.TL_help_appUpdate u){pendingAppUpdate=u;return true;}
         public static void saveConfig(){} }''',
-    'org/telegram/messenger/Utilities.java': 'public class Utilities { public static Utilities globalQueue=new Utilities(); public void postRunnable(Runnable r){r.run();} }',
+    'org/telegram/messenger/DispatchQueue.java': '''public class DispatchQueue {
+        public record Delayed(Runnable runnable,long delay) {}
+        public java.util.ArrayDeque<Delayed> delayed=new java.util.ArrayDeque<>();
+        public void postRunnable(Runnable r){r.run();}
+        public void postRunnable(Runnable r,long delay){delayed.add(new Delayed(r,delay));} }''',
+    'org/telegram/messenger/Utilities.java': '''public class Utilities { public static DispatchQueue globalQueue=new DispatchQueue(); }''',
     'org/telegram/messenger/diagnostics/Diagnostics.java': 'public class Diagnostics { public enum Event {UPDATE_FAILED,UPDATE_VERSION,UPDATE_PARSE_FAILED,UPDATE_CHECK} public static void event(Event e,int v){} }',
     'xyz/nextalone/nagram/NaConfig.java': 'public class NaConfig { public static NaConfig INSTANCE=new NaConfig(); public static int channel=1; public NaConfig getAutoUpdateChannel(){return this;} public int Int(){return channel;} }',
 })
@@ -79,9 +84,9 @@ STUBS['org/telegram/messenger/FileLoader.java'] = STUBS['org/telegram/messenger/
     'public class FileLoader {', 'public class FileLoader { public java.io.File getPathToAttach(Object d,boolean b){return null;}')
 STUBS['org/json/JSONObject.java'] = '''public class JSONObject {
     String data; public JSONObject(String s) throws JSONException {data=s;}
-    public int getInt(String key) throws JSONException {return switch(key){case "version_code" -> data.contains("old")?1:20; case "sticker","message" -> 0; default -> 42;};}
-    public long optLong(String key,long fallback){return fallback;}
-    public String getString(String key) throws JSONException {return key.equals("version")?"20":"https://example.org/update";}
+    public int getInt(String key) throws JSONException {return switch(key){case "version_code" -> data.contains("old")?1280:data.contains("current")?1281:1282; case "sticker","message" -> 0; default -> 42;};}
+    public long optLong(String key,long fallback){return data.contains("rebuilt")?11:fallback;}
+    public String getString(String key) throws JSONException {return key.equals("version")?Integer.toString(getInt("version_code")):"https://example.org/update";}
     public boolean getBoolean(String key) throws JSONException {return false;}
     public JSONObject getJSONObject(String key) throws JSONException {return this;}
 }'''
@@ -169,13 +174,69 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
             check("CHANNEL_INVALID".equals(e.error) && ConnectionsManager.requests.isEmpty());
         }
 
-        // UpdateHelper persistent empty → UPDATE_METADATA_EMPTY alone.
-        final String[] updateErrors=new String[1];
-        UserConfig.selectedAccount=0;NaConfig.channel=1;
-        UpdateHelper.getInstance().checkNewVersionAvailable((r,err)->{updateErrors[0]=err;});
-        drainEmptyThen(0,"updateRelease",610,611,true,false);
-        check("UPDATE_METADATA_EMPTY".equals(updateErrors[0]));
-        check(ConnectionsManager.requests.isEmpty());
+        // CASE1–4,6–7: exact attempt/delay counts, fresh hashes, fixed account/lane.
+        for(int foundAttempt=1;foundAttempt<=4;foundAttempt++){
+            final int[] callbacks={0}; final String[] errors={null};
+            final TLRPC.TL_help_appUpdate[] results={null};
+            var pending=new TLRPC.TL_help_appUpdate();SharedConfig.pendingAppUpdate=pending;
+            UserConfig.selectedAccount=0;NaConfig.channel=2;
+            UpdateHelper.getInstance().checkNewVersionAvailable((r,e)->{
+                callbacks[0]++;errors[0]=e;results[0]=r;
+                UpdateHelper.applyPendingUpdateCheckResult(r,e);
+            });
+            long waiting=0;
+            for(int attempt=1;attempt<=Math.min(foundAttempt,3);attempt++){
+                if(attempt>1){
+                    check(callbacks[0]==0 && ConnectionsManager.requests.isEmpty());
+                    check(Utilities.globalQueue.delayed.size()==1);
+                    var delayed=Utilities.globalQueue.delayed.remove();
+                    check(delayed.delay()==(attempt==2?1000:2500));waiting+=delayed.delay();
+                    UserConfig.selectedAccount=1;NaConfig.channel=1;
+                    delayed.runnable().run();
+                }
+                resolve(0,CHANNEL_METADATA_ID,610+attempt,true);
+                search(0,"updateBeta",610+attempt,attempt!=foundAttempt,false);
+            }
+            if(foundAttempt<=3){
+                var request=next(0,TLRPC.TL_channels_getMessages.class);
+                check(((TLRPC.TL_channels_getMessages)request.body()).channel.access_hash==610+foundAttempt);
+                request.callback().run(new TLRPC.messages_Messages(),null);
+                check(results[0]!=null && errors[0]==null);
+            }else{
+                check(results[0]==null && "UPDATE_METADATA_EMPTY".equals(errors[0]));
+                check(SharedConfig.pendingAppUpdate==pending);
+            }
+            check(callbacks[0]==1 && waiting<=3500);
+            check(Utilities.globalQueue.delayed.isEmpty() && ConnectionsManager.requests.isEmpty());
+        }
+
+        // CASE5: resolve/search/getMessages errors preserve pending, including after a delay.
+        for(int stage=0;stage<4;stage++){
+            var pending=new TLRPC.TL_help_appUpdate();SharedConfig.pendingAppUpdate=pending;
+            final int[] callbacks={0};UserConfig.selectedAccount=0;NaConfig.channel=1;
+            UpdateHelper.getInstance().checkNewVersionAvailable((r,e)->{
+                callbacks[0]++;check(r==null && "CHANNEL_PRIVATE".equals(e));
+                UpdateHelper.applyPendingUpdateCheckResult(r,e);
+            });
+            if(stage==0){
+                next(0,TLRPC.TL_contacts_resolveUsername.class).callback().run(null,new TLRPC.Error());
+            }else{
+                resolve(0,CHANNEL_METADATA_ID,800,true);
+                if(stage==3){
+                    search(0,"updateRelease",800,true,false);
+                    Utilities.globalQueue.delayed.remove().runnable().run();
+                    resolve(0,CHANNEL_METADATA_ID,801,true);
+                }
+                if(stage==2){
+                    search(0,"updateRelease",800,false,false);
+                    next(0,TLRPC.TL_channels_getMessages.class).callback().run(null,new TLRPC.Error());
+                }else{
+                    next(0,TLRPC.TL_messages_search.class).callback().run(null,new TLRPC.Error());
+                }
+            }
+            check(callbacks[0]==1 && SharedConfig.pendingAppUpdate==pending);
+            check(Utilities.globalQueue.delayed.isEmpty() && ConnectionsManager.requests.isEmpty());
+        }
 
         // PagePreviewRulesHelper-style persistent empty → empty success / cache clear.
         var preview=new PagePreviewStub();UserConfig.selectedAccount=0;preview.load((r,e)->{});
@@ -196,6 +257,15 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
         check(((TLRPC.TL_messages_search)manualSearch.body()).q.equals("#updateRelease"));
         var old=new TLRPC.messages_Messages();var oldMessage=new TLRPC.Message();
         oldMessage.message="#updateRelease old";old.messages.add(oldMessage);manualSearch.callback().run(old,null);
+        for(int attempt=2;attempt<=3;attempt++){
+            Utilities.globalQueue.delayed.remove().runnable().run();
+            // Background search is already queued; take the manual resolve directly.
+            var manualResolve=ConnectionsManager.requests.removeLast();
+            ConnectionsManager.requests.addFirst(manualResolve);
+            resolve(0,CHANNEL_METADATA_ID,600,true);
+            var retrySearch=ConnectionsManager.requests.removeLast();
+            retrySearch.callback().run(old,null);
+        }
         search(1,"updateRelease",700,false,false);
         for(int i=0;i<2;i++){
             var request=next(i,TLRPC.TL_channels_getMessages.class);
@@ -209,6 +279,57 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
             check(MessagesController.lastAccount==i);
         }
         check(ConnectionsManager.requests.isEmpty());
+
+        // Installed=1281: stale/current → newer, persistent stale, and stale → RPC error.
+        // Also cover same-version newer timestamps and a newer candidate after an old one.
+        for(int scenario=0;scenario<6;scenario++){
+            var pendingBefore=new TLRPC.TL_help_appUpdate();SharedConfig.pendingAppUpdate=pendingBefore;
+            final int[] count={0};final String[] error={null};
+            final TLRPC.TL_help_appUpdate[] result={null};
+            UserConfig.selectedAccount=0;NaConfig.channel=2;
+            UpdateHelper.getInstance().checkNewVersionAvailable((r,e)->{
+                count[0]++;error[0]=e;result[0]=r;
+                UpdateHelper.applyPendingUpdateCheckResult(r,e);
+            },false,true);
+            int attempts=scenario==2?3:scenario>=4?1:2;
+            for(int attempt=1;attempt<=attempts;attempt++){
+                if(attempt>1){
+                    check(count[0]==0 && SharedConfig.pendingAppUpdate==pendingBefore);
+                    check(ConnectionsManager.requests.isEmpty() && Utilities.globalQueue.delayed.size()==1);
+                    var delayed=Utilities.globalQueue.delayed.remove();
+                    check(delayed.delay()==(attempt==2?1000:2500));
+                    UserConfig.selectedAccount=1;NaConfig.channel=1;
+                    delayed.runnable().run();
+                }
+                resolve(0,CHANNEL_METADATA_ID,900+attempt,true);
+                var request=next(0,TLRPC.TL_messages_search.class);
+                var query=(TLRPC.TL_messages_search)request.body();
+                check(query.q.equals("#updateBeta") && query.peer.access_hash==900+attempt);
+                if(scenario==3 && attempt==2){
+                    request.callback().run(null,new TLRPC.Error());
+                    continue;
+                }
+                var messages=new TLRPC.messages_Messages();var m=new TLRPC.Message();
+                String payload=scenario==4?"current rebuilt":scenario==1 && attempt==1?"current":
+                        attempt==1 || scenario==2?"old":"new";
+                m.message="#updateBeta "+payload;messages.messages.add(m);
+                if(scenario==5){var newerMessage=new TLRPC.Message();newerMessage.message="#updateBeta new";messages.messages.add(newerMessage);}
+                request.callback().run(messages,null);
+            }
+            if(scenario==2){
+                check(result[0]==null && error[0]==null && SharedConfig.pendingAppUpdate==null);
+            }else if(scenario==3){
+                check(result[0]==null && "CHANNEL_PRIVATE".equals(error[0]) && SharedConfig.pendingAppUpdate==pendingBefore);
+            }else{
+                check(Utilities.globalQueue.delayed.isEmpty());
+                var request=next(0,TLRPC.TL_channels_getMessages.class);
+                check(((TLRPC.TL_channels_getMessages)request.body()).channel.access_hash==900+attempts);
+                request.callback().run(new TLRPC.messages_Messages(),null);
+                check(result[0]!=null && result[0].version.equals(scenario==4?"1281":"1282") && error[0]==null);
+                check(SharedConfig.pendingAppUpdate==result[0]);
+            }
+            check(count[0]==1 && Utilities.globalQueue.delayed.isEmpty() && ConnectionsManager.requests.isEmpty());
+        }
 
         // pending+failed → preserved; pending+successful no-update → cleared.
         var pending=new TLRPC.TL_help_appUpdate();pending.version="19";
