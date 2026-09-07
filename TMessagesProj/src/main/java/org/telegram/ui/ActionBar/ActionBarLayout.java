@@ -83,6 +83,7 @@ import org.telegram.ui.MainTabsActivity;
 import org.telegram.ui.bots.BotWebViewSheet;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.ChatAttachAlert;
+import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.FloatingDebug.FloatingDebugController;
 import org.telegram.ui.Components.FloatingDebug.FloatingDebugProvider;
@@ -3339,16 +3340,34 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         }
     }
 
-    // updates only Theme.Colorable views
-    private void globallyUpdateColors(ViewGroup parent) {
-        if (parent == null) return;
-        for (int i = 0; i < parent.getChildCount(); ++i) {
-            final View child = parent.getChildAt(i);
-            if (child instanceof Theme.Colorable) {
-                ((Theme.Colorable) child).updateColors();
+    public void refreshThemeColors() {
+        globallyUpdateColors(this);
+        for (BaseFragment fragment : fragmentsStack) {
+            Dialog dialog = fragment.getVisibleDialog();
+            if (dialog instanceof ChatAttachAlert && dialog.isShowing()) {
+                // The sheet has its own window, outside this view hierarchy.
+                ((ChatAttachAlert) dialog).checkColors();
+                if (dialog.getWindow() != null) {
+                    globallyUpdateColors(dialog.getWindow().getDecorView());
+                }
             }
-            if (child instanceof ViewGroup) {
-                globallyUpdateColors((ViewGroup) child);
+        }
+    }
+
+    private void globallyUpdateColors(View view) {
+        if (view == null) return;
+        if (view instanceof Theme.Colorable) {
+            ((Theme.Colorable) view).updateColors();
+            view.invalidate();
+        }
+        if (view.getBackground() instanceof BlurredBackgroundDrawable) {
+            ((BlurredBackgroundDrawable) view.getBackground()).updateColors();
+            view.invalidate();
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup parent = (ViewGroup) view;
+            for (int i = 0; i < parent.getChildCount(); ++i) {
+                globallyUpdateColors(parent.getChildAt(i));
             }
         }
     }

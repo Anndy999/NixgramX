@@ -5709,6 +5709,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             }
         }
 
+        if (isShowing() && baseFragment != null && actionBar != null) {
+            AndroidUtilities.setLightStatusBar(this, actionBar.getTag() != null
+                    ? isLightStatusBar() : baseFragment.isLightStatusBar());
+        }
         if (Build.VERSION.SDK_INT >= 30) {
             navBarColorKey = -1;
             navBarColor = getThemedColor(Theme.key_dialogBackgroundGray);
