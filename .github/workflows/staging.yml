@@ -16,14 +16,13 @@ on:
         type: boolean
         default: false
       release_notes:
-        description: 'Optional changelog body for public APK caption.'
+        description: 'Optional 「日志」 body for public APK caption (multiline, one "- item" per line). Empty falls back to docs/RELEASE_NOTES.txt then commit subject; rendered as NagramX Commit Message blockquote.'
         required: false
         type: string
         default: ''
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   build:
@@ -31,10 +30,85 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build_timestamp: ${{ steps.beta_build_step.outputs.build_timestamp }}
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_HARDLINK: "true"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: "10G"
+      NATIVE_TARGET: "universal"
     steps:
-      - name: Reuse existing 1284 timestamp
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          submodules: recursive
+      - name: Verify beta source
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'beta'
+        run: |
+          echo "Beta publishing must run from the beta branch."
+          exit 1
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Set up Ccache
+        uses: hendrikmuhs/ccache-action@v1.2.23
+        with:
+          append-timestamp: false
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true
+      - name: Set up Gradle cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.gradle
+          key: gradle-${{ hashFiles('**/*.gradle') }}
+      - name: Set up Android SDK Tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0"
+      - name: Install Native Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes nasm
+      - name: Configure Android SDK Path
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" >> local.properties
+      - name: Modify Gradle JVM Args
+        run: |
+          MEMORY_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+          MEMORY_GB=$((MEMORY_KB / 1024 / 1024))
+          echo "Detected memory size: ${MEMORY_GB}GB"
+          if [ $MEMORY_GB -ge 12 ]; then
+            sed -i '/^org\.gradle\.jvmargs=/d' gradle.properties
+            echo "org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=2G -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
+          fi
+          cat gradle.properties
+      - name: Beta Build
         id: beta_build_step
-        run: echo "build_timestamp=1788771352" >> "$GITHUB_OUTPUT"
+        env:
+          COMMIT_ID: ${{ github.sha }}
+          NIXGRAMX_CHANNEL: beta
+        run: |
+          export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
+          export KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}"
+          export ALIAS_PASS="${{ secrets.ALIAS_PASS }}"
+          export ALIAS_NAME="${{ secrets.ALIAS_NAME }}"
+          export BUILD_TIMESTAMP=$(date +%s)
+          echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
+          ./gradlew TMessagesProj:assembleStaging
+      - name: Upload arm64-v8a Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Beta-arm64-v8a
+          path: TMessagesProj/build/outputs/apk/staging/*-arm64-v8a.apk
+      - name: Upload universal Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Beta-universal
+          path: TMessagesProj/build/outputs/apk/staging/*-universal.apk
   upload:
     name: Publish Beta
     if: github.event_name == 'workflow_dispatch' && inputs.publish
@@ -44,15 +118,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          ref: d57401c30abf765f10c5863175cbb970d3eb8963
       - name: Download Artifacts
         uses: actions/download-artifact@v8
         with:
-          github-token: ${{ github.token }}
-          run-id: 34102991181
           path: artifacts
-          pattern: Beta-*
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -61,11 +130,12 @@ jobs:
         env:
           APP_ID: ${{ secrets.APP_ID }}
           APP_HASH: ${{ secrets.APP_HASH }}
-          COMMIT_ID: d57401c30abf765f10c5863175cbb970d3eb8963
-          COMMIT_URL: https://github.com/Anndy999/NixgramX/commit/d57401c30abf765f10c5863175cbb970d3eb8963
-          COMMIT_MESSAGE: "release: prepare NixgramX 12.10.1 (1284) beta"
+          COMMIT_ID: ${{ github.sha }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Beta release' }}
           BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
           RELEASE_NOTES: ${{ github.event.inputs.release_notes || '' }}
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
+          export COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
           python Tools/scripts/upload.py "${{ secrets.HELPER_BOT_TOKEN }}" "${{ secrets.HELPER_BOT_TARGET }}" beta "${{ secrets.HELPER_BOT_CANARY_TARGET }}"
