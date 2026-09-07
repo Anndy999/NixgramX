@@ -124,8 +124,8 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Init submodules when native build is required
-        if: steps.classify.outputs.need_native == 'true'
+      - name: Init submodules when Android verification is required
+        if: steps.classify.outputs.need_android == 'true'
         run: git submodule update --init --recursive
 
       - uses: gradle/actions/setup-gradle@v6
