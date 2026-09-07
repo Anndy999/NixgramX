@@ -27,6 +27,8 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 | exteraless/exteraless | 738786ec1eb0f863273396662909630b59f769a1 | Last Java crash unavailable next launch | Independently implemented bounded no-backup local store, sanitized frames (no exception messages/thread names), preserve existing Crashlytics filter chain | `695e1db2ce`, `b14fa0d188` | Host JVM PASS; crash/relaunch device NOT TESTED |
 | Anndy999/NixgramX | d7bc4dcb90 | Cross-account clear of deleted/edit history | Add userId to clear/query/bulk-edit-delete DAO parameters and pass account identity from ChatActivity | `ab5627ea78` | Host SQLite regression PASS; Room/device NOT TESTED |
 
+DATA-03 (Stability Phase 2 audit, local fix): bulk deleted-message cleanup now collects media paths before deleting database rows, matching `deleteCurrent()` ordering. Existing file cleanup semantics are preserved; shared-media ownership/refcount and DATA-02 schema investigation are unchanged. Host JVM regression executes the production method with DAO doubles and temporary files; original ordering fails, fixed ordering passes. Android/Room and device behavior NOT TESTED.
+
 The Exteraless source commits were read using GitHub API, not transplanted as whole files.
 Neither selected change depends on plugins. Current official base does not implement
 NixgramX local push selection, Ayu history or this diagnostic UI, so these are local adaptations,
