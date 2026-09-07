@@ -17,7 +17,7 @@ This follows the mature NagramX model of a Stable `main` lane and a test lane (`
 
 ```text
 feature / bugfix ──> beta ──> main
-upstream-sync/* ────┘          │
+upstream-sync/* ─────┘          │
                                Stable tag
 ```
 
