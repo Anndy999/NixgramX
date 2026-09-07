@@ -63,7 +63,7 @@ jobs:
           APP_HASH: ${{ secrets.APP_HASH }}
           COMMIT_ID: d57401c30abf765f10c5863175cbb970d3eb8963
           COMMIT_URL: https://github.com/Anndy999/NixgramX/commit/d57401c30abf765f10c5863175cbb970d3eb8963
-          COMMIT_MESSAGE: release: prepare NixgramX 12.10.1 (1284) beta
+          COMMIT_MESSAGE: "release: prepare NixgramX 12.10.1 (1284) beta"
           BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
           RELEASE_NOTES: ${{ github.event.inputs.release_notes || '' }}
         run: |
