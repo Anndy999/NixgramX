@@ -10,8 +10,16 @@ permissions:
   contents: read
 
 jobs:
-  stability:
+  quick-verify:
     if: ${{ !startsWith(github.head_ref, 'upstream-sync/') }}
+    uses: ./.github/workflows/quick-verify.yml
+    with:
+      source_sha: ${{ github.event.pull_request.head.sha }}
+      base_sha: ${{ github.event.pull_request.base.sha }}
+      base_ref: ${{ github.event.pull_request.base.ref }}
+
+  upstream-sync:
+    if: ${{ startsWith(github.head_ref, 'upstream-sync/') }}
     uses: ./.github/workflows/upstream-sync-ci.yml
     with:
       source_sha: ${{ github.event.pull_request.head.sha }}

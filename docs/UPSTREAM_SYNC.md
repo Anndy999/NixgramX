@@ -68,9 +68,9 @@ Concurrent branch creation or API failures stop safely; rerun to recover.
 
 The watcher directly calls `upstream-sync-ci.yml` on the exact prepared SHA,
 because PRs created with GITHUB_TOKEN do not trigger ordinary pull_request runs.
-Later human pushes/reopens trigger the same dedicated CI through pull_request.
-No path filter skips resource-only changes. Generic PR CI skips upstream-sync
-branches to avoid duplicate builds; ordinary PRs now reuse this same secret-free compile workflow.
+Later human pushes/reopens on `upstream-sync/*` are routed by `pr.yml` to the
+same dedicated workflow. No path filter skips resource-only changes. Ordinary
+PRs use Quick Verify instead of this full compile workflow.
 
 Checks: YAML/XML/privacy and host regressions, git diff check, Android lint,
 Gradle configuration, Java/Kotlin compileDebugSources, resource merge,
