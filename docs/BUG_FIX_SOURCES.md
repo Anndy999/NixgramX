@@ -10,6 +10,13 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 
 ## Log
 
+Premium status popup alignment: ported the one-line offset fix from
+`risin42/NagramX@54925824e872dd3c21ae3e6059bf11c11a8398a1` on 2026-09-07.
+NixgramX initializes the titles container and translates it by 0 when centered or
+4dp otherwise; the popup now uses that actual translation. Official Telegram
+`62b56a07ca` retains the fixed 4dp offset in the same popup structure, so it does
+not already supply this fix. Device NOT TESTED.
+
 | Date | Upstream SHA | Summary | NixgramX commit |
 | --- | --- | --- | --- |
 | 2026-09-04 | `4335a2e` | Bootstrap baseline | `e6d49a82` |
