@@ -4,6 +4,7 @@ import android.os.Build;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.NotificationCenter;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import xyz.nextalone.nagram.NaConfig;
 
@@ -28,6 +30,10 @@ public class UpdateHelper extends BaseRemoteHelper {
     public static final int UPDATE_OFF = 0;
     public static final int UPDATE_CHANNEL_RELEASE = 1;
     public static final int UPDATE_CHANNEL_BETA = 2;
+    private static final Object CHECK_LOCK = new Object();
+    private static long latestCheckGeneration;
+    private long checkGeneration;
+    private boolean silentRecheck;
     private boolean updateAlways = false;
     private int checkAccount;
     private int checkChannel;
@@ -89,28 +95,53 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     @Override
     protected boolean retrySearch(int attempt, boolean error, Runnable retry) {
-        if (error || attempt >= 3) {
-            return false;
-        }
-        // Telegram may not have indexed newly published metadata yet. The runnable
-        // retains this check's account/tag and resolves a fresh access hash each time.
-        // Bound added waiting to 3.5 seconds; RPC latency is outside this delay budget.
-        Utilities.globalQueue.postRunnable(retry, attempt == 1 ? 1000 : 2500);
-        return true;
+        // Foreground and silent checks each resolve/search once. Never hold the
+        // foreground delegate behind BaseRemoteHelper's empty/error retry hooks.
+        return false;
     }
 
-    @Override
-    protected boolean shouldRetryAfterLoad(ArrayList<JSONObject> responses) {
-        // Inspect every candidate without consuming updateAlways or completing the check.
-        for (var response : responses) {
-            try {
-                if (isNewerThanInstalled(response)) {
-                    return false;
+    private void scheduleSilentRecheck() {
+        // The caller may enqueue its pending-update/UI changes in the delegate.
+        // Capture pending after those changes, and publish on the same UI queue.
+        AndroidUtilities.runOnUIThread(() -> {
+            final TLRPC.TL_help_appUpdate pending = SharedConfig.pendingAppUpdate;
+            synchronized (CHECK_LOCK) {
+                if (checkGeneration != latestCheckGeneration) {
+                    return;
                 }
-            } catch (JSONException ignored) {
             }
-        }
-        return true;
+            Utilities.globalQueue.postRunnable(() -> {
+                synchronized (CHECK_LOCK) {
+                    if (checkGeneration != latestCheckGeneration) {
+                        return;
+                    }
+                }
+                var recheck = new UpdateHelper();
+                recheck.checkAccount = checkAccount;
+                recheck.checkChannel = checkChannel;
+                recheck.silentRecheck = true;
+                // A manual check with auto updates OFF still accepts a newer build.
+                recheck.manualCheckPending = true;
+                var completed = new AtomicBoolean();
+                recheck.load(checkAccount, getTag(checkChannel), (res, error) -> {
+                    if (!completed.compareAndSet(false, true) || res == null || error != null) {
+                        return;
+                    }
+                    AndroidUtilities.runOnUIThread(() -> {
+                        synchronized (CHECK_LOCK) {
+                            // Also protect pending written outside this helper while
+                            // the silent RPC (including getMessages) was in flight.
+                            if (checkGeneration != latestCheckGeneration
+                                    || SharedConfig.pendingAppUpdate != pending) {
+                                return;
+                            }
+                            SharedConfig.setNewAppVersionAvailable(res);
+                            NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
+                        }
+                    });
+                });
+            }, 1000);
+        });
     }
 
     private boolean isNewerThanInstalled(JSONObject response) throws JSONException {
@@ -122,7 +153,9 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     @Override
     protected void onError(String text, Delegate delegate) {
-        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_FAILED, 0);
+        if (!silentRecheck) {
+            org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_FAILED, 0);
+        }
         manualCheckPending = false;
         if (delegate != null) {
             delegate.onTLResponse(null, text);
@@ -332,7 +365,23 @@ public class UpdateHelper extends BaseRemoteHelper {
         check.checkChannel = channel;
         check.updateAlways = updateAlways;
         check.manualCheckPending = updateAlways || manualUserCheck;
-        check.load(account, getTag(channel), delegate);
+        synchronized (CHECK_LOCK) {
+            check.checkGeneration = ++latestCheckGeneration;
+        }
+        var completed = new AtomicBoolean();
+        check.load(account, getTag(channel), (res, error) -> {
+            if (!completed.compareAndSet(false, true)) {
+                return;
+            }
+            if (delegate != null) {
+                delegate.onTLResponse(res, error);
+            }
+            // Complete the foreground before scheduling any waiting. RPC failures
+            // stop immediately; only valid no-update/empty results get one recheck.
+            if (res == null && (error == null || "UPDATE_METADATA_EMPTY".equals(error))) {
+                check.scheduleSilentRecheck();
+            }
+        });
     }
 
     private static final class InstanceHolder {
