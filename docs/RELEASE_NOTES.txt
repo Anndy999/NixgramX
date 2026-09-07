@@ -1,2 +1,1 @@
-- Liquid Glass 边缘毛边修正
-- 实时切主题时玻璃控件刷新
+- FCM 匿名 timing diagnostics（T1–T5，仅 ms）
