@@ -1,0 +1,306 @@
+name: Quick Verify
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      base_sha:
+        required: false
+        type: string
+        default: ''
+      base_ref:
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  quick-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      COMMIT_ID: ${{ inputs.source_sha }}
+      NATIVE_TARGET: arm64-v8a
+      # Non-production compile-only placeholders, no repository secrets exposed.
+      TELEGRAM_APP_ID: '123456'
+      TELEGRAM_APP_HASH: '00000000000000000000000000000000'
+      BASE_SHA_INPUT: ${{ inputs.base_sha }}
+      BASE_REF_INPUT: ${{ inputs.base_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch base and classify changed paths
+        id: classify
+        run: |
+          set -euo pipefail
+          if [ -n "${BASE_SHA_INPUT}" ]; then
+            git fetch --depth=1 origin "${BASE_SHA_INPUT}"
+            BASE_SHA="${BASE_SHA_INPUT}"
+          else
+            git fetch --depth=1 origin "${BASE_REF_INPUT}"
+            BASE_SHA="$(git rev-parse FETCH_HEAD)"
+          fi
+          echo "BASE_SHA=${BASE_SHA}" >> "$GITHUB_ENV"
+          git diff --name-only "${BASE_SHA}" HEAD > /tmp/changed_files.txt
+          git diff --raw "${BASE_SHA}" HEAD > /tmp/changed_raw.txt
+          echo "Changed files:"
+          cat /tmp/changed_files.txt
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          files = [ln.strip() for ln in Path('/tmp/changed_files.txt').read_text().splitlines() if ln.strip()]
+          raw = Path('/tmp/changed_raw.txt').read_text()
+
+          need_workflow = False
+          need_java = False
+          need_resources = False
+          need_manifest = False
+          need_native = False
+
+          for f in files:
+              posix = f.replace('\\', '/')
+              name = Path(posix).name
+              if posix.startswith('.github/') or posix.endswith(('.yml', '.yaml')):
+                  need_workflow = True
+              if (
+                  posix.endswith(('.java', '.kt', '.kts'))
+                  or name.startswith('build.gradle')
+                  or name.startswith('settings.gradle')
+                  or name == 'gradle.properties'
+              ):
+                  need_java = True
+              if posix.endswith('.xml') or (
+                  posix.startswith('TMessagesProj/src/') and '/res/' in posix
+              ):
+                  need_resources = True
+              if name == 'AndroidManifest.xml':
+                  need_manifest = True
+                  need_resources = True
+              if (
+                  posix.endswith(('.c', '.cc', '.cpp', '.h'))
+                  or name == 'CMakeLists.txt'
+                  or '/jni/' in posix
+                  or posix.endswith('/jni')
+                  or posix == 'TMessagesProj/jni'
+              ):
+                  need_native = True
+
+          for line in raw.splitlines():
+              if '160000' in line:
+                  need_native = True
+                  break
+
+          need_android = need_java or need_resources or need_manifest or need_native
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              fh.write(f'need_workflow={str(need_workflow).lower()}\n')
+              fh.write(f'need_java={str(need_java).lower()}\n')
+              fh.write(f'need_resources={str(need_resources).lower()}\n')
+              fh.write(f'need_manifest={str(need_manifest).lower()}\n')
+              fh.write(f'need_native={str(need_native).lower()}\n')
+              fh.write(f'need_android={str(need_android).lower()}\n')
+          print(
+              'Classification:',
+              f'workflow={need_workflow}',
+              f'java={need_java}',
+              f'resources={need_resources}',
+              f'manifest={need_manifest}',
+              f'native={need_native}',
+              f'android={need_android}',
+          )
+          PY
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Init submodules when native build is required
+        if: steps.classify.outputs.need_native == 'true'
+        run: git submodule update --init --recursive
+
+      - uses: gradle/actions/setup-gradle@v6
+        if: steps.classify.outputs.need_android == 'true'
+
+      - uses: android-actions/setup-android@v4
+        if: steps.classify.outputs.need_android == 'true' && steps.classify.outputs.need_native != 'true'
+        with:
+          packages: 'build-tools;36.0.0 platforms;android-37.0 cmake;3.31.6'
+
+      - uses: android-actions/setup-android@v4
+        if: steps.classify.outputs.need_native == 'true'
+        with:
+          packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
+
+      - name: Stability static checks
+        id: static
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'PyYAML==6.0.2'
+          python3 Tools/stability/static_checks.py
+          python3 -m unittest discover -s Tools/stability -p 'test_*.py'
+          mkdir -p /tmp/diagnostic-tests
+          javac -d /tmp/diagnostic-tests \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java \
+            Tools/stability/DiagnosticStoreTest.java
+          java -cp /tmp/diagnostic-tests DiagnosticStoreTest
+          while IFS= read -r f || [ -n "$f" ]; do
+            [ -z "$f" ] && continue
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.sh) bash -n "$f" ;;
+              *.py) python3 -m py_compile "$f" ;;
+            esac
+          done < /tmp/changed_files.txt
+          git diff --check "${BASE_SHA}" HEAD
+
+      - name: Workflow / CI checks
+        id: workflow
+        if: steps.classify.outputs.need_workflow == 'true'
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'PyYAML==6.0.2'
+          shopt -s nullglob
+          for path in .github/workflows/*.yml .github/workflows/*.yaml; do
+            python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1])); print('YAML OK', sys.argv[1])" "$path"
+          done
+          ACTIONLINT_VERSION='1.7.12'
+          ACTIONLINT_ARCHIVE="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          ACTIONLINT_SHA256='8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+          curl -sSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${ACTIONLINT_ARCHIVE}" -o "/tmp/${ACTIONLINT_ARCHIVE}"
+          echo "${ACTIONLINT_SHA256}  /tmp/${ACTIONLINT_ARCHIVE}" | sha256sum -c -
+          tar -xzf "/tmp/${ACTIONLINT_ARCHIVE}" -C /tmp actionlint
+          chmod +x /tmp/actionlint
+          /tmp/actionlint -version
+          changed_workflows=()
+          while IFS= read -r f || [ -n "$f" ]; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              .github/workflows/*.yml|.github/workflows/*.yaml)
+                [ -f "$f" ] || continue
+                changed_workflows+=("$f")
+                ;;
+            esac
+          done < /tmp/changed_files.txt
+          if [ "${#changed_workflows[@]}" -eq 0 ]; then
+            echo "No changed workflow YAML files; skipping actionlint (NOT REQUIRED)"
+          else
+            echo "Running actionlint v${ACTIONLINT_VERSION} on changed workflows:"
+            printf '  %s\n' "${changed_workflows[@]}"
+            /tmp/actionlint -color -- "${changed_workflows[@]}"
+          fi
+          while IFS= read -r f || [ -n "$f" ]; do
+            [ -z "$f" ] && continue
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.sh) bash -n "$f" ;;
+              *.py) python3 -m py_compile "$f" ;;
+            esac
+          done < /tmp/changed_files.txt
+          git diff --check "${BASE_SHA}" HEAD
+
+      - name: Prepare disposable Debug configuration
+        if: steps.classify.outputs.need_android == 'true'
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.classify.outputs.need_native }}" = "true" ]; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends --yes nasm
+          fi
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          # Only this disposable CI checkout changes; release keystore is untouched.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('TMessagesProj/build.gradle')
+          text = p.read_text()
+          start = text.index('        debug {')
+          end = text.index('        staging {', start)
+          block = text[start:end]
+          assert block.count('signingConfig = signingConfigs.release') == 1
+          p.write_text(text[:start] + block.replace('signingConfig = signingConfigs.release', 'signingConfig = signingConfigs.debug') + text[end:])
+          PY
+
+      - name: Java/Kotlin compile
+        id: compile
+        if: steps.classify.outputs.need_java == 'true'
+        run: |
+          set -euo pipefail
+          ./gradlew help --no-daemon
+          ./gradlew :TMessagesProj:compileDebugSources --no-daemon
+
+      - name: Resource merge
+        id: resources
+        if: steps.classify.outputs.need_resources == 'true'
+        run: ./gradlew :TMessagesProj:mergeDebugResources --no-daemon
+
+      - name: Manifest merge
+        id: manifest
+        if: steps.classify.outputs.need_manifest == 'true'
+        run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
+
+      - name: Native build
+        id: native
+        if: steps.classify.outputs.need_native == 'true'
+        run: ./gradlew :TMessagesProj:externalNativeBuildDebug --no-daemon
+
+      - name: Write Quick Verify summary and enforce required failures
+        if: always()
+        env:
+          RESULTS: ${{ toJSON(steps) }}
+          NEED_WORKFLOW: ${{ steps.classify.outputs.need_workflow }}
+          NEED_JAVA: ${{ steps.classify.outputs.need_java }}
+          NEED_RESOURCES: ${{ steps.classify.outputs.need_resources }}
+          NEED_MANIFEST: ${{ steps.classify.outputs.need_manifest }}
+          NEED_NATIVE: ${{ steps.classify.outputs.need_native }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          steps = json.loads(os.environ['RESULTS'])
+
+          def status(required, step_id):
+              if not required:
+                  return 'NOT REQUIRED'
+              outcome = steps.get(step_id, {}).get('outcome')
+              return 'PASS' if outcome == 'success' else 'FAIL'
+
+          need_workflow = os.environ.get('NEED_WORKFLOW') == 'true'
+          need_java = os.environ.get('NEED_JAVA') == 'true'
+          need_resources = os.environ.get('NEED_RESOURCES') == 'true'
+          need_manifest = os.environ.get('NEED_MANIFEST') == 'true'
+          need_native = os.environ.get('NEED_NATIVE') == 'true'
+
+          rows = [
+              ('Static checks', status(True, 'static')),
+              ('Workflow checks', status(need_workflow, 'workflow')),
+              ('Java/Kotlin compile', status(need_java, 'compile')),
+              ('Resources', status(need_resources, 'resources')),
+              ('Manifest', status(need_manifest, 'manifest')),
+              ('Native', status(need_native, 'native')),
+          ]
+
+          ok = all(value != 'FAIL' for _, value in rows)
+          lines = ['NixgramX Quick Verify', '']
+          lines.extend(f'{label}: {value}' for label, value in rows)
+          lines.extend([
+              '',
+              'Full Android lint: NOT RUN',
+              'APK build: NOT RUN',
+              'Device test: NOT TESTED',
+              '',
+          ])
+          summary = '\n'.join(lines)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write(summary)
+          print(summary)
+          raise SystemExit(0 if ok else 1)
+          PY
