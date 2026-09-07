@@ -1,1 +1,2 @@
-- FCM 匿名 timing diagnostics（T1–T5，仅 ms）
+- 检测更新：刚发帖时对 empty/旧 metadata 有界重试
+- 保留 FCM timing diagnostics
