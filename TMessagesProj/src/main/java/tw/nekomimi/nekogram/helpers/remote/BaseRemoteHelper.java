@@ -74,13 +74,12 @@ public abstract class BaseRemoteHelper {
         }
     }
 
-    private void onGetMessageSuccess(TLObject response, Delegate delegate, int account, String requestTag, TLRPC.InputChannel channel) {
+    private void onGetMessageSuccess(TLObject response, Delegate delegate, int account, String requestTag, TLRPC.InputChannel channel, int attempt) {
         var tag = "#" + requestTag;
         final var res = (TLRPC.messages_Messages) response;
         var messages = res.messages;
         if (messages == null) {
-            onLoadSuccess(new ArrayList<>(), delegate, account, channel);
-            return;
+            messages = new ArrayList<>();
         }
         MessagesController.getInstance(account).removeDeletedMessagesFromArray(CHANNEL_METADATA_ID, messages);
         ArrayList<JSONObject> responses = new ArrayList<>();
@@ -94,7 +93,16 @@ public abstract class BaseRemoteHelper {
                 FileLog.e(e);
             }
         }
+        if (shouldRetryAfterLoad(responses) && retrySearch(attempt, false,
+                () -> resolveAndSearch(account, requestTag, delegate, attempt + 1))) {
+            return;
+        }
         onLoadSuccess(responses, delegate, account, channel);
+    }
+
+    /** Additional parsed-metadata retry policy; disabled for shared remote helpers. */
+    protected boolean shouldRetryAfterLoad(ArrayList<JSONObject> responses) {
+        return false;
     }
 
     public static boolean isMetadataChannelConfigured() {
@@ -119,10 +127,19 @@ public abstract class BaseRemoteHelper {
             reportError("updater_not_configured", delegate);
             return;
         }
-        resolveAndSearch(account, tag, delegate, false);
+        resolveAndSearch(account, tag, delegate, 1);
     }
 
-    private void resolveAndSearch(int account, String tag, Delegate delegate, boolean retried) {
+    /** Default policy retains the single immediate retry used by other remote helpers. */
+    protected boolean retrySearch(int attempt, boolean error, Runnable retry) {
+        if (attempt != 1) {
+            return false;
+        }
+        retry.run();
+        return true;
+    }
+
+    private void resolveAndSearch(int account, String tag, Delegate delegate, int attempt) {
         var controller = MessagesController.getInstance(account);
         var connections = ConnectionsManager.getInstance(account);
         var resolve = new TLRPC.TL_contacts_resolveUsername();
@@ -162,17 +179,17 @@ public abstract class BaseRemoteHelper {
             connections.sendRequest(req, (searchResponse, searchError) -> {
                 boolean empty = searchResponse instanceof TLRPC.messages_Messages messages
                         && (messages.messages == null || messages.messages.isEmpty());
-                if ((searchError != null || empty) && !retried) {
-                    // Local membership is not proof that search returned complete metadata.
-                    resolveAndSearch(account, tag, delegate, true);
+                if ((searchError != null || empty) && retrySearch(attempt, searchError != null,
+                        () -> resolveAndSearch(account, tag, delegate, attempt + 1))) {
+                    return;
                 } else if (searchError != null) {
                     reportError(searchError.text, delegate);
                 } else if (empty) {
-                    onGetMessageSuccess(searchResponse, delegate, account, tag, channel);
+                    onGetMessageSuccess(searchResponse, delegate, account, tag, channel, attempt);
                 } else if (!(searchResponse instanceof TLRPC.messages_Messages)) {
                     reportError("UPDATE_METADATA_INVALID", delegate);
                 } else {
-                    onGetMessageSuccess(searchResponse, delegate, account, tag, channel);
+                    onGetMessageSuccess(searchResponse, delegate, account, tag, channel, attempt);
                 }
             });
         });
