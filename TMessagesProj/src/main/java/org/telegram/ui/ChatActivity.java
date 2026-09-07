@@ -45686,7 +45686,8 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public boolean isDark() {
-            return isDark;
+            // Match getColor(): chats without a custom palette follow the live global theme.
+            return chatTheme == null ? Theme.isCurrentThemeDark() : isDark;
         }
 
         @Override

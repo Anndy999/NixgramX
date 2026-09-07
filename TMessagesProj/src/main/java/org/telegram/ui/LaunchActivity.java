@@ -7484,6 +7484,14 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             fragment.showDialog(dialog);
             dialog.setCanceledOnTouchOutside(false);
         } else if (id == NotificationCenter.didSetNewTheme) {
+            // Refresh cached glass colors after the new theme has been applied.
+            actionBarLayout.refreshThemeColors();
+            if (rightActionBarLayout != null) {
+                rightActionBarLayout.refreshThemeColors();
+            }
+            if (layersActionBarLayout != null) {
+                layersActionBarLayout.refreshThemeColors();
+            }
             Boolean nightTheme = (Boolean) args[0];
             if (!nightTheme) {
                 try {
