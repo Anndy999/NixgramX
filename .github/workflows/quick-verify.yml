@@ -173,8 +173,31 @@ jobs:
           for path in .github/workflows/*.yml .github/workflows/*.yaml; do
             python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1])); print('YAML OK', sys.argv[1])" "$path"
           done
-          curl -sL 'https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash' | bash -s -- latest /tmp
-          /tmp/actionlint -color
+          ACTIONLINT_VERSION='1.7.12'
+          ACTIONLINT_ARCHIVE="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          ACTIONLINT_SHA256='8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+          curl -sSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${ACTIONLINT_ARCHIVE}" -o "/tmp/${ACTIONLINT_ARCHIVE}"
+          echo "${ACTIONLINT_SHA256}  /tmp/${ACTIONLINT_ARCHIVE}" | sha256sum -c -
+          tar -xzf "/tmp/${ACTIONLINT_ARCHIVE}" -C /tmp actionlint
+          chmod +x /tmp/actionlint
+          /tmp/actionlint -version
+          changed_workflows=()
+          while IFS= read -r f || [ -n "$f" ]; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              .github/workflows/*.yml|.github/workflows/*.yaml)
+                [ -f "$f" ] || continue
+                changed_workflows+=("$f")
+                ;;
+            esac
+          done < /tmp/changed_files.txt
+          if [ "${#changed_workflows[@]}" -eq 0 ]; then
+            echo "No changed workflow YAML files; skipping actionlint (NOT REQUIRED)"
+          else
+            echo "Running actionlint v${ACTIONLINT_VERSION} on changed workflows:"
+            printf '  %s\n' "${changed_workflows[@]}"
+            /tmp/actionlint -color -- "${changed_workflows[@]}"
+          fi
           while IFS= read -r f || [ -n "$f" ]; do
             [ -z "$f" ] && continue
             [ -f "$f" ] || continue
