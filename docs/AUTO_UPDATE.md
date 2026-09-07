@@ -6,7 +6,7 @@ NixgramX reuses NagramX `UpdateHelper` / `BaseRemoteHelper` (metadata channel po
 
 There is **no server update API** — the app only `messages.search`es the metadata channel.
 
-The app resolves and searches the public metadata channel (`@NixgramXMetadata`) without joining it; users need not join manually. Each check keeps its starting account and update lane through asynchronous requests and reuses the resolved access hash for attachment lookup. Empty searches retry once after resolving again, regardless of cached membership. UpdateHelper treats a second empty result as `UPDATE_METADATA_EMPTY` (not “up to date”); other remote helpers deliver empty `onLoadSuccess`. Failed checks retain any global pending update; a successful no-update result clears it.
+The app resolves and searches the public metadata channel (`@NixgramXMetadata`) without joining it; users need not join manually. Each check keeps its starting account and update lane through asynchronous requests and reuses the resolved access hash for attachment lookup. UpdateHelper retries empty or stale metadata after 1 second and then 2.5 seconds, resolving again on each attempt regardless of cached membership. Newer version/build metadata completes the search immediately. A final empty result reports `UPDATE_METADATA_EMPTY`; a final old/current result completes successfully with no update (unless explicitly forcing the update dialog). Other remote helpers retain their single immediate retry and empty `onLoadSuccess` behavior. Failed checks retain any global pending update; a successful no-update result clears it.
 
 ## Publish channels (important)
 

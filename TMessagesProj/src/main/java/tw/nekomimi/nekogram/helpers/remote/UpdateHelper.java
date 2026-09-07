@@ -100,6 +100,27 @@ public class UpdateHelper extends BaseRemoteHelper {
     }
 
     @Override
+    protected boolean shouldRetryAfterLoad(ArrayList<JSONObject> responses) {
+        // Inspect every candidate without consuming updateAlways or completing the check.
+        for (var response : responses) {
+            try {
+                if (isNewerThanInstalled(response)) {
+                    return false;
+                }
+            } catch (JSONException ignored) {
+            }
+        }
+        return true;
+    }
+
+    private boolean isNewerThanInstalled(JSONObject response) throws JSONException {
+        int version = response.getInt("version_code");
+        return version > BuildConfig.VERSION_CODE
+                || (version == BuildConfig.VERSION_CODE
+                && response.optLong("build_timestamp", 0L) > BuildConfig.BUILD_TIMESTAMP);
+    }
+
+    @Override
     protected void onError(String text, Delegate delegate) {
         org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_FAILED, 0);
         manualCheckPending = false;
@@ -157,20 +178,12 @@ public class UpdateHelper extends BaseRemoteHelper {
     }
 
     private Update getShouldUpdateVersion(List<JSONObject> responses) {
-        int currentVersion = BuildConfig.VERSION_CODE;
-        long buildTimestamp = BuildConfig.BUILD_TIMESTAMP;
         Update ref = null;
         for (var string : responses) {
             try {
                 int remoteVersion = string.getInt("version_code");
                 org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_VERSION, remoteVersion);
-                long remoteBuildTimestamp = string.optLong("build_timestamp", 0L);
-                boolean shouldUpdate = false;
-                if (remoteVersion > currentVersion) {
-                    shouldUpdate = true;
-                } else if (remoteVersion == currentVersion && remoteBuildTimestamp > buildTimestamp) {
-                    shouldUpdate = true;
-                }
+                boolean shouldUpdate = isNewerThanInstalled(string);
                 if (shouldUpdate || updateAlways) {
                     if (updateAlways) {
                         updateAlways = false;
