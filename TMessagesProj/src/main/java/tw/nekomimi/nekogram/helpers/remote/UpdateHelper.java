@@ -7,10 +7,12 @@ import org.json.JSONObject;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLObject;
+import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 
 import java.io.File;
@@ -27,6 +29,8 @@ public class UpdateHelper extends BaseRemoteHelper {
     public static final int UPDATE_CHANNEL_RELEASE = 1;
     public static final int UPDATE_CHANNEL_BETA = 2;
     private boolean updateAlways = false;
+    private int checkAccount;
+    private int checkChannel;
     /** Survives getShouldUpdateVersion clearing updateAlways; lets manual checks show dialog when AutoUpdateChannel==OFF. */
     private boolean manualCheckPending = false;
 
@@ -36,6 +40,30 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     public static boolean isAutoCheckEnabled() {
         return isChannelConfigured() && NaConfig.INSTANCE.getAutoUpdateChannel().Int() != UPDATE_OFF;
+    }
+
+    /**
+     * LaunchActivity pending-update policy for a checkAppUpdate callback:
+     * A) res==null && error!=null (query failed) → keep SharedConfig.pendingAppUpdate
+     * B) res==null && error==null (success, no update) → clear via setNewAppVersionAvailable(null)
+     * When res!=null the caller stores the new update instead.
+     */
+    public static boolean shouldClearPendingAppUpdate(TLRPC.TL_help_appUpdate res, String error) {
+        return res == null && error == null;
+    }
+
+    /**
+     * Apply update-check outcome to the device-wide pending update.
+     * A failed check (error != null) must preserve pendingAppUpdate.
+     * A successful no-update (res == null && error == null) must clear it.
+     */
+    public static void applyPendingUpdateCheckResult(TLRPC.TL_help_appUpdate res, String error) {
+        if (res != null) {
+            SharedConfig.setNewAppVersionAvailable(res);
+        } else if (error == null) {
+            SharedConfig.setNewAppVersionAvailable(null);
+        }
+        // else: failed check — preserve SharedConfig.pendingAppUpdate
     }
 
     public static UpdateHelper getInstance() {
@@ -79,7 +107,10 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     @Override
     protected String getTag() {
-        int channel = NaConfig.INSTANCE.getAutoUpdateChannel().Int();
+        return getTag(NaConfig.INSTANCE.getAutoUpdateChannel().Int());
+    }
+
+    private static String getTag(int channel) {
         if (channel == UPDATE_CHANNEL_BETA) {
             return "updateBeta";
         }
@@ -160,14 +191,14 @@ public class UpdateHelper extends BaseRemoteHelper {
         }
         // Manual long-press check must still show the dialog when AutoUpdateChannel is OFF.
         // updateAlways is cleared earlier in getShouldUpdateVersion; use manualCheckPending instead.
-        if (NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_OFF && !update.can_not_skip && !manualCheckPending) {
+        if (checkChannel == UPDATE_OFF && !update.can_not_skip && !manualCheckPending) {
             delegate.onTLResponse(null, null);
             return;
         }
         manualCheckPending = false;
         if (response != null) {
             var res = (TLRPC.messages_Messages) response;
-            getMessagesController().removeDeletedMessagesFromArray(CHANNEL_METADATA_ID, res.messages);
+            MessagesController.getInstance(checkAccount).removeDeletedMessagesFromArray(CHANNEL_METADATA_ID, res.messages);
             var messages = new HashMap<Integer, TLRPC.Message>();
             for (var message : res.messages) {
                 messages.put(message.id, message);
@@ -198,7 +229,12 @@ public class UpdateHelper extends BaseRemoteHelper {
     }
 
     @Override
-    protected void onLoadSuccess(ArrayList<JSONObject> responses, Delegate delegate) {
+    protected void onLoadSuccess(ArrayList<JSONObject> responses, Delegate delegate,
+                                 int account, TLRPC.InputChannel channel) {
+        if (responses.isEmpty()) {
+            onError("UPDATE_METADATA_EMPTY", delegate);
+            return;
+        }
         var update = getShouldUpdateVersion(responses);
         if (update == null) {
             manualCheckPending = false;
@@ -225,9 +261,9 @@ public class UpdateHelper extends BaseRemoteHelper {
             getNewVersionMessagesCallback(delegate, update, null, null);
         } else {
             var req = new TLRPC.TL_channels_getMessages();
-            req.channel = getMessagesController().getInputChannel(CHANNEL_METADATA_ID);
+            req.channel = channel;
             req.id = new ArrayList<>(ids.values());
-            getConnectionsManager().sendRequest(req, (response1, error1) -> {
+            ConnectionsManager.getInstance(account).sendRequest(req, (response1, error1) -> {
                 if (error1 == null) {
                     getNewVersionMessagesCallback(delegate, update, ids, response1);
                 } else {
@@ -250,23 +286,28 @@ public class UpdateHelper extends BaseRemoteHelper {
      * @param manualUserCheck user-initiated check (e.g. long-press); must not be swallowed when AutoUpdateChannel==OFF
      */
     public void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck) {
+        final int account = UserConfig.selectedAccount;
+        final int channel = NaConfig.INSTANCE.getAutoUpdateChannel().Int();
         if (!isChannelConfigured()) {
             if (delegate != null) {
                 delegate.onTLResponse(null, "updater_not_configured");
             }
             return;
         }
-        if (!updateAlways && !manualUserCheck && NaConfig.INSTANCE.getAutoUpdateChannel().Int() == UPDATE_OFF) {
+        if (!updateAlways && !manualUserCheck && channel == UPDATE_OFF) {
             if (delegate != null) {
                 delegate.onTLResponse(null, null);
             }
             return;
         }
         org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_CHECK, BuildConfig.VERSION_CODE);
-        this.updateAlways = updateAlways;
-        // Preserve through getShouldUpdateVersion (which clears updateAlways) into getNewVersionMessagesCallback.
-        this.manualCheckPending = updateAlways || manualUserCheck;
-        load(delegate);
+        // Each invocation owns its flags and account, including overlapping manual/background checks.
+        var check = new UpdateHelper();
+        check.checkAccount = account;
+        check.checkChannel = channel;
+        check.updateAlways = updateAlways;
+        check.manualCheckPending = updateAlways || manualUserCheck;
+        check.load(account, getTag(channel), delegate);
     }
 
     private static final class InstanceHolder {

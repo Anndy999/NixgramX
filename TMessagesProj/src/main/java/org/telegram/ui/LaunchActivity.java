@@ -6136,7 +6136,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             SharedConfig.saveConfig();
             AndroidUtilities.runOnUIThread(() -> {
                 if (res != null) {
-                    SharedConfig.setNewAppVersionAvailable(res);
+                    UpdateHelper.applyPendingUpdateCheckResult(res, error);
                     if (res.can_not_skip) {
                         showUpdateActivity(accountNum, res, false);
                     } else {
@@ -6154,7 +6154,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                             }
                         }
                     }
-                    SharedConfig.setNewAppVersionAvailable(null);
+                    // Failed checks (error != null) preserve pendingAppUpdate; successful no-update clears it.
+                    UpdateHelper.applyPendingUpdateCheckResult(null, error);
                 }
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
                 if (progress != null) {
