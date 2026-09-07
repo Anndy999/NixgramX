@@ -1,22 +1,23 @@
-name: Upstream Sync CI
+name: Full Verify
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      source_sha:
+      ref:
+        description: 'Git branch, tag, or SHA to verify (arm64-v8a Debug)'
         required: true
         type: string
+        default: main
 
 permissions:
   contents: read
 
 jobs:
-  compile:
-    if: inputs.source_sha != '' || github.event_name != 'pull_request' || startsWith(github.head_ref, 'upstream-sync/')
+  full-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      COMMIT_ID: ${{ inputs.source_sha || github.event.pull_request.head.sha }}
+      COMMIT_ID: ${{ github.sha }}
       NATIVE_TARGET: arm64-v8a
       # Non-production compile-only placeholders, no repository secrets exposed.
       TELEGRAM_APP_ID: '123456'
@@ -24,22 +25,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha }}
+          ref: ${{ inputs.ref }}
           submodules: recursive
           persist-credentials: false
+
+      - name: Record checked-out commit
+        run: |
+          echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Building ref=${{ inputs.ref }} sha=$(git rev-parse HEAD)"
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
+
       - uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-disabled: true
+
       - uses: android-actions/setup-android@v4
         with:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
+
       - name: YAML, regression and diff checks
-        env:
-          STABILITY_BASE_REF: ${{ github.base_ref || 'main' }}
         run: |
           python3 -m pip install 'PyYAML==6.0.2'
           python3 Tools/stability/static_checks.py
@@ -47,10 +53,12 @@ jobs:
           mkdir -p /tmp/diagnostic-tests
           javac -d /tmp/diagnostic-tests TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java Tools/stability/DiagnosticStoreTest.java
           java -cp /tmp/diagnostic-tests DiagnosticStoreTest
-          git fetch origin "$STABILITY_BASE_REF" --depth=1
+          git fetch origin main --depth=1
           git diff --check FETCH_HEAD HEAD
+
       - name: Prepare disposable Debug configuration
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes nasm
           echo "sdk.dir=$ANDROID_HOME" > local.properties
@@ -65,47 +73,51 @@ jobs:
           assert block.count('signingConfig = signingConfigs.release') == 1
           p.write_text(text[:start] + block.replace('signingConfig = signingConfigs.release', 'signingConfig = signingConfigs.debug') + text[end:])
           PY
+
       - name: Gradle config
         id: config
-        continue-on-error: true
         run: ./gradlew help --no-daemon
+
       - name: Java/Kotlin compile
         id: compile
-        continue-on-error: true
         run: ./gradlew :TMessagesProj:compileDebugSources --no-daemon
+
       - name: Resource merge
         id: resources
-        continue-on-error: true
         run: ./gradlew :TMessagesProj:mergeDebugResources --no-daemon
+
       - name: Manifest merge
         id: manifest
-        continue-on-error: true
         run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
+
       - name: Android lint
         id: lint
-        continue-on-error: true
         run: ./gradlew :TMessagesProj:lintDebug --no-daemon
+
       - name: Native build
         id: native
-        continue-on-error: true
         run: ./gradlew :TMessagesProj:externalNativeBuildDebug --no-daemon
-      - name: arm64 Debug APK (CI only; never uploaded or published)
+
+      - name: arm64 Debug APK
         id: apk
-        continue-on-error: true
         run: |
+          set -euo pipefail
           ./gradlew :TMessagesProj:assembleDebug --no-daemon
-          test -n "$(find TMessagesProj/build/outputs/apk -name '*arm64-v8a*.apk' -print -quit)"
-      - name: Adaptation review gate
-        id: adaptation
-        continue-on-error: true
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          state = json.loads(Path('docs/upstream-base.json').read_text())
-          assert not state.get('pending'), 'Unresolved upstream adaptation: see docs/upstream-sync-report.md'
-          PY
-      - name: Record actual results and enforce failure
+          APK="$(find TMessagesProj/build/outputs/apk -name '*arm64-v8a*.apk' -print -quit)"
+          test -n "$APK"
+          mkdir -p /tmp/full-verify-apk
+          cp "$APK" /tmp/full-verify-apk/
+          echo "APK=$APK"
+
+      - name: Upload arm64-v8a Debug APK
+        id: artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NixgramX-arm64-v8a-debug
+          path: /tmp/full-verify-apk/*.apk
+          if-no-files-found: error
+
+      - name: Summary
         if: always()
         env:
           RESULTS: ${{ toJSON(steps) }}
@@ -113,15 +125,40 @@ jobs:
           python3 - <<'PY'
           import json, os
           steps = json.loads(os.environ['RESULTS'])
-          checks = {'config': 'Gradle config', 'compile': 'Java/Kotlin compile', 'resources': 'resource merge', 'manifest': 'manifest merge', 'lint': 'Android lint', 'native': 'native build', 'apk': 'arm64 Debug APK', 'adaptation': 'Adaptation review gate'}
+
+          def status(step_id):
+              outcome = steps.get(step_id, {}).get('outcome')
+              return {'success': 'PASS', 'failure': 'FAIL'}.get(outcome, 'FAIL')
+
+          rows = [
+              ('Gradle config', 'config'),
+              ('Java/Kotlin compile', 'compile'),
+              ('Resources', 'resources'),
+              ('Manifest', 'manifest'),
+              ('Full Android lint', 'lint'),
+              ('Native', 'native'),
+              ('APK build', 'apk'),
+          ]
           ok = True
+          lines = ['NixgramX Full Verify', '']
+          for label, key in rows:
+              value = status(key)
+              ok &= value == 'PASS'
+              lines.append(f'{label}: {value}')
+          artifact = status('artifact')
+          lines.append(f'Artifact upload: {artifact}')
+          ok &= artifact == 'PASS'
+          lines.extend([
+              '',
+              'Telegram publish: NOT RUN',
+              'GitHub Release: NOT RUN',
+              'Merge / version bump: NOT RUN',
+              'Device test: NOT TESTED',
+              '',
+          ])
+          summary = '\n'.join(lines)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-              f.write('## Telegram Upstream Sync — actual CI results\n\n')
-              for key, label in checks.items():
-                  outcome = steps.get(key, {}).get('outcome', 'skipped')
-                  status = {'success': 'Passed', 'failure': 'Failed'}.get(outcome, 'Not tested')
-                  ok &= outcome == 'success'
-                  f.write(f'- {label}: {status}\n')
-              f.write('- Universal build: Not tested (runner budget)\n- Device/manual checks: Not tested\n\nPR waiting for review. No APK publication, merge or release.\n')
+              f.write(summary)
+          print(summary)
           raise SystemExit(0 if ok else 1)
           PY
