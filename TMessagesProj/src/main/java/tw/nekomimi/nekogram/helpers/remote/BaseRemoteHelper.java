@@ -139,6 +139,45 @@ public abstract class BaseRemoteHelper {
         return true;
     }
 
+    /** Other remote helpers keep their legacy search transport. */
+    protected int getPointerMessageId(String tag) {
+        return 0;
+    }
+
+    private void loadPointer(int account, String tag, Delegate delegate, TLRPC.InputChannel channel, int pointerId) {
+        var req = new TLRPC.TL_channels_getMessages();
+        req.channel = channel;
+        req.id.add(pointerId);
+        ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
+            if (error != null) {
+                reportError(error.text, delegate);
+                return;
+            }
+            if (!(response instanceof TLRPC.messages_Messages result)) {
+                reportError("UPDATE_METADATA_INVALID", delegate);
+                return;
+            }
+            for (var message : result.messages) {
+                if (message.id != pointerId || TextUtils.isEmpty(message.message)) {
+                    continue;
+                }
+                try {
+                    String text = message.message.trim();
+                    if (text.startsWith("#" + tag + " ")) {
+                        text = text.substring(tag.length() + 2).trim();
+                    }
+                    var parsed = new ArrayList<JSONObject>();
+                    parsed.add(new JSONObject(text));
+                    onLoadSuccess(parsed, delegate, account, channel);
+                } catch (JSONException e) {
+                    reportError("UPDATE_METADATA_INVALID", delegate);
+                }
+                return;
+            }
+            reportError("UPDATE_METADATA_EMPTY", delegate);
+        });
+    }
+
     private void resolveAndSearch(int account, String tag, Delegate delegate, int attempt) {
         var controller = MessagesController.getInstance(account);
         var connections = ConnectionsManager.getInstance(account);
@@ -169,6 +208,11 @@ public abstract class BaseRemoteHelper {
             MessagesStorage.getInstance(account).putUsersAndChats(resolved.users, resolved.chats, false, true);
             // Carry the resolved hash through search and getMessages; neither needs a cached chat.
             TLRPC.InputChannel channel = MessagesController.getInputChannel(metadata);
+            int pointerId = getPointerMessageId(tag);
+            if (pointerId > 0) {
+                loadPointer(account, tag, delegate, channel, pointerId);
+                return;
+            }
             var req = new TLRPC.TL_messages_search();
             req.limit = 10;
             req.filter = new TLRPC.TL_inputMessagesFilterEmpty();

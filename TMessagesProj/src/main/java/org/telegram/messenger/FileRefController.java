@@ -649,7 +649,7 @@ public class FileRefController extends BaseController {
                 }
                 favStickersWaiter.add(new Waiter(locationKey, parentKey));
             } else if ("update".equals(string)) {
-                UpdateHelper.getInstance().checkNewVersionAvailable((response, error) -> {
+                UpdateHelper.getInstance().checkNewVersionAvailableForFileReference((response, error) -> {
                     if (error != null) {
                         TLRPC.TL_error error1 = new TLRPC.TL_error();
                         error1.text = error;

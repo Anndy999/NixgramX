@@ -33,7 +33,6 @@ public class UpdateHelper extends BaseRemoteHelper {
     private static final Object CHECK_LOCK = new Object();
     private static long latestCheckGeneration;
     private long checkGeneration;
-    private boolean silentRecheck;
     private boolean updateAlways = false;
     private int checkAccount;
     private int checkChannel;
@@ -100,48 +99,18 @@ public class UpdateHelper extends BaseRemoteHelper {
         return false;
     }
 
-    private void scheduleSilentRecheck() {
-        // The caller may enqueue its pending-update/UI changes in the delegate.
-        // Capture pending after those changes, and publish on the same UI queue.
-        AndroidUtilities.runOnUIThread(() -> {
-            final TLRPC.TL_help_appUpdate pending = SharedConfig.pendingAppUpdate;
-            synchronized (CHECK_LOCK) {
-                if (checkGeneration != latestCheckGeneration) {
-                    return;
-                }
-            }
-            Utilities.globalQueue.postRunnable(() -> {
-                synchronized (CHECK_LOCK) {
-                    if (checkGeneration != latestCheckGeneration) {
-                        return;
-                    }
-                }
-                var recheck = new UpdateHelper();
-                recheck.checkAccount = checkAccount;
-                recheck.checkChannel = checkChannel;
-                recheck.silentRecheck = true;
-                // A manual check with auto updates OFF still accepts a newer build.
-                recheck.manualCheckPending = true;
-                var completed = new AtomicBoolean();
-                recheck.load(checkAccount, getTag(checkChannel), (res, error) -> {
-                    if (!completed.compareAndSet(false, true) || res == null || error != null) {
-                        return;
-                    }
-                    AndroidUtilities.runOnUIThread(() -> {
-                        synchronized (CHECK_LOCK) {
-                            // Also protect pending written outside this helper while
-                            // the silent RPC (including getMessages) was in flight.
-                            if (checkGeneration != latestCheckGeneration
-                                    || SharedConfig.pendingAppUpdate != pending) {
-                                return;
-                            }
-                            SharedConfig.setNewAppVersionAvailable(res);
-                            NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
-                        }
-                    });
-                });
-            }, 1000);
-        });
+    @Override
+    protected int getPointerMessageId(String tag) {
+        return "updateBeta".equals(tag) ? BuildConfig.UPDATE_BETA_POINTER_ID : BuildConfig.UPDATE_RELEASE_POINTER_ID;
+    }
+
+    @Override
+    protected void load(int account, String tag, Delegate delegate) {
+        if (getPointerMessageId(tag) <= 0) {
+            onError("UPDATE_POINTER_NOT_CONFIGURED", delegate);
+            return;
+        }
+        super.load(account, tag, delegate);
     }
 
     private boolean isNewerThanInstalled(JSONObject response) throws JSONException {
@@ -153,9 +122,7 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     @Override
     protected void onError(String text, Delegate delegate) {
-        if (!silentRecheck) {
-            org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_FAILED, 0);
-        }
+        org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.UPDATE_FAILED, 0);
         manualCheckPending = false;
         if (delegate != null) {
             delegate.onTLResponse(null, text);
@@ -196,17 +163,21 @@ public class UpdateHelper extends BaseRemoteHelper {
         return files.getOrDefault("universal", files.get("arm64-v8a"));
     }
 
-    private Map<String, Integer> jsonToMap(JSONObject obj) {
+    private Map<String, Integer> jsonToMap(JSONObject obj) throws JSONException {
         Map<String, Integer> map = new HashMap<>();
         List<String> abis = new ArrayList<>();
         abis.add("arm64-v8a");
         abis.add("universal");
-        try {
-            for (var abi : abis) {
-                map.put(abi, obj.getInt(abi));
+        for (var abi : abis) {
+            if (obj.has(abi)) {
+                int id = obj.getInt(abi);
+                if (id <= 0) {
+                    throw new JSONException("Invalid APK message ID");
+                }
+                map.put(abi, id);
             }
-        } catch (JSONException ignored) {
         }
+        if (map.isEmpty()) throw new JSONException("Missing supported APK");
         return map;
     }
 
@@ -293,6 +264,23 @@ public class UpdateHelper extends BaseRemoteHelper {
             onError("UPDATE_METADATA_EMPTY", delegate);
             return;
         }
+        // Validate before version comparison: malformed current/older metadata is
+        // an error, never a successful no-update that clears an existing pending APK.
+        try {
+            for (var metadata : responses) {
+                if (metadata.getInt("version_code") <= 0 || metadata.getString("version").trim().isEmpty()) {
+                    throw new JSONException("Missing version");
+                }
+                metadata.getBoolean("can_not_skip");
+                metadata.getInt("sticker");
+                metadata.getInt("message");
+                jsonToMap(metadata.getJSONObject("document"));
+                metadata.getString("url");
+            }
+        } catch (JSONException e) {
+            onError("UPDATE_METADATA_INVALID", delegate);
+            return;
+        }
         var update = getShouldUpdateVersion(responses);
         if (update == null) {
             manualCheckPending = false;
@@ -344,6 +332,15 @@ public class UpdateHelper extends BaseRemoteHelper {
      * @param manualUserCheck user-initiated check (e.g. long-press); must not be swallowed when AutoUpdateChannel==OFF
      */
     public void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck) {
+        checkNewVersionAvailable(delegate, updateAlways, manualUserCheck, true);
+    }
+
+    /** FileRefController owns stage-queue maps; do not move its callback to UI. */
+    public void checkNewVersionAvailableForFileReference(Delegate delegate) {
+        checkNewVersionAvailable(delegate, false, false, false);
+    }
+
+    private void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck, boolean onUiThread) {
         final int account = UserConfig.selectedAccount;
         final int channel = NaConfig.INSTANCE.getAutoUpdateChannel().Int();
         if (!isChannelConfigured()) {
@@ -373,13 +370,22 @@ public class UpdateHelper extends BaseRemoteHelper {
             if (!completed.compareAndSet(false, true)) {
                 return;
             }
-            if (delegate != null) {
-                delegate.onTLResponse(res, error);
-            }
-            // Complete the foreground before scheduling any waiting. RPC failures
-            // stop immediately; only valid no-update/empty results get one recheck.
-            if (res == null && (error == null || "UPDATE_METADATA_EMPTY".equals(error))) {
-                check.scheduleSilentRecheck();
+            // Guard on the consumer queue, not before enqueueing a stale write.
+            Runnable completion = () -> {
+                synchronized (CHECK_LOCK) {
+                    if (delegate != null) {
+                        if (check.checkGeneration != latestCheckGeneration) {
+                            delegate.onTLResponse(null, "UPDATE_CHECK_SUPERSEDED");
+                        } else {
+                            delegate.onTLResponse(res, error);
+                        }
+                    }
+                }
+            };
+            if (onUiThread) {
+                AndroidUtilities.runOnUIThread(completion);
+            } else {
+                Utilities.stageQueue.postRunnable(completion);
             }
         });
     }
