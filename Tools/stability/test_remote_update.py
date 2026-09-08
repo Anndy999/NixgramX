@@ -161,6 +161,9 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
     static Result start(boolean manual){
         var r=new Result();UpdateHelper.getInstance().checkNewVersionAvailable(r::complete,false,manual);return r;
     }
+    static Result startFileRef(){
+        var r=new Result();UpdateHelper.getInstance().checkNewVersionAvailableForFileReference(r::complete);return r;
+    }
     static void idle(){
         check(ConnectionsManager.requests.isEmpty());
         check(Utilities.globalQueue.delayed.isEmpty());
@@ -176,7 +179,22 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
             check(h.successes==1 && h.error==null && ConnectionsManager.searches==2);
             idle();return;
         }
-        if(test.startsWith("overlap")){
+        if(test.equals("overlap-fileref-then-manual") || test.equals("overlap-manual-then-fileref")){
+            Result fileRef; Result manual;
+            ConnectionsManager.Request fileReq; ConnectionsManager.Request manReq;
+            if(test.equals("overlap-fileref-then-manual")){
+                fileRef=startFileRef();fileReq=pointer(0,101);
+                manual=start(true);manReq=pointer(0,101);
+            }else{
+                manual=start(true);manReq=pointer(0,101);
+                fileRef=startFileRef();fileReq=pointer(0,101);
+            }
+            fileReq.callback().run(payload(101,"new"),null);attachments(0,false);
+            check(fileRef.count==1 && fileRef.error==null && fileRef.update!=null);
+            manReq.callback().run(payload(101,"new"),null);attachments(0,false);
+            AndroidUtilities.drain();
+            check(manual.count==1 && manual.error==null && manual.update!=null);
+        }else if(test.startsWith("overlap")){
             var older=start(true);var oldReq=pointer(0,101);
             if(test.equals("overlap-queued")){
                 oldReq.callback().run(payload(101,"current"),null);
@@ -244,7 +262,7 @@ class RemoteUpdateTest(unittest.TestCase):
         for name, body in STUBS.items():
             path = cls.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text('package ' + '/'.join(Path(name).parts[:-1]).replace('/', '.') + ';\n' + body)
+            path.write_text('package ' + '/'.join(Path(name).parts[:-1]).replace('/', '.') + ';\\n' + body)
         for helper in ('BaseRemoteHelper.java', 'UpdateHelper.java'):
             shutil.copy(ROOT / 'TMessagesProj/src/main/java/tw/nekomimi/nekogram/helpers/remote' / helper, cls.root)
         (cls.root / 'RemoteUpdateTest.java').write_text(HARNESS)
@@ -264,7 +282,8 @@ def scenario(name):
 for case in ('same', 'new', 'rebuilt', 'release', 'automatic', 'account', 'lane',
              'malformed', 'missing-code', 'missing-version', 'invalid-doc',
              'resolve-error', 'pointer-error', 'missing-pointer', 'attachment-error',
-             'overlap', 'overlap-queued', 'duplicate', 'universal', 'shared-helper'):
+             'overlap', 'overlap-queued', 'overlap-fileref-then-manual',
+             'overlap-manual-then-fileref', 'duplicate', 'universal', 'shared-helper'):
     setattr(RemoteUpdateTest, 'test_' + case.replace('-', '_'), scenario(case))
 
 
