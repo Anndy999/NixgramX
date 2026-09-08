@@ -262,7 +262,7 @@ class RemoteUpdateTest(unittest.TestCase):
         for name, body in STUBS.items():
             path = cls.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text('package ' + '/'.join(Path(name).parts[:-1]).replace('/', '.') + ';\\n' + body)
+            path.write_text('package ' + '/'.join(Path(name).parts[:-1]).replace('/', '.') + ';\n' + body)
         for helper in ('BaseRemoteHelper.java', 'UpdateHelper.java'):
             shutil.copy(ROOT / 'TMessagesProj/src/main/java/tw/nekomimi/nekogram/helpers/remote' / helper, cls.root)
         (cls.root / 'RemoteUpdateTest.java').write_text(HARNESS)
