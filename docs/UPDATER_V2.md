@@ -22,6 +22,12 @@ FileRefController retains stage-queue delivery for its account-owned maps.
 Permanent IDs live in gradle.properties; BuildConfig and the publisher read the
 same properties. Zero deliberately fails closed and is NOT a deployable V2 setup.
 
+Verified initialization run: https://github.com/Anndy999/NixgramX/actions/runs/34190498353
+Beta pointer: https://t.me/NixgramXMetadata/65 (1284).
+Release pointer: https://t.me/NixgramXMetadata/66 (1278).
+Both were created, edited and read back by the existing publisher. No new APK or
+legacy metadata was published in this initialization. Do not recreate these IDs.
+
 The existing HELPER_BOT_TOKEN identity creates, edits and reads back pointers.
 Beta Build's `initialize_pointers=true, publish=false` mode builds no APK and
 publishes no new version. Supply reviewed legacy message IDs and expected codes.
