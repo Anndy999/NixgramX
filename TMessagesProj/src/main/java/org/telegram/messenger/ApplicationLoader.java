@@ -855,7 +855,8 @@ public class ApplicationLoader extends Application {
             }
             return;
         }
-        UpdateHelper.getInstance().checkNewVersionAvailable((res, error) -> AndroidUtilities.runOnUIThread(() -> {
+        // UpdateHelper delivers on the UI queue under its generation guard.
+        UpdateHelper.getInstance().checkNewVersionAvailable((res, error) -> {
             if (res instanceof TLRPC.TL_help_appUpdate) {
                 SharedConfig.setNewAppVersionAvailable((TLRPC.TL_help_appUpdate) res);
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
@@ -863,7 +864,7 @@ public class ApplicationLoader extends Application {
             if (whenDone != null) {
                 whenDone.run();
             }
-        }), false, force);
+        }, false, force);
     }
     public BetaUpdate getUpdate() {
         return null;

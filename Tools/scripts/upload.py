@@ -9,6 +9,7 @@ from sys import argv
 from pyrogram import Client
 from pyrogram.enums import ParseMode
 from pyrogram.types import InputMediaDocument
+from update_pointer import METADATA_CHANNEL, pointer_id, parse_metadata, edit_pointer
 
 api_id = os.environ.get("APP_ID")
 api_hash = os.environ.get("APP_HASH")
@@ -577,6 +578,14 @@ async def main():
     )
     client = get_client(bot_token)
     await client.start()
+    # Fail before uploading anything if the reviewed permanent pointer is absent.
+    lane = "beta" if beta_version else "release"
+    pointer_id(lane)
+    if not metadata_chat_id:
+        raise ValueError("Metadata channel required for V2 publication")
+    target = await client.get_chat(int(metadata_chat_id) if metadata_chat_id.lstrip('-').isdigit() else metadata_chat_id)
+    if target.id != METADATA_CHANNEL:
+        raise ValueError("Wrong permanent-pointer metadata channel")
     await resolve_and_print_chat(client, chat_id)
     # Public @NixgramX: APK media group + NagramX-style 「日志」 caption only (never #update*).
     await send_to_channel(client, chat_id, with_caption=True)
@@ -593,13 +602,15 @@ async def main():
         # 「日志」 text message → JSON message id for UpdateAppAlertDialog changelog.
         changelog_message_id = await send_changelog_message(client, metadata_chat_id)
         sticker_message_id = await obtain_sticker_message_id(client, metadata_chat_id)
-        await send_update_json(
+        legacy = await send_update_json(
             client,
             metadata_chat_id,
             metadata_document_ids,
             sticker_message_id=sticker_message_id,
             changelog_message_id=changelog_message_id,
         )
+        # FINAL visibility switch, after real APK/changelog IDs and legacy metadata.
+        await edit_pointer(client, lane, parse_metadata(legacy.text, lane))
         print(
             "Posted metadata APKs + 「日志」 + #update* JSON "
             f"(APK chat={chat_id}, metadata chat={metadata_chat_id}); "
