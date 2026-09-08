@@ -332,15 +332,16 @@ public class UpdateHelper extends BaseRemoteHelper {
      * @param manualUserCheck user-initiated check (e.g. long-press); must not be swallowed when AutoUpdateChannel==OFF
      */
     public void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck) {
-        checkNewVersionAvailable(delegate, updateAlways, manualUserCheck, true);
+        checkNewVersionAvailable(delegate, updateAlways, manualUserCheck, true, true);
     }
 
     /** FileRefController owns stage-queue maps; do not move its callback to UI. */
     public void checkNewVersionAvailableForFileReference(Delegate delegate) {
-        checkNewVersionAvailable(delegate, false, false, false);
+        // Independent transport refresh: must not join or bump the UI/pending generation.
+        checkNewVersionAvailable(delegate, false, false, false, false);
     }
 
-    private void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck, boolean onUiThread) {
+    private void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck, boolean onUiThread, boolean guardGeneration) {
         final int account = UserConfig.selectedAccount;
         final int channel = NaConfig.INSTANCE.getAutoUpdateChannel().Int();
         if (!isChannelConfigured()) {
@@ -362,8 +363,10 @@ public class UpdateHelper extends BaseRemoteHelper {
         check.checkChannel = channel;
         check.updateAlways = updateAlways;
         check.manualCheckPending = updateAlways || manualUserCheck;
-        synchronized (CHECK_LOCK) {
-            check.checkGeneration = ++latestCheckGeneration;
+        if (guardGeneration) {
+            synchronized (CHECK_LOCK) {
+                check.checkGeneration = ++latestCheckGeneration;
+            }
         }
         var completed = new AtomicBoolean();
         check.load(account, getTag(channel), (res, error) -> {
@@ -372,13 +375,18 @@ public class UpdateHelper extends BaseRemoteHelper {
             }
             // Guard on the consumer queue, not before enqueueing a stale write.
             Runnable completion = () -> {
+                if (delegate == null) {
+                    return;
+                }
+                if (!guardGeneration) {
+                    delegate.onTLResponse(res, error);
+                    return;
+                }
                 synchronized (CHECK_LOCK) {
-                    if (delegate != null) {
-                        if (check.checkGeneration != latestCheckGeneration) {
-                            delegate.onTLResponse(null, "UPDATE_CHECK_SUPERSEDED");
-                        } else {
-                            delegate.onTLResponse(res, error);
-                        }
+                    if (check.checkGeneration != latestCheckGeneration) {
+                        delegate.onTLResponse(null, "UPDATE_CHECK_SUPERSEDED");
+                    } else {
+                        delegate.onTLResponse(res, error);
                     }
                 }
             };
