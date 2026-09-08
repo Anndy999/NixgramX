@@ -146,6 +146,8 @@ android {
         buildConfigField 'String', 'BUILD_VERSION_STRING', '"' + verName + '"'
         buildConfigField 'String', 'DIAGNOSTIC_COMMIT', '"' + (commitId ==~ /[0-9a-fA-F]{40}/ ? commitId : 'unknown') + '"'
         buildConfigField 'String', 'NIXGRAMX_CHANNEL', '"' + distributionChannel + '"'
+        buildConfigField 'int', 'UPDATE_BETA_POINTER_ID', NIXGRAMX_UPDATE_BETA_POINTER_ID
+        buildConfigField 'int', 'UPDATE_RELEASE_POINTER_ID', NIXGRAMX_UPDATE_RELEASE_POINTER_ID
         buildConfigField 'String', 'OFFICIAL_VERSION', '"' + officialVer + '"'
         buildConfigField 'int', 'OFFICIAL_VERSION_CODE', officialCode + ''
         buildConfigField 'int', 'APP_ID', appId

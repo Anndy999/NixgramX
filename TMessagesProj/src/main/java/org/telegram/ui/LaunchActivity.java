@@ -6134,7 +6134,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         UpdateHelper.getInstance().checkNewVersionAvailable((res, error) -> {
             SharedConfig.lastUpdateCheckTime = System.currentTimeMillis();
             SharedConfig.saveConfig();
-            AndroidUtilities.runOnUIThread(() -> {
+            // Already on UI under UpdateHelper's generation guard. Do not defer
+            // pending writes past a subsequent account/lane check.
                 if (res != null) {
                     UpdateHelper.applyPendingUpdateCheckResult(res, error);
                     if (res.can_not_skip) {
@@ -6161,7 +6162,6 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 if (progress != null) {
                     progress.end();
                 }
-            });
         }, updateAlways, force);
         if (progress != null) {
             progress.init();
