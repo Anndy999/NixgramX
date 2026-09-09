@@ -58,11 +58,6 @@ jobs:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
 
       - name: Prepare signed diagnostic Beta build
-        env:
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
-          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
-          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
-          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -83,6 +78,11 @@ jobs:
           PY
 
       - name: Build signed diagnostic Beta APK
+        env:
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
+          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
         run: ./gradlew :TMessagesProj:assembleStaging --no-daemon
 
       - name: Collect and verify arm64-v8a APK
