@@ -59,6 +59,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.NixgramXDiagnostics;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
@@ -205,6 +206,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     private boolean glassMode;
     private boolean glassOnlyBack;
     private boolean glassModeIsForum;
+    private final NixgramXDiagnostics.Header glassGeometryDiagnostics = new NixgramXDiagnostics.Header(this);
 
     private ChatAvatarContainer chatAvatarContainer;
 
@@ -214,6 +216,11 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
     public void setChatAvatarContainer(ChatAvatarContainer chatAvatarContainer) {
         this.chatAvatarContainer = chatAvatarContainer;
+    }
+
+    /** Temporary 1284 diagnostic; lane contains only a generic peer class. */
+    public void setGlassGeometryDiagnosticLane(String lane) {
+        glassGeometryDiagnostics.setLane(lane);
     }
 
     public void setupGlass(BlurredBackgroundDrawableViewFactory factory, BlurredBackgroundColorProvider colorProvider) {
@@ -2323,18 +2330,21 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
         final int t = getHeight() - (getCurrentActionBarHeight() + s) / 2 - p;
         final int b = t + s + p * 2;
+        int diagnosticRightOffset = -1;
+        int diagnosticLeftDefault = -1;
+        int diagnosticRightDefault = -1;
 
         if (glassDrawable != null && !glassOnlyBack) {
             final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * animatorHasMenuItems.getFloatValue()));
-            final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
+            diagnosticRightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
 
-            final int leftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
-            final int rightDefault = getWidth() - rightOffset;
-            final int widthDefault = rightDefault - leftDefault;
+            diagnosticLeftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
+            diagnosticRightDefault = getWidth() - diagnosticRightOffset;
+            final int widthDefault = diagnosticRightDefault - diagnosticLeftDefault;
             final int left, right;
             if (chatAvatarContainer != null) {
                 final int width = lerp(Math.min(widthDefault, (int) animatorAvatarContainerWidth.getFactor() + p * 2), widthDefault, Math.max(searchFactor, actionModeFactor));
-                left = (rightDefault + leftDefault - width) / 2;
+                left = (diagnosticRightDefault + diagnosticLeftDefault - width) / 2;
                 right = left + width;
 
                 final float translationX = left
@@ -2344,8 +2354,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
                 chatAvatarContainer.setTranslationX(translationX);
                 chatAvatarContainer.setPivotX((chatAvatarContainer.getMeasuredWidth()) / 2f - translationX );
             } else {
-                left = leftDefault;
-                right = rightDefault;
+                left = diagnosticLeftDefault;
+                right = diagnosticRightDefault;
             }
 
             glassDrawable.setBounds(left, t, right, b);
@@ -2359,6 +2369,53 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             glassDrawableMenu.setBounds(getWidth() - Math.max(s, menuWidth) - p * 2, t, getWidth(), b);
             glassDrawableMenu.setAlpha(hasForcedMenuWidth ? 255 : (int) (255 * animatorHasMenuItems.getFloatValue()));
             glassDrawableMenu.draw(canvas);
+        }
+
+        if (glassGeometryDiagnostics.isEnabled() && glassDrawable != null) {
+            final NixgramXDiagnostics.Header d = glassGeometryDiagnostics;
+            final Rect centerRaw = glassDrawable.getBounds();
+            final Rect centerPadded = glassDrawable.getPaddedBounds();
+            d.barW = getWidth(); d.barH = getHeight();
+            d.centerL = centerRaw.left; d.centerT = centerRaw.top; d.centerR = centerRaw.right; d.centerB = centerRaw.bottom;
+            d.centerPL = centerPadded.left; d.centerPT = centerPadded.top; d.centerPR = centerPadded.right; d.centerPB = centerPadded.bottom;
+            d.sourceL = Math.round(centerPadded.left + glassDrawable.getSourceOffsetX()); d.sourceT = Math.round(centerPadded.top + glassDrawable.getSourceOffsetY());
+            d.sourceR = Math.round(centerPadded.right + glassDrawable.getSourceOffsetX()); d.sourceB = Math.round(centerPadded.bottom + glassDrawable.getSourceOffsetY());
+            d.radius0 = glassDrawable.getRadiusAt(0); d.radius2 = glassDrawable.getRadiusAt(2); d.radius4 = glassDrawable.getRadiusAt(4); d.radius6 = glassDrawable.getRadiusAt(6);
+            d.shaderRadius0 = glassDrawable.getShaderRadiusAt(0); d.shaderRadius2 = glassDrawable.getShaderRadiusAt(2); d.shaderRadius4 = glassDrawable.getShaderRadiusAt(4); d.shaderRadius6 = glassDrawable.getShaderRadiusAt(6);
+            if (glassDrawableBack != null) {
+                final Rect backRaw = glassDrawableBack.getBounds(); final Rect backPadded = glassDrawableBack.getPaddedBounds();
+                d.backL = backRaw.left; d.backT = backRaw.top; d.backR = backRaw.right; d.backB = backRaw.bottom;
+                d.backPL = backPadded.left; d.backPT = backPadded.top; d.backPR = backPadded.right; d.backPB = backPadded.bottom;
+            }
+            if (glassDrawableMenu != null) {
+                final Rect menuRaw = glassDrawableMenu.getBounds(); final Rect menuPadded = glassDrawableMenu.getPaddedBounds();
+                d.menuL = menuRaw.left; d.menuT = menuRaw.top; d.menuR = menuRaw.right; d.menuB = menuRaw.bottom;
+                d.menuPL = menuPadded.left; d.menuPT = menuPadded.top; d.menuPR = menuPadded.right; d.menuPB = menuPadded.bottom;
+            }
+            d.menuWidth = menuWidth; d.visibleItems = 0; d.largestItemWidth = 0;
+            if (menu != null) for (int i = 0, count = menu.getChildCount(); i < count; i++) {
+                final View item = menu.getChildAt(i);
+                if (item instanceof ActionBarMenuItem && item.getVisibility() == VISIBLE) {
+                    d.visibleItems++; d.largestItemWidth = Math.max(d.largestItemWidth, item.getMeasuredWidth());
+                }
+            }
+            d.rightOffset = diagnosticRightOffset;
+            d.leftDefault = diagnosticLeftDefault;
+            d.rightDefault = diagnosticRightDefault;
+            d.avatarAttached = chatAvatarContainer != null && chatAvatarContainer.isAttachedToWindow();
+            d.avatarFactor = animatorAvatarContainerHasAvatar.getFloatValue(); d.avatarWidthFactor = animatorAvatarContainerWidth.getFactor();
+            d.searchFactor = searchFactor; d.actionModeFactor = actionModeFactor; d.forum = glassModeIsForum; d.clipChildren = getClipChildren(); d.renderNodeClipToOutline = glassDrawable.isClipToOutline();
+            if (chatAvatarContainer != null) {
+                final int tx = Math.round(chatAvatarContainer.getTranslationX());
+                d.titleL = chatAvatarContainer.getLeft() + tx; d.titleT = chatAvatarContainer.getTop() + Math.round(chatAvatarContainer.getTranslationY());
+                d.titleR = chatAvatarContainer.getRight() + tx; d.titleB = chatAvatarContainer.getBottom() + Math.round(chatAvatarContainer.getTranslationY());
+                if (chatAvatarContainer.avatarImageView != null) {
+                    final View avatar = chatAvatarContainer.avatarImageView;
+                    d.avatarL = d.titleL + avatar.getLeft() + Math.round(avatar.getTranslationX()); d.avatarT = d.titleT + avatar.getTop() + Math.round(avatar.getTranslationY());
+                    d.avatarR = d.titleL + avatar.getRight() + Math.round(avatar.getTranslationX()); d.avatarB = d.titleT + avatar.getBottom() + Math.round(avatar.getTranslationY());
+                }
+            }
+            d.changed();
         }
 
         if (blurredBackground && actionBarColor != Color.TRANSPARENT) {

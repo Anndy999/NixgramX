@@ -36,7 +36,7 @@ public class BlurredBackgroundDrawableRenderNode extends BlurredBackgroundDrawab
     public BlurredBackgroundDrawableRenderNode(BlurredBackgroundSource source) {
         this.renderNode = new RenderNode("BlurredNode");
         this.renderNodeFill = new RenderNode("BlurredFill");
-        this.renderNode.setClipToOutline(true);
+        setClipToOutline(true);
         this.renderNode.setClipToBounds(true);
 
         this.source = source;

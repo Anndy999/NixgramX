@@ -184,6 +184,7 @@ import org.telegram.messenger.MessageSuggestionParams;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.NixgramXDiagnostics;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SecureDocument;
 import org.telegram.messenger.SendMessagesHelper;
@@ -371,6 +372,19 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
     private final static float ZOOM_SCALE = 0.1f;
     private final static int MARK_DEFERRED_IMAGE_LOADING = 1;
+
+    private void startTransitionDiagnostic(ChatActivity chatActivity) {
+        if (chatActivity == null) return;
+        final String peer;
+        if (chatActivity.getCurrentUser() != null) {
+            peer = "PRIVATE";
+        } else if (ChatObject.isChannelAndNotMegaGroup(chatActivity.getCurrentChat())) {
+            peer = "CHANNEL";
+        } else {
+            peer = "GROUP";
+        }
+        NixgramXDiagnostics.startPhotoViewerTransition(parentActivity, peer, Theme.isCurrentThemeDark() ? "DARK" : "LIGHT");
+    }
 
     private boolean ALLOW_USE_SURFACE = Build.VERSION.SDK_INT >= 30;
 
@@ -17975,6 +17989,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         allowShowFullscreenButton = true;
         usedSurfaceView = false;
         parentChatActivity = chatActivity;
+        startTransitionDiagnostic(chatActivity);
         lastTitle = null;
         isEmbedVideo = embedSeekTime != null;
         if (editCoverButton != null) {
@@ -18270,6 +18285,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         if (provider != null) {
                             provider.onOpen();
                         }
+                        NixgramXDiagnostics.finishPhotoViewerTransition();
                     };
 
                     if (!openedFullScreenVideo) {
@@ -18427,6 +18443,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             if (provider != null) {
                                 provider.onOpen();
                             }
+                            NixgramXDiagnostics.finishPhotoViewerTransition();
                         }
                     });
                     animatorSet.start();
@@ -18640,6 +18657,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (parentActivity == null || !isInline && !isVisible || checkAnimation() || placeProvider == null) {
             return;
         }
+        NixgramXDiagnostics.startPhotoViewerCloseTransition(parentActivity);
 //        if (captionEditText.hideActionMode() && !fromEditMode) {
 //            return;
 //        }
@@ -18774,6 +18792,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             isInline = false;
             animationInProgress = 0;
             onPhotoClosed(object);
+            NixgramXDiagnostics.finishPhotoViewerTransition();
             containerView.setScaleX(1.0f);
             containerView.setScaleY(1.0f);
             if (!doneButtonPressed) {
@@ -18948,6 +18967,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     animationInProgress = 0;
                     invalidateBlur();
                     onPhotoClosed(object);
+                    NixgramXDiagnostics.finishPhotoViewerTransition();
                     MediaController.getInstance().tryResumePausedAudio();
                     if (stickerEmpty && !stickerEmptySent && imagesArrLocals != null) {
                         for (Object obj : imagesArrLocals) {
@@ -19010,6 +19030,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     containerView.setLayerType(View.LAYER_TYPE_NONE, null);
                     animationInProgress = 0;
                     onPhotoClosed(object);
+                    NixgramXDiagnostics.finishPhotoViewerTransition();
                     containerView.setScaleX(1.0f);
                     containerView.setScaleY(1.0f);
                     MediaController.getInstance().tryResumePausedAudio();
@@ -23204,9 +23225,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void invalidateBlur() {
-        if (stickerMakerView != null && stickerMakerView.isThanosInProgress) {
-            return;
-        }
+        final long diagnosticStartNs = NixgramXDiagnostics.startTimer();
+        try {
+            if (stickerMakerView != null && stickerMakerView.isThanosInProgress) {
+                return;
+            }
 //        if (animationInProgress != 0) {
 //            return;
 //        }
@@ -23240,6 +23263,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         }
         if (containerView != null) {
             containerView.invalidate();
+        }
+        } finally {
+            NixgramXDiagnostics.recordPhotoViewerBlur(diagnosticStartNs);
         }
     }
 

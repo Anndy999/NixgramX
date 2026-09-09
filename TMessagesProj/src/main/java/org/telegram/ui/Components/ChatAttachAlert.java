@@ -108,6 +108,7 @@ import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessageSuggestionParams;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.NixgramXDiagnostics;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.SharedConfig;
@@ -7379,7 +7380,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
     private final ArrayList<RectF> iBlur3PositionsMerged = new ArrayList<>();
 
     public void blur3_InvalidateBlur() {
+        final long diagnosticStartNs = NixgramXDiagnostics.startTimer();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
+            NixgramXDiagnostics.recordAttachBlur(diagnosticStartNs, false);
             return;
         }
 
@@ -7407,7 +7410,8 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
         final int mergedPositionsCount = RectFMergeBounding.mergeOverlapping(iBlur3Positions, hasFastScroll ? 3 : 2, iBlur3PositionsMerged);
         scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3PositionsMerged, mergedPositionsCount);
-        scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+        final boolean updated = scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+        NixgramXDiagnostics.recordAttachBlur(diagnosticStartNs, updated);
     }
 
     @SuppressLint("ViewConstructor")

@@ -16,6 +16,7 @@ import androidx.annotation.RequiresApi;
 
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.MediaDataController;
+import org.telegram.messenger.NixgramXDiagnostics;
 import org.telegram.messenger.utils.RenderNodeEffects;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
@@ -297,6 +298,7 @@ public class DownscaleScrollableNoiseSuppressor {
     long lastHash;
 
     private boolean invalidateResultRenderNodes(int width, int height) {
+        final long rebuildStartNs = NixgramXDiagnostics.startTimer();
         boolean ignoreHashCheck = false;
         long hash = 0;
 
@@ -322,6 +324,7 @@ public class DownscaleScrollableNoiseSuppressor {
         }
 
         if (hash == lastHash && !ignoreHashCheck) {
+            if (rebuildStartNs != 0L) NixgramXDiagnostics.recordSuppressorRebuild(System.nanoTime() - rebuildStartNs);
             return false;
         }
 
@@ -345,6 +348,7 @@ public class DownscaleScrollableNoiseSuppressor {
             renderNode.endRecording();
         }
 
+        if (rebuildStartNs != 0L) NixgramXDiagnostics.recordSuppressorRebuild(System.nanoTime() - rebuildStartNs);
         return true;
     }
 
@@ -372,12 +376,15 @@ public class DownscaleScrollableNoiseSuppressor {
             tmpRectF.set(position);
 
             builder.start();
+            final long hashStartNs = NixgramXDiagnostics.startTimer();
             capture.captureCalculateHash(builder, tmpRectF);
             final long hash = builder.get();
 
             if (!builder.isUnsupported() && sourcePart.lastHash == hash && sourcePart.renderNode.hasDisplayList()) {
+                if (hashStartNs != 0L) NixgramXDiagnostics.recordSuppressorHash(System.nanoTime() - hashStartNs, true, false);
                 continue;
             }
+            if (hashStartNs != 0L) NixgramXDiagnostics.recordSuppressorHash(System.nanoTime() - hashStartNs, false, builder.isUnsupported());
 
             sourcePart.lastHash = hash;
 
@@ -385,7 +392,9 @@ public class DownscaleScrollableNoiseSuppressor {
             c.save();
             c.translate(-position.left, -position.top);
 
+            final long captureStartNs = NixgramXDiagnostics.startTimer();
             capture.capture(c, tmpRectF);
+            if (captureStartNs != 0L) NixgramXDiagnostics.recordSuppressorCapture(System.nanoTime() - captureStartNs);
             c.restore();
             endRecordingRect();
 

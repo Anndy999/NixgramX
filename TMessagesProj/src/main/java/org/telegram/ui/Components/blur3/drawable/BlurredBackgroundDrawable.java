@@ -46,6 +46,7 @@ import java.util.Arrays;
 import xyz.nextalone.nagram.NaConfig;
 
 public abstract class BlurredBackgroundDrawable extends Drawable {
+    private boolean clipToOutline;
     public BlurredBackgroundDrawable() {
         boundProps.strokeWidthTop = dpf2(1);
         boundProps.strokeWidthBottom = dpf2(2 / 3f);
@@ -75,6 +76,7 @@ public abstract class BlurredBackgroundDrawable extends Drawable {
     }
 
     public BlurredBackgroundDrawable setClipToOutline(boolean clipToOutline) {
+        this.clipToOutline = clipToOutline;
         return this;
     }
 
@@ -141,6 +143,20 @@ public abstract class BlurredBackgroundDrawable extends Drawable {
 
     public Rect getPaddedBounds() {
         return boundProps.boundsWithPadding;
+    }
+
+    /** Primitive-only access for the temporary geometry diagnostic. */
+    public float getRadiusAt(int index) {
+        return boundProps.radii[index];
+    }
+
+    /** Primitive-only access for the temporary geometry diagnostic. */
+    public float getShaderRadiusAt(int index) {
+        return boundProps.shaderRadii[index];
+    }
+
+    public boolean isClipToOutline() {
+        return clipToOutline;
     }
 
     public Path getPath() {

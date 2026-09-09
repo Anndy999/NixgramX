@@ -5105,6 +5105,17 @@ public class ChatActivity extends BaseFragment implements
             glassBackgroundDrawableFactory,
             BlurredBackgroundProviderImpl.topPanelChatActivity(themeDelegate),
             ChatObject.isForum(currentChat));
+        if (chatMode == MODE_DEFAULT) {
+            if (currentUser != null) {
+                actionBar.setGlassGeometryDiagnosticLane("PRIVATE");
+            } else if (ChatObject.isForum(currentChat)) {
+                actionBar.setGlassGeometryDiagnosticLane("FORUM");
+            } else if (ChatObject.isChannelAndNotMegaGroup(currentChat)) {
+                actionBar.setGlassGeometryDiagnosticLane("CHANNEL");
+            } else if (currentChat != null) {
+                actionBar.setGlassGeometryDiagnosticLane("GROUP");
+            }
+        }
 
         if (chatMode == MODE_PINNED) {
             actionBar.setChatAvatarContainer(avatarContainer);
