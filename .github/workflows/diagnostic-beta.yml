@@ -1,6 +1,9 @@
 name: Diagnostic Beta APK
 
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       ref:
@@ -26,7 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref }}
+          # PR runs use the diagnostic head directly, never the synthetic
+          # merge commit with main. Manual dispatch keeps the explicit input.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref }}
           fetch-depth: 0
           submodules: recursive
           persist-credentials: false
