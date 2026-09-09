@@ -23207,9 +23207,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (stickerMakerView != null && stickerMakerView.isThanosInProgress) {
             return;
         }
-//        if (animationInProgress != 0) {
-//            return;
-//        }
+        if (animationInProgress != 0) {
+            return;
+        }
 
         invalidateAllGlassAttachedViews();
 
