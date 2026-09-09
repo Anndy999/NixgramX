@@ -5106,6 +5106,14 @@ public class ChatActivity extends BaseFragment implements
             BlurredBackgroundProviderImpl.topPanelChatActivity(themeDelegate),
             ChatObject.isForum(currentChat));
 
+        if (chatMode == MODE_DEFAULT && !isTopic) {
+            if (currentUser != null) {
+                actionBar.setGlassGeometryDiagnosticLane("private");
+            } else if (ChatObject.isChannelAndNotMegaGroup(currentChat)) {
+                actionBar.setGlassGeometryDiagnosticLane("channel");
+            }
+        }
+
         if (chatMode == MODE_DEFAULT && !isTopic && ChatObject.isChannelAndNotMegaGroup(currentChat)) {
             actionBar.setGlassMenuMinimumItems(2);
         }

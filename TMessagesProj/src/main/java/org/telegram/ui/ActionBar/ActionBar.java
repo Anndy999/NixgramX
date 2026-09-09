@@ -42,6 +42,7 @@ import android.transition.Fade;
 import android.transition.TransitionManager;
 import android.transition.TransitionSet;
 import android.transition.TransitionValues;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -206,6 +207,15 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     private boolean glassOnlyBack;
     private boolean glassModeIsForum;
     private int glassMenuMinimumItems;
+    private String glassGeometryDiagnosticLane;
+    private String pendingGlassGeometryDiagnostic;
+    private String loggedGlassGeometryDiagnostic;
+    private final Runnable glassGeometryDiagnosticLogger = () -> {
+        if (pendingGlassGeometryDiagnostic != null && !TextUtils.equals(pendingGlassGeometryDiagnostic, loggedGlassGeometryDiagnostic)) {
+            Log.i("NixgramXHeaderGeometry", pendingGlassGeometryDiagnostic);
+            loggedGlassGeometryDiagnostic = pendingGlassGeometryDiagnostic;
+        }
+    };
 
     private ChatAvatarContainer chatAvatarContainer;
 
@@ -221,6 +231,73 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     public void setGlassMenuMinimumItems(int minimumItems) {
         glassMenuMinimumItems = Math.max(0, minimumItems);
         invalidate();
+    }
+
+    /** Temporary device diagnostic. The lane is a generic peer class, never a peer identifier. */
+    public void setGlassGeometryDiagnosticLane(String lane) {
+        glassGeometryDiagnosticLane = lane;
+        pendingGlassGeometryDiagnostic = null;
+        loggedGlassGeometryDiagnostic = null;
+        removeCallbacks(glassGeometryDiagnosticLogger);
+    }
+
+    private static String geometryRect(Rect rect) {
+        return "[" + rect.left + "," + rect.top + "," + rect.right + "," + rect.bottom + "]";
+    }
+
+    private static String shaderSampleRect(BlurredBackgroundDrawable drawable) {
+        Rect padded = drawable.getPaddedBounds();
+        return "[" + (padded.left + drawable.getSourceOffsetX()) + "," + (padded.top + drawable.getSourceOffsetY()) + "," + (padded.right + drawable.getSourceOffsetX()) + "," + (padded.bottom + drawable.getSourceOffsetY()) + "]";
+    }
+
+    private void scheduleGlassGeometryDiagnostic(int p, int s, int t, int b, int menuWidthA, int menuWidth, int glassMenuWidth, int rightOffset, int leftDefault, int rightDefault) {
+        if (glassGeometryDiagnosticLane == null || glassDrawable == null) {
+            return;
+        }
+        Rect centerPadding = new Rect();
+        Rect menuPadding = new Rect();
+        glassDrawable.getPadding(centerPadding);
+        if (glassDrawableMenu != null) {
+            glassDrawableMenu.getPadding(menuPadding);
+        }
+        String snapshot = "lane=" + glassGeometryDiagnosticLane
+            + " bar=" + getWidth() + "x" + getHeight()
+            + " p=" + p + " s=" + s + " t=" + t + " b=" + b
+            + " centerRaw=" + geometryRect(glassDrawable.getBounds())
+            + " centerPadded=" + geometryRect(glassDrawable.getPaddedBounds())
+            + " centerOutline=[0,0," + glassDrawable.getPaddedBounds().width() + "," + glassDrawable.getPaddedBounds().height() + "]"
+            + " centerLiquidShader=[0,0," + glassDrawable.getPaddedBounds().width() + "," + glassDrawable.getPaddedBounds().height() + "]"
+            + " centerShader=" + shaderSampleRect(glassDrawable)
+            + " centerRadius=" + (glassModeIsForum ? "forum" : dp(23))
+            + " centerPadding=" + geometryRect(centerPadding)
+            + " menuRaw=" + (glassDrawableMenu == null ? "-" : geometryRect(glassDrawableMenu.getBounds()))
+            + " menuPadded=" + (glassDrawableMenu == null ? "-" : geometryRect(glassDrawableMenu.getPaddedBounds()))
+            + " menuOutline=" + (glassDrawableMenu == null ? "-" : "[0,0," + glassDrawableMenu.getPaddedBounds().width() + "," + glassDrawableMenu.getPaddedBounds().height() + "]")
+            + " menuLiquidShader=" + (glassDrawableMenu == null ? "-" : "[0,0," + glassDrawableMenu.getPaddedBounds().width() + "," + glassDrawableMenu.getPaddedBounds().height() + "]")
+            + " menuShader=" + (glassDrawableMenu == null ? "-" : shaderSampleRect(glassDrawableMenu))
+            + " menuRadius=" + dp(23)
+            + " menuPadding=" + geometryRect(menuPadding)
+            + " visibleItems=" + (menu == null ? 0 : menu.getVisibleItemCount())
+            + " largestItem=" + (menu == null ? 0 : menu.getLargestVisibleItemWidth())
+            + " menuAnimator=" + animatorMenuItemsWidth.getFactor() + "/" + animatorMenuItemsWidth.getToFactor()
+            + " hasMenuAnimator=" + animatorHasMenuItems.getFloatValue()
+            + " menuWidthA=" + menuWidthA + " menuWidth=" + menuWidth + " glassMenuWidth=" + glassMenuWidth
+            + " minimumItems=" + glassMenuMinimumItems
+            + " rightOffset=" + rightOffset + " leftDefault=" + leftDefault + " rightDefault=" + rightDefault
+            + " avatarAttached=" + (chatAvatarContainer != null)
+            + " avatarFactor=" + animatorAvatarContainerHasAvatar.getFloatValue()
+            + " avatarWidth=" + animatorAvatarContainerWidth.getFactor()
+            + " searchFactor=" + searchFactor + " actionModeFactor=" + getActionModeFactor()
+            + " forcedMenu=" + hasForcedMenuWidth + "/" + hasForcedMenuMinWidth
+            + " clipChildren=" + getClipChildren()
+            + " renderNodeClipToOutline=true"
+            + " forum=" + glassModeIsForum;
+        if (TextUtils.equals(snapshot, pendingGlassGeometryDiagnostic) || TextUtils.equals(snapshot, loggedGlassGeometryDiagnostic)) {
+            return;
+        }
+        pendingGlassGeometryDiagnostic = snapshot;
+        removeCallbacks(glassGeometryDiagnosticLogger);
+        postDelayed(glassGeometryDiagnosticLogger, 500);
     }
 
     static int calculateGlassMenuGeometryWidth(int visibleMenuWidth, int visibleItemCount, int largestVisibleItemWidth, int minimumItems) {
@@ -2349,6 +2426,9 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final int menuWidthA = hasForcedMenuWidth ? forcedMenuWidth : (int) animatorMenuItemsWidth.getFactor();
         final int menuWidth = hasForcedMenuMinWidth ? Math.max((int) (forcedMenuMinWidth * (1f - searchFactor)), menuWidthA) : menuWidthA;
         final int glassMenuWidth = getGlassMenuGeometryWidth(menuWidth);
+        int rightOffset = -1;
+        int leftDefault = -1;
+        int rightDefault = -1;
 
         final boolean hasBackButton = backButtonImageView != null && backButtonImageView.getVisibility() == View.VISIBLE;
 
@@ -2357,10 +2437,10 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
         if (glassDrawable != null && !glassOnlyBack) {
             final int menuWidthWithPadding = glassMenuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (glassMenuWidth > 0 ? p : 0) : (int) (p * animatorHasMenuItems.getFloatValue()));
-            final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
+            rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
 
-            final int leftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
-            final int rightDefault = getWidth() - rightOffset;
+            leftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
+            rightDefault = getWidth() - rightOffset;
             final int widthDefault = rightDefault - leftDefault;
             final int left, right;
             if (chatAvatarContainer != null) {
@@ -2391,6 +2471,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             glassDrawableMenu.setAlpha(hasForcedMenuWidth ? 255 : (int) (255 * animatorHasMenuItems.getFloatValue()));
             glassDrawableMenu.draw(canvas);
         }
+        scheduleGlassGeometryDiagnostic(p, s, t, b, menuWidthA, menuWidth, glassMenuWidth, rightOffset, leftDefault, rightDefault);
 
         if (blurredBackground && actionBarColor != Color.TRANSPARENT) {
             rectTmp.set(0, 0, getMeasuredWidth(), getMeasuredHeight());
