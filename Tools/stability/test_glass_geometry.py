@@ -33,15 +33,12 @@ public class GlassGeometryTest {
             // Private/channel and back/menu buttons use uniform radii.
             check(d.setRadius(23*density)==d);
             check(Arrays.equals(d.boundProps.radii,d.boundProps.shaderRadii));
-            // Forum setup and every search transition must update both arrays.
-            for(float progress:new float[]{0,.25f,.5f,.75f,1}){
-                float left=(18.33f+(23-18.33f)*progress)*density;
-                int before=d.notifications,builds=d.boundProps.builds;
-                check(d.setRadius(left,23*density,23*density,left)==d);
-                check(Arrays.equals(d.boundProps.radii,d.boundProps.shaderRadii));
-                check(d.boundProps.radii[0]==left && d.boundProps.radii[6]==left);
-                check(d.notifications==before+1 && d.boundProps.builds==builds+1);
-            }
+            // Forum headers keep the same uniform 23dp shape during setup and search.
+            int before=d.notifications,builds=d.boundProps.builds;
+            check(d.setRadius(23*density)==d);
+            check(Arrays.equals(d.boundProps.radii,d.boundProps.shaderRadii));
+            check(d.boundProps.radii[0]==23*density && d.boundProps.radii[6]==23*density);
+            check(d.notifications==before+1 && d.boundProps.builds==builds+1);
             // Deliberate five-argument clipped-bottom behavior must not change.
             d.setRadius(1,2,3,4,true);
             check(d.boundProps.radii[4]==0 && d.boundProps.radii[6]==0);
@@ -50,7 +47,7 @@ public class GlassGeometryTest {
             check(Arrays.equals(d.boundProps.radii,d.boundProps.shaderRadii));
             check(d.boundProps.radii[4]==7 && d.boundProps.radii[6]==8);
         }
-        System.out.println("PASS: uniform/forum/search radii, 5 densities, clipped-bottom preserved");
+        System.out.println("PASS: uniform forum/search radii, 5 densities, clipped-bottom preserved");
     }
 }
 '''.replace('METHODS', methods)
@@ -61,12 +58,14 @@ public class GlassGeometryTest {
             subprocess.run(['javac', '-encoding', 'UTF-8', '-d', str(root), str(path)], check=True)
             subprocess.run(['java', '-cp', str(root), 'GlassGeometryTest'], check=True)
 
-    def test_forum_reaches_per_corner_setter(self):
+    def test_forum_header_uses_uniform_radius(self):
         action = (ROOT / 'TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java').read_text(encoding='utf-8')
         chat = (ROOT / 'TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java').read_text(encoding='utf-8')
         renderer = (DRAWABLE.parent / 'BlurredBackgroundDrawableRenderNode.java').read_text(encoding='utf-8')
         self.assertIn('ChatObject.isForum(currentChat)', chat)
-        self.assertIn('glassDrawable.setRadius(dp(18.33f), dp(23), dp(23), dp(18.33f))', action)
-        self.assertIn('glassDrawable.setRadius(r2, r1, r1, r2)', action)
+        self.assertIn('glassDrawable.setRadius(dp(23));', action)
+        self.assertNotIn('glassDrawable.setRadius(dp(18.33f), dp(23), dp(23), dp(18.33f))', action)
+        self.assertNotIn('glassDrawable.setRadius(r2, r1, r1, r2)', action)
+        self.assertNotIn('lerp(dp(18.33f), dp(23), searchFieldVisibleAlpha)', action)
         self.assertIn('getOutline(outline, outlineRect, boundProps.radii)', renderer)
         self.assertIn('boundProps.shaderRadii[0]', renderer)

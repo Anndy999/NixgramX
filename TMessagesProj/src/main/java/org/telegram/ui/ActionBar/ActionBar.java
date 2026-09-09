@@ -231,11 +231,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         glassDrawable = factory.create(this)
             .setColorProvider(colorProvider)
             .setPadding(dp(6));
-        if (isForum) {
-            glassDrawable.setRadius(dp(18.33f), dp(23), dp(23), dp(18.33f));
-        } else {
-            glassDrawable.setRadius(dp(23));
-        }
+        glassDrawable.setRadius(dp(23));
 
 
         glassDrawableBack = factory.create(this)
@@ -1239,13 +1235,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         ValueAnimator alphaUpdate = ValueAnimator.ofFloat(searchFieldVisibleAlpha, visible ? 1f : 0f);
         alphaUpdate.addUpdateListener(anm -> {
             searchFieldVisibleAlpha = (float) anm.getAnimatedValue();
-
-            if (glassDrawable != null && glassModeIsForum) {
-                final float r1 = dp(23);
-                final float r2 = lerp(dp(18.33f), dp(23), searchFieldVisibleAlpha);
-                glassDrawable.setRadius(r2, r1, r1, r2);
-                invalidate();
-            }
 
             if (glassMode && menu != null) {
                 menu.setTranslationX(-lerp((float) dp(10), dp(5), searchFieldVisibleAlpha));
