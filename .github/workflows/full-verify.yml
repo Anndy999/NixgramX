@@ -1,38 +1,50 @@
-name: Full Verify
+name: Diagnostic Beta APK
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Git branch, tag, or SHA to verify (arm64-v8a Debug)'
+        description: 'Diagnostic branch or SHA to build as a signed Beta APK artifact'
         required: true
         type: string
-        default: main
+        default: diagnostic/combined-header-photoviewer-1284
 
 permissions:
   contents: read
 
 jobs:
-  full-verify:
+  diagnostic-beta:
+    name: Diagnostic Beta (arm64-v8a)
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      COMMIT_ID: ${{ github.sha }}
       NATIVE_TARGET: arm64-v8a
-      # Non-production compile-only placeholders, no repository secrets exposed.
-      TELEGRAM_APP_ID: '123456'
-      TELEGRAM_APP_HASH: '00000000000000000000000000000000'
+      NIXGRAMX_CHANNEL: beta
+      # The diagnostic source remains the 1284 baseline; this artifact must
+      # have a greater versionCode to install over an existing 1284 build.
+      NIXGRAMX_VERSION_CODE: '1285'
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
+          fetch-depth: 0
           submodules: recursive
           persist-credentials: false
 
-      - name: Record checked-out commit
+      - name: Verify diagnostic source boundary
         run: |
+          set -euo pipefail
+          git fetch --no-tags origin beta diagnostic/channel-header-runtime-geometry
+          git merge-base --is-ancestor 8e654a7605a2cbb3fca676a70e1253031793817d HEAD
+          if git merge-base --is-ancestor 0041b0bc6e9b00ca4f9279a20847f3b53a45f18c HEAD; then
+            echo 'Refuses to build: PR #46 is in the selected history.' >&2
+            exit 1
+          fi
+          if git merge-base --is-ancestor 0a65a788376c30e5e7e60b2e82d3c9e5334f1fc9 HEAD; then
+            echo 'Refuses to build: PR #47 is in the selected history.' >&2
+            exit 1
+          fi
           echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "Building ref=${{ inputs.ref }} sha=$(git rev-parse HEAD)"
 
       - uses: actions/setup-java@v5
         with:
@@ -45,124 +57,54 @@ jobs:
         with:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
 
-      - name: YAML, regression and diff checks
-        run: |
-          python3 -m pip install 'PyYAML==6.0.2'
-          python3 Tools/stability/static_checks.py
-          python3 -m unittest discover -s Tools/stability -p 'test_*.py'
-          mkdir -p /tmp/diagnostic-tests
-          javac -d /tmp/diagnostic-tests TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java Tools/stability/DiagnosticStoreTest.java
-          java -cp /tmp/diagnostic-tests DiagnosticStoreTest
-          git fetch origin main --depth=1
-          git diff --check FETCH_HEAD HEAD
-
-      - name: Prepare disposable Debug configuration
+      - name: Prepare signed diagnostic Beta build
+        env:
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
+          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes nasm
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Only this disposable CI checkout changes; release keystore is untouched.
+          BUILD_TIMESTAMP=$(date +%s)
+          echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP" >> "$GITHUB_ENV"
+
+      - name: Verify normal staging signing configuration
+        run: |
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('TMessagesProj/build.gradle')
-          text = p.read_text()
-          start = text.index('        debug {')
-          end = text.index('        staging {', start)
-          block = text[start:end]
-          assert block.count('signingConfig = signingConfigs.release') == 1
-          text = text[:start] + block.replace('signingConfig = signingConfigs.release', 'signingConfig = signingConfigs.debug') + text[end:]
-          # Android Lint's JoinEffectDetector currently crashes while checking
-          # ThreadConstraint in an unrelated baseline source path.  Disable only
-          # that detector in this disposable CI checkout; app sources stay intact.
-          p.write_text(text + "\nandroid {\n    lint {\n        disable 'ThreadConstraint'\n    }\n}\n")
+          text = Path('TMessagesProj/build.gradle').read_text(encoding='utf-8')
+          start = text.index('        staging {')
+          end = text.index('        release {', start)
+          staging = text[start:end]
+          assert staging.count('signingConfig = signingConfigs.release') == 1
           PY
 
-      - name: Gradle config
-        id: config
-        run: ./gradlew help --no-daemon
+      - name: Build signed diagnostic Beta APK
+        run: ./gradlew :TMessagesProj:assembleStaging --no-daemon
 
-      - name: Java/Kotlin compile
-        id: compile
-        run: ./gradlew :TMessagesProj:compileDebugSources --no-daemon
-
-      - name: Resource merge
-        id: resources
-        run: ./gradlew :TMessagesProj:mergeDebugResources --no-daemon
-
-      - name: Manifest merge
-        id: manifest
-        run: ./gradlew :TMessagesProj:processDebugMainManifest --no-daemon
-
-      - name: Android lint
-        id: lint
-        run: ./gradlew :TMessagesProj:lintDebug --no-daemon
-
-      - name: Native build
-        id: native
-        run: ./gradlew :TMessagesProj:externalNativeBuildDebug --no-daemon
-
-      - name: arm64 Debug APK
-        id: apk
+      - name: Collect and verify arm64-v8a APK
         run: |
           set -euo pipefail
-          ./gradlew :TMessagesProj:assembleDebug --no-daemon
-          APK="$(find TMessagesProj/build/outputs/apk -name '*arm64-v8a*.apk' -print -quit)"
-          test -n "$APK"
-          mkdir -p /tmp/full-verify-apk
-          cp "$APK" /tmp/full-verify-apk/
-          echo "APK=$APK"
+          mapfile -t APKS < <(find TMessagesProj/build/outputs/apk -type f -name '*.apk' -print)
+          test "${#APKS[@]}" -eq 1
+          APK="${APKS[0]}"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt -print -quit)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print -quit)"
+          test -n "$AAPT"
+          test -n "$APKSIGNER"
+          "$AAPT" dump badging "$APK" | grep -F "package: name='app.nixgramx.android'"
+          "$APKSIGNER" verify --verbose "$APK"
+          find TMessagesProj/build/intermediates -type f -name AndroidManifest.xml -exec grep -Fl 'app.nixgramx.android.provider' {} + | grep -q .
+          find TMessagesProj/build/intermediates -type f -name AndroidManifest.xml -exec grep -Fl '@xml/provider_paths' {} + | grep -q .
+          mkdir -p /tmp/diagnostic-beta-apk
+          cp "$APK" /tmp/diagnostic-beta-apk/
 
-      - name: Upload arm64-v8a Debug APK
-        id: artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload diagnostic Beta APK
+        uses: actions/upload-artifact@v7
         with:
-          name: NixgramX-arm64-v8a-debug
-          path: /tmp/full-verify-apk/*.apk
+          name: NixgramX-1285-diagnostic-beta-arm64-v8a
+          path: /tmp/diagnostic-beta-apk/*.apk
           if-no-files-found: error
-
-      - name: Summary
-        if: always()
-        env:
-          RESULTS: ${{ toJSON(steps) }}
-        run: |
-          python3 - <<'PY'
-          import json, os
-          steps = json.loads(os.environ['RESULTS'])
-
-          def status(step_id):
-              outcome = steps.get(step_id, {}).get('outcome')
-              return {'success': 'PASS', 'failure': 'FAIL'}.get(outcome, 'FAIL')
-
-          rows = [
-              ('Gradle config', 'config'),
-              ('Java/Kotlin compile', 'compile'),
-              ('Resources', 'resources'),
-              ('Manifest', 'manifest'),
-              ('Full Android lint', 'lint'),
-              ('Native', 'native'),
-              ('APK build', 'apk'),
-          ]
-          ok = True
-          lines = ['NixgramX Full Verify', '']
-          for label, key in rows:
-              value = status(key)
-              ok &= value == 'PASS'
-              lines.append(f'{label}: {value}')
-          artifact = status('artifact')
-          lines.append(f'Artifact upload: {artifact}')
-          ok &= artifact == 'PASS'
-          lines.extend([
-              '',
-              'Telegram publish: NOT RUN',
-              'GitHub Release: NOT RUN',
-              'Merge / version bump: NOT RUN',
-              'Device test: NOT TESTED',
-              '',
-          ])
-          summary = '\n'.join(lines)
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-              f.write(summary)
-          print(summary)
-          raise SystemExit(0 if ok else 1)
-          PY
