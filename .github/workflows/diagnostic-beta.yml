@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Diagnostic branch or SHA to build as a signed Beta APK'
+        description: 'Diagnostic branch or SHA to build as a Beta Debug APK artifact'
         required: true
         type: string
         default: diagnostic/combined-header-photoviewer-1284
@@ -17,14 +17,14 @@ permissions:
 
 jobs:
   diagnostic-beta:
-    name: Signed diagnostic Beta (arm64-v8a)
+    name: Diagnostic Beta Debug (arm64-v8a)
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
       NATIVE_TARGET: arm64-v8a
       NIXGRAMX_CHANNEL: beta
       # This is an artifact-only diagnostic beta.  The source remains 1284;
-      # 1285 makes its signed package installable over a 1284 build.
+      # 1285 marks this temporary artifact as newer than the 1284 baseline.
       NIXGRAMX_VERSION_CODE: '1285'
     steps:
       - uses: actions/checkout@v7
@@ -63,27 +63,34 @@ jobs:
         with:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
 
-      - name: Prepare signed Beta build
-        env:
-          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
-          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
-          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
-          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
+      - name: Prepare disposable diagnostic Beta Debug build
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes nasm
           echo "sdk.dir=$ANDROID_HOME" > local.properties
+          # pull_request jobs do not receive release-signing credentials. This
+          # changes only the runner checkout to use Android's debug key.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('TMessagesProj/build.gradle')
+          text = p.read_text()
+          start = text.index('        debug {')
+          end = text.index('        staging {', start)
+          block = text[start:end]
+          assert block.count('signingConfig = signingConfigs.release') == 1
+          p.write_text(text[:start] + block.replace('signingConfig = signingConfigs.release', 'signingConfig = signingConfigs.debug') + text[end:])
+          PY
           BUILD_TIMESTAMP=$(date +%s)
           echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP" >> "$GITHUB_ENV"
 
-      - name: Build signed diagnostic Beta APK
-        run: ./gradlew :TMessagesProj:assembleStaging --no-daemon
+      - name: Build diagnostic Beta Debug APK
+        run: ./gradlew :TMessagesProj:assembleDebug --no-daemon
 
       - name: Collect arm64-v8a APK
         run: |
           set -euo pipefail
-          APK="$(find TMessagesProj/build/outputs/apk/staging -name '*-arm64-v8a.apk' -print -quit)"
+          APK="$(find TMessagesProj/build/outputs/apk/debug -name '*-arm64-v8a.apk' -print -quit)"
           test -n "$APK"
           mkdir -p /tmp/diagnostic-beta-apk
           cp "$APK" /tmp/diagnostic-beta-apk/
@@ -99,11 +106,12 @@ jobs:
       - name: Summary
         run: |
           {
-            echo 'NixgramX diagnostic Beta APK created.'
+            echo 'NixgramX diagnostic Beta Debug APK created.'
             echo ''
             echo "Source commit: $COMMIT_ID"
             echo 'Base source: 8e654a7605a2cbb3fca676a70e1253031793817d (NixgramX 1284)'
             echo 'Artifact channel: beta; artifact version code: 1285'
+            echo 'Signing: disposable Android debug key (not release-signable)'
             echo 'Full Android Lint: intentionally not run; it is blocked by baseline failures unrelated to this diagnostic.'
             echo 'GitHub Release: NOT RUN'
             echo 'Telegram publish: NOT RUN'
