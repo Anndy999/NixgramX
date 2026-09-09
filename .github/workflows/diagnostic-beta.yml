@@ -90,7 +90,9 @@ jobs:
       - name: Collect arm64-v8a APK
         run: |
           set -euo pipefail
-          APK="$(find TMessagesProj/build/outputs/apk/debug -name '*-arm64-v8a.apk' -print -quit)"
+          # ABI splits place Debug output below an ABI directory, not always
+          # directly below apk/debug. NATIVE_TARGET limits this build to one APK.
+          APK="$(find TMessagesProj/build/outputs/apk -type f -name '*.apk' -print -quit)"
           test -n "$APK"
           mkdir -p /tmp/diagnostic-beta-apk
           cp "$APK" /tmp/diagnostic-beta-apk/
