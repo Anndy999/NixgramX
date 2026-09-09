@@ -692,6 +692,28 @@ public class ActionBarMenu extends LinearLayout {
         return found ? (int)(mRight - mLeft) : 0;
     }
 
+    public int getVisibleItemCount() {
+        int count = 0;
+        for (int a = 0, N = getChildCount(); a < N; a++) {
+            View view = getChildAt(a);
+            if (view instanceof ActionBarMenuItem && view.getVisibility() == View.VISIBLE) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public int getLargestVisibleItemWidth() {
+        int width = 0;
+        for (int a = 0, N = getChildCount(); a < N; a++) {
+            View view = getChildAt(a);
+            if (view instanceof ActionBarMenuItem && view.getVisibility() == View.VISIBLE) {
+                width = Math.max(width, view.getWidth());
+            }
+        }
+        return width;
+    }
+
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);

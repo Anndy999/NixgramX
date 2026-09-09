@@ -205,11 +205,41 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     private boolean glassMode;
     private boolean glassOnlyBack;
     private boolean glassModeIsForum;
+    private int glassMenuMinimumItems;
 
     private ChatAvatarContainer chatAvatarContainer;
 
     public void setGlassOnlyBack() {
         glassOnlyBack = true;
+    }
+
+    /**
+     * Reserves glass background geometry without changing menu layout or touch targets.
+     * ChatActivity uses this for a broadcast channel whose single overflow action should
+     * retain the same header silhouette as a private chat's call-plus-overflow menu.
+     */
+    public void setGlassMenuMinimumItems(int minimumItems) {
+        glassMenuMinimumItems = Math.max(0, minimumItems);
+        invalidate();
+    }
+
+    static int calculateGlassMenuGeometryWidth(int visibleMenuWidth, int visibleItemCount, int largestVisibleItemWidth, int minimumItems) {
+        if (visibleMenuWidth <= 0 || visibleItemCount <= 0 || largestVisibleItemWidth <= 0 || minimumItems <= visibleItemCount) {
+            return visibleMenuWidth;
+        }
+        return visibleMenuWidth + (minimumItems - visibleItemCount) * largestVisibleItemWidth;
+    }
+
+    private int getGlassMenuGeometryWidth(int visibleMenuWidth) {
+        if (menu == null) {
+            return visibleMenuWidth;
+        }
+        return calculateGlassMenuGeometryWidth(
+            visibleMenuWidth,
+            menu.getVisibleItemCount(),
+            menu.getLargestVisibleItemWidth(),
+            glassMenuMinimumItems
+        );
     }
 
     public void setChatAvatarContainer(ChatAvatarContainer chatAvatarContainer) {
@@ -2318,6 +2348,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final float actionModeFactor = getActionModeFactor();
         final int menuWidthA = hasForcedMenuWidth ? forcedMenuWidth : (int) animatorMenuItemsWidth.getFactor();
         final int menuWidth = hasForcedMenuMinWidth ? Math.max((int) (forcedMenuMinWidth * (1f - searchFactor)), menuWidthA) : menuWidthA;
+        final int glassMenuWidth = getGlassMenuGeometryWidth(menuWidth);
 
         final boolean hasBackButton = backButtonImageView != null && backButtonImageView.getVisibility() == View.VISIBLE;
 
@@ -2325,7 +2356,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final int b = t + s + p * 2;
 
         if (glassDrawable != null && !glassOnlyBack) {
-            final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * animatorHasMenuItems.getFloatValue()));
+            final int menuWidthWithPadding = glassMenuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (glassMenuWidth > 0 ? p : 0) : (int) (p * animatorHasMenuItems.getFloatValue()));
             final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
 
             final int leftDefault = lerp(hasBackButton ? s + p : 0, s + p, chatAvatarContainer == null? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
@@ -2355,8 +2386,8 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             glassDrawableBack.setBounds(0, t, s + p * 2, b);
             glassDrawableBack.draw(canvas);
         }
-        if (glassDrawableMenu != null && menuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
-            glassDrawableMenu.setBounds(getWidth() - Math.max(s, menuWidth) - p * 2, t, getWidth(), b);
+        if (glassDrawableMenu != null && glassMenuWidth > 0 && !glassOnlyBack && !doNotDrawGlassMenu) {
+            glassDrawableMenu.setBounds(getWidth() - Math.max(s, glassMenuWidth) - p * 2, t, getWidth(), b);
             glassDrawableMenu.setAlpha(hasForcedMenuWidth ? 255 : (int) (255 * animatorHasMenuItems.getFloatValue()));
             glassDrawableMenu.draw(canvas);
         }
