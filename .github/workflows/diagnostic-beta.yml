@@ -1,0 +1,106 @@
+name: Diagnostic Beta APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Diagnostic branch or SHA to build as a signed Beta APK'
+        required: true
+        type: string
+        default: diagnostic/combined-header-photoviewer-1284
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic-beta:
+    name: Signed diagnostic Beta (arm64-v8a)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      NATIVE_TARGET: arm64-v8a
+      NIXGRAMX_CHANNEL: beta
+      # This is an artifact-only diagnostic beta.  The source remains 1284;
+      # 1285 makes its signed package installable over a 1284 build.
+      NIXGRAMX_VERSION_CODE: '1285'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Verify diagnostic source boundary
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin beta diagnostic/channel-header-runtime-geometry
+          git merge-base --is-ancestor 8e654a7605a2cbb3fca676a70e1253031793817d HEAD
+          if git merge-base --is-ancestor 0041b0bc6e9b00ca4f9279a20847f3b53a45f18c HEAD; then
+            echo 'Refuses to build: PR #46 is in the selected history.' >&2
+            exit 1
+          fi
+          if git merge-base --is-ancestor 0a65a788376c30e5e7e60b2e82d3c9e5334f1fc9 HEAD; then
+            echo 'Refuses to build: PR #47 is in the selected history.' >&2
+            exit 1
+          fi
+          echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Building diagnostic source $(git rev-parse --short HEAD) as Beta version code ${NIXGRAMX_VERSION_CODE}"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
+
+      - name: Prepare signed Beta build
+        env:
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
+          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes nasm
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          BUILD_TIMESTAMP=$(date +%s)
+          echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP" >> "$GITHUB_ENV"
+
+      - name: Build signed diagnostic Beta APK
+        run: ./gradlew :TMessagesProj:assembleStaging --no-daemon
+
+      - name: Collect arm64-v8a APK
+        run: |
+          set -euo pipefail
+          APK="$(find TMessagesProj/build/outputs/apk/staging -name '*-arm64-v8a.apk' -print -quit)"
+          test -n "$APK"
+          mkdir -p /tmp/diagnostic-beta-apk
+          cp "$APK" /tmp/diagnostic-beta-apk/
+          echo "APK=$APK" >> "$GITHUB_ENV"
+
+      - name: Upload diagnostic Beta APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: NixgramX-1285-diagnostic-beta-arm64-v8a
+          path: /tmp/diagnostic-beta-apk/*.apk
+          if-no-files-found: error
+
+      - name: Summary
+        run: |
+          {
+            echo 'NixgramX diagnostic Beta APK created.'
+            echo ''
+            echo "Source commit: $COMMIT_ID"
+            echo 'Base source: 8e654a7605a2cbb3fca676a70e1253031793817d (NixgramX 1284)'
+            echo 'Artifact channel: beta; artifact version code: 1285'
+            echo 'Full Android Lint: intentionally not run; it is blocked by baseline failures unrelated to this diagnostic.'
+            echo 'GitHub Release: NOT RUN'
+            echo 'Telegram publish: NOT RUN'
+            echo 'Merge: NOT RUN'
+          } >> "$GITHUB_STEP_SUMMARY"
