@@ -79,7 +79,7 @@ jobs:
       CCACHE_HARDLINK: "true"
       CCACHE_NOHASHDIR: "true"
       CCACHE_MAXSIZE: "10G"
-      NATIVE_TARGET: "universal"
+      NATIVE_TARGET: "arm64-v8a"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -149,11 +149,6 @@ jobs:
         with:
           name: Beta-arm64-v8a
           path: TMessagesProj/build/outputs/apk/staging/*-arm64-v8a.apk
-      - name: Upload universal Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: Beta-universal
-          path: TMessagesProj/build/outputs/apk/staging/*-universal.apk
   upload:
     concurrency:
       group: nixgramx-metadata-publisher
