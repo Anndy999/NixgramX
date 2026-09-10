@@ -120,6 +120,7 @@ import android.widget.Scroller;
 import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
 import androidx.annotation.Keep;
@@ -2099,6 +2100,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private boolean openedFromProfile;
 
     private boolean attachedToWindow;
+    private Object photoViewerBackDispatcher;
+    private Object photoViewerBackCallback;
 
     private boolean wasLayout;
     private boolean dontResetZoomOnFirstLayout;
@@ -9869,6 +9872,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void onHideView() {
+        unregisterPhotoViewerBackCallback();
         if (parentActivity instanceof LaunchActivity) {
             LaunchActivity launchActivity = (LaunchActivity) parentActivity;
             launchActivity.removeOnUserLeaveHintListener(onUserLeaveHintListener);
@@ -9885,6 +9889,50 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 view.setScaleY(1f);
             }
         }
+    }
+
+    private void showPhotoViewerWindow(WindowManager wm) {
+        if (windowView.getParent() == null) {
+            wm.addView(windowView, windowLayoutParams);
+        } else {
+            windowView.setVisibility(View.VISIBLE);
+            wm.updateViewLayout(windowView, windowLayoutParams);
+        }
+    }
+
+    private void hidePhotoViewerWindow() {
+        if (!isVisible && windowView != null && windowView.getParent() != null) {
+            windowView.setVisibility(View.INVISIBLE);
+            onHideView();
+        }
+    }
+
+    private void registerPhotoViewerBackCallback() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || photoViewerBackDispatcher != null) {
+            return;
+        }
+        final OnBackInvokedDispatcher dispatcher = windowView.findOnBackInvokedDispatcher();
+        if (dispatcher == null) {
+            return;
+        }
+        if (photoViewerBackCallback == null) {
+            photoViewerBackCallback = (OnBackInvokedCallback) () -> {
+                if (parentActivity instanceof LaunchActivity) {
+                    ((LaunchActivity) parentActivity).onBackPressed();
+                } else if (isVisible()) {
+                    closePhoto(true, false);
+                }
+            };
+        }
+        dispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, (OnBackInvokedCallback) photoViewerBackCallback);
+        photoViewerBackDispatcher = dispatcher;
+    }
+
+    private void unregisterPhotoViewerBackCallback() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && photoViewerBackDispatcher != null && photoViewerBackCallback != null) {
+            ((OnBackInvokedDispatcher) photoViewerBackDispatcher).unregisterOnBackInvokedCallback((OnBackInvokedCallback) photoViewerBackCallback);
+        }
+        photoViewerBackDispatcher = null;
     }
 
     private void onUserLeaveHint() {
@@ -17913,14 +17961,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         final PlaceProviderObject object = provider.getPlaceForPhoto(messageObject, fileLocation, index, true, false);
         WindowManager wm = (WindowManager) parentActivity.getSystemService(Context.WINDOW_SERVICE);
-        if (attachedToWindow) {
-            try {
-                wm.removeView(windowView);
-                onHideView();
-            } catch (Exception e) {
-                //don't promt
-            }
-        }
 
         try {
             windowLayoutParams.type = WindowManager.LayoutParams.LAST_APPLICATION_WINDOW;
@@ -17943,26 +17983,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             windowLayoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | WindowManager.LayoutParams.SOFT_INPUT_IS_FORWARD_NAVIGATION;
             windowView.setFocusable(false);
             containerView.setFocusable(false);
-            wm.addView(windowView, windowLayoutParams);
+            showPhotoViewerWindow(wm);
             onShowView();
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                final OnBackInvokedDispatcher dispatcher = windowView.findOnBackInvokedDispatcher();
-                if (dispatcher != null) {
-                    dispatcher.registerOnBackInvokedCallback(
-                        OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-                        () -> {
-                            if (parentActivity instanceof LaunchActivity) {
-                                ((LaunchActivity) parentActivity).onBackPressed();
-                            } else {
-                                if (isVisible()) {
-                                    closePhoto(true, false);
-                                }
-                            }
-                        }
-                    );
-                }
-            }
+            registerPhotoViewerBackCallback();
         } catch (Exception e) {
             FileLog.e(e);
             return false;
@@ -19221,11 +19244,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 object.animatingImageView.setImageBitmap(null);
             }
             try {
-                if (windowView.getParent() != null) {
-                    WindowManager wm = (WindowManager) parentActivity.getSystemService(Context.WINDOW_SERVICE);
-                    wm.removeView(windowView);
-                    onHideView();
-                }
+                hidePhotoViewerWindow();
             } catch (Exception e) {
                 FileLog.e(e);
             }
