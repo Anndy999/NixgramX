@@ -19,9 +19,8 @@ jobs:
     env:
       COMMIT_ID: ${{ github.sha }}
       NATIVE_TARGET: arm64-v8a
-      # Non-production compile-only placeholders, no repository secrets exposed.
-      TELEGRAM_APP_ID: '123456'
-      TELEGRAM_APP_HASH: '00000000000000000000000000000000'
+      TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
+      TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
     steps:
       - uses: actions/checkout@v7
         with:
