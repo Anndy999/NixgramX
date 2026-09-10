@@ -1,0 +1,54 @@
+name: Validated 1284 arm64 test
+
+on:
+  push:
+    branches:
+      - test/restore-validated-viewer-1284
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Staging arm64-v8a test APK
+    runs-on: ubuntu-latest
+    env:
+      NATIVE_TARGET: "arm64-v8a"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          submodules: recursive
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0"
+      - name: Install native build dependency
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes nasm
+      - name: Configure signing and SDK
+        env:
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
+          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" >> local.properties
+      - name: Build staging arm64-v8a APK
+        env:
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
+          ALIAS_PASS: ${{ secrets.ALIAS_PASS }}
+        run: ./gradlew TMessagesProj:assembleStaging --no-daemon
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: validated-1284-arm64-v8a
+          path: TMessagesProj/build/outputs/apk/staging/*-arm64-v8a.apk
