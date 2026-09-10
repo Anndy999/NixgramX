@@ -908,6 +908,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private WindowManager.LayoutParams windowLayoutParams;
     private boolean windowColorModeHdr;
     private Boolean windowDisplayHdrCapable;
+    private boolean pendingWindowHdrColorModeUpdate;
     private FrameLayoutDrawer containerView;
     private PhotoViewerWebView photoViewerWebView;
     public FrameLayout windowView;
@@ -23211,6 +23212,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             return;
         }
 
+        applyPendingWindowHdrColorMode();
+
         invalidateAllGlassAttachedViews();
 
 
@@ -24373,6 +24376,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (Build.VERSION.SDK_INT < 34 || windowLayoutParams == null) {
             return;
         }
+        if (animationInProgress != 0) {
+            pendingWindowHdrColorModeUpdate = true;
+            return;
+        }
         if (windowColorModeHdr == enabled) {
             return;
         }
@@ -24386,6 +24393,14 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         } catch (Throwable e) {
             FileLog.e(e);
         }
+    }
+
+    private void applyPendingWindowHdrColorMode() {
+        if (!pendingWindowHdrColorModeUpdate) {
+            return;
+        }
+        pendingWindowHdrColorModeUpdate = false;
+        updateWindowHdrColorMode();
     }
 
     private void updateWindowHdrColorMode() {

@@ -45,6 +45,19 @@ class PhotoViewerTransitionPathTest(unittest.TestCase):
         self.assertIn("wm.addView(windowView, windowLayoutParams);", self.open_photo)
         self.assertIn("wm.removeView(windowView);", self.viewer)
 
+    def test_hdr_window_reconfiguration_waits_for_the_stable_frame(self):
+        blur_start = self.viewer.index("    private void invalidateBlur()")
+        blur_end = self.viewer.index("\n    }", blur_start) + len("\n    }")
+        blur = self.viewer[blur_start:blur_end]
+        hdr_start = self.viewer.index("    private void setWindowHdrColorMode(boolean enabled)")
+        hdr_end = self.viewer.index("\n    private void updateWindowHdrColorMode()", hdr_start)
+        hdr = self.viewer[hdr_start:hdr_end]
+
+        self.assertIn("if (animationInProgress != 0) {\n            pendingWindowHdrColorModeUpdate = true;\n            return;\n        }", hdr)
+        self.assertLess(hdr.index("if (animationInProgress != 0)"), hdr.index("wm.updateViewLayout(windowView, windowLayoutParams);"))
+        self.assertIn("applyPendingWindowHdrColorMode();", blur)
+        self.assertLess(blur.index("applyPendingWindowHdrColorMode();"), blur.index("invalidateAllGlassAttachedViews()"))
+
     def test_no_reuse_delay_or_synthetic_menu_workarounds_are_present(self):
         forbidden_viewer = (
             "showPhotoViewerWindow",
