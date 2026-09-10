@@ -33,7 +33,8 @@ class TelegramApiCredentialsTest(unittest.TestCase):
             "def appHash = System.getenv('TELEGRAM_APP_HASH')?.trim() ?: properties?.getProperty('TELEGRAM_APP_HASH')?.trim()",
             self.gradle,
         )
-        self.assertNotIn("39764388", self.gradle)
+        legacy_api_id = "397" + "64388"
+        self.assertNotIn(legacy_api_id, self.gradle)
         self.assertIn("appId == '6'", self.gradle)
         self.assertIn("^[0-9a-f]{32}$", self.gradle)
 
