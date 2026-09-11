@@ -1,5 +1,7 @@
 # NixgramX
 
+官方频道：[NixgramX](https://t.me/NixgramX)
+
 Independent long-term fork based on [NagramX](https://github.com/risin42/NagramX) `12.9.2.1260` (`4335a2e`), with Day-1 identity isolation from NagramX.
 
 **Priorities:** (1) track Telegram Android official upstream; (2) maximize stability / bugfixes. Phase 1 is not a large new-feature push.
