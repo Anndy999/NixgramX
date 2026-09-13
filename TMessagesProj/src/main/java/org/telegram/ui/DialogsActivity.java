@@ -64,6 +64,7 @@ import android.util.LongSparseArray;
 import android.util.Property;
 import android.util.StateSet;
 import android.util.TypedValue;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
@@ -826,7 +827,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         private boolean prepareForMoving(MotionEvent ev, boolean forward) {
             int id = filterTabsView.getNextPageId(forward);
+            Log.d("NixFolderSwipe", "prepareForMoving enter forward=" + forward
+                    + " currentTab=" + (filterTabsView != null ? filterTabsView.getCurrentTabId() : -1)
+                    + " nextId=" + id
+                    + " tabsCount=" + (filterTabsView != null ? filterTabsView.getTabsCount() : -1));
             if (id < 0) {
+                Log.d("NixFolderSwipe", "prepareForMoving exit false reason=no_next_page");
                 return false;
             }
             getParent().requestDisallowInterceptTouchEvent(true);
@@ -845,6 +851,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             } else {
                 viewPages[1].setTranslationX(-viewPages[0].getMeasuredWidth());
             }
+            Log.d("NixFolderSwipe", "prepareForMoving exit true nextId=" + id + " forward=" + forward);
             return true;
         }
 
@@ -1443,6 +1450,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     startedTrackingX = (int) ev.getX();
                     startedTrackingY = (int) ev.getY();
                     velocityTracker.clear();
+                    final boolean foldersSwipe = SharedConfig.getChatSwipeAction(currentAccount) == SwipeGestureSettingsView.SWIPE_GESTURE_FOLDERS;
+                    Log.d("NixFolderSwipe", "DOWN x=" + startedTrackingX + " y=" + startedTrackingY
+                            + " currentTab=" + filterTabsView.getCurrentTabId()
+                            + " tabsCount=" + filterTabsView.getTabsCount()
+                            + " foldersSwipe=" + foldersSwipe
+                            + " swipeAction=" + SharedConfig.getChatSwipeAction(currentAccount));
+                    if (foldersSwipe && filterTabsView.getTabsCount() > 1) {
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                        Log.d("NixFolderSwipe", "DOWN requestDisallowInterceptTouchEvent=true");
+                    }
                 } else if (ev != null && ev.getAction() == MotionEvent.ACTION_MOVE && ev.getPointerId(0) == startedTrackingPointerId) {
                     int dx = (int) (ev.getX() - startedTrackingX + additionalOffset);
                     int dy = Math.abs((int) ev.getY() - startedTrackingY);
@@ -1459,7 +1476,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         float touchSlop = AndroidUtilities.getPixelsInCM(0.3f, true);
                         int dxLocal = (int) (ev.getX() - startedTrackingX);
                         if (Math.abs(dxLocal) >= touchSlop && Math.abs(dxLocal) > dy) {
-                            prepareForMoving(ev, dx < 0);
+                            final boolean forward = dx < 0;
+                            final int nextId = filterTabsView.getNextPageId(forward);
+                            Log.d("NixFolderSwipe", "MOVE slop dx=" + dx + " dxLocal=" + dxLocal + " dy=" + dy
+                                    + " forward=" + forward + " nextId=" + nextId
+                                    + " currentTab=" + filterTabsView.getCurrentTabId());
+                            prepareForMoving(ev, forward);
                         }
                     } else if (startedTracking) {
                         viewPages[0].setTranslationX(dx);
@@ -13047,11 +13069,23 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public boolean canBeginSlide() {
         if (rightSlidingDialogContainer.hasFragment()) {
+            Log.d("NixFolderSwipe", "canBeginSlide=false reason=rightSliding");
+            return false;
+        }
+        if (filterTabsView != null
+                && filterTabsView.getVisibility() == View.VISIBLE
+                && filterTabsView.getTabsCount() > 1
+                && SharedConfig.getChatSwipeAction(currentAccount) == SwipeGestureSettingsView.SWIPE_GESTURE_FOLDERS) {
+            Log.d("NixFolderSwipe", "canBeginSlide=false reason=folders_multi_tab currentTab="
+                    + filterTabsView.getCurrentTabId() + " tabsCount=" + filterTabsView.getTabsCount());
             return false;
         }
         if (initialDialogsType == DIALOGS_TYPE_FORWARD && filterTabsView != null && filterTabsView.getVisibility() == View.VISIBLE) {
-            return filterTabsView.isFirstTab();
+            final boolean allow = filterTabsView.isFirstTab();
+            Log.d("NixFolderSwipe", "canBeginSlide forward-type firstTab=" + allow);
+            return allow;
         }
+        Log.d("NixFolderSwipe", "canBeginSlide=true");
         return true;
     }
 
@@ -13928,6 +13962,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         final boolean isActionBarTouch = ev.getY() < actionBar.getMeasuredHeight();
         if (isActionBarTouch) {
+            Log.d("NixFolderSwipe", "canParentTabsSlide=true reason=actionBarTouch forward=" + forward);
             return true;
         }
 
@@ -13935,8 +13970,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 && filterTabsView.getVisibility() == View.VISIBLE
                 && filterTabsView.getTabsCount() > 1
                 && filterTabsView.getNextPageId(forward) >= 0) {
+            Log.d("NixFolderSwipe", "canParentTabsSlide=false reason=folder_next forward=" + forward
+                    + " nextId=" + filterTabsView.getNextPageId(forward)
+                    + " currentTab=" + filterTabsView.getCurrentTabId());
             return false;
         }
+        Log.d("NixFolderSwipe", "canParentTabsSlide=true reason=default forward=" + forward);
         return true;
     }
 
