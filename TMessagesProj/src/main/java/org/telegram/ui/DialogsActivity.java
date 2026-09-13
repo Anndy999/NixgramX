@@ -3778,6 +3778,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         showScrollbars(true);
                         updateCounters(false);
                         filterTabsView.stopAnimatingIndicator();
+                        filterTabsView.setEnabled(true);
+                        actionBar.setEnabled(true);
                         checkListLoad(viewPages[0]);
                         viewPages[0].dialogsAdapter.resume();
                         viewPages[1].dialogsAdapter.pause();
