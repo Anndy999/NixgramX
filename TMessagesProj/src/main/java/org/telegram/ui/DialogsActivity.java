@@ -748,6 +748,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return t * t * t * t * t + 1.0F;
     };
 
+    private void restoreTabsEnabledState() {
+        if (actionBar != null) {
+            actionBar.setEnabled(true);
+        }
+        if (filterTabsView != null) {
+            filterTabsView.setEnabled(true);
+        }
+    }
+
     private Bulletin topBulletin;
 
     private AnimationNotificationsLocker notificationsLocker = new AnimationNotificationsLocker();
@@ -862,10 +871,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 if (cancel) {
                     showScrollbars(true);
                     if (tabsAnimation != null) {
+                        tabsAnimation.removeAllListeners();
                         tabsAnimation.cancel();
                         tabsAnimation = null;
                     }
                     tabsAnimationInProgress = false;
+                    restoreTabsEnabledState();
                 }
                 return tabsAnimationInProgress;
             }
@@ -1422,6 +1433,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     tabsAnimation.removeAllListeners();
                     tabsAnimation.cancel();
                     tabsAnimationInProgress = false;
+                    restoreTabsEnabledState();
                 } else if (ev != null && ev.getAction() == MotionEvent.ACTION_DOWN) {
                     additionalOffset = 0;
                 }
@@ -1568,9 +1580,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                 showScrollbars(true);
                                 tabsAnimationInProgress = false;
                                 maybeStartTracking = false;
-                                actionBar.setEnabled(true);
-                                filterTabsView.setEnabled(true);
+                                restoreTabsEnabledState();
                                 checkListLoad(viewPages[0]);
+                            }
+
+                            @Override
+                            public void onAnimationCancel(Animator animator) {
+                                tabsAnimation = null;
+                                tabsAnimationInProgress = false;
+                                maybeStartTracking = false;
+                                restoreTabsEnabledState();
                             }
                         });
                         tabsAnimation.start();
@@ -1578,8 +1597,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         startedTracking = false;
                     } else {
                         maybeStartTracking = false;
-                        actionBar.setEnabled(true);
-                        filterTabsView.setEnabled(true);
+                        restoreTabsEnabledState();
                     }
                     if (velocityTracker != null) {
                         velocityTracker.recycle();
@@ -13913,14 +13931,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             return true;
         }
 
-        final boolean isFirstTab = filterTabsView == null || filterTabsView.getTabsCount() < 2 || filterTabsView.getCurrentTabId() == filterTabsView.getFirstTabId();
-        final boolean isLastTab = filterTabsView == null || filterTabsView.getTabsCount() < 2 || filterTabsView.getCurrentTabId() == filterTabsView.getLastTabId();
-        final int chatSwipeAction = SharedConfig.getChatSwipeAction(currentAccount);
-        if (forward) {
-            return isLastTab && !isFirstTab;
-        } else {
-            return isFirstTab;
+        if (filterTabsView != null
+                && filterTabsView.getVisibility() == View.VISIBLE
+                && filterTabsView.getTabsCount() > 1
+                && filterTabsView.getNextPageId(forward) >= 0) {
+            return false;
         }
+        return true;
     }
 
     private void showItemOptions() {
