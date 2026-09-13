@@ -1361,7 +1361,14 @@ public class FilterTabsView extends FrameLayout {
     }
 
     public int getNextPageId(boolean forward) {
-        return positionToId.get(currentPosition + (forward ? 1 : -1), -1);
+        final int count = tabs.size();
+        if (count <= 1) {
+            return -1;
+        }
+        final int nextPosition = forward
+                ? (currentPosition + 1) % count
+                : (currentPosition - 1 + count) % count;
+        return positionToId.get(nextPosition, -1);
     }
 
     public void removeTabs() {
