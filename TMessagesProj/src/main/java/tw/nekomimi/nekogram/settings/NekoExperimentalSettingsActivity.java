@@ -210,9 +210,8 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
         checkUseDeletedIconRows();
         checkSaveBotMsgRows();
         checkSaveDeletedRows();
-        // NixgramX: Ghost Mode removed-by-policy; _base disables Save Deleted family
+        // NixgramX: _base disables Save Deleted family
         // NIXGRAMX_POLICY
-        cellGroup.rows.remove(ghostModeRow);
         if (BuildConfig.IS_BASE) {
             cellGroup.rows.remove(enableSaveDeletedMessagesRow);
             cellGroup.rows.remove(enableSaveEditsHistoryRow);

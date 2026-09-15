@@ -21,7 +21,7 @@ NixgramX **cannot** overlay-install over NagramX (different package + signing). 
 
 Full builds include Save Deleted Messages and related enhancements (Telegram ToS / account risk). `_base` mirrors NagramX’s ToS-friendlier cut (without those advanced features). **No ban immunity.** See [`docs/BAN_RISK.md`](docs/BAN_RISK.md).
 
-Ghost Mode, hide-typing, and online-status hide/enhance are **removed-by-policy**.
+**Ghost Mode** (hide typing / read / online status) is a NixgramX feature restored from the NagramX lineage — **not** an official Telegram feature. Drawer shortcut and status indicator remain off by default.
 
 ## Docs
 
