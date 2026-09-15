@@ -135,6 +135,26 @@ jobs:
         with:
           python-version: 3.12
 
+      # Trust boundary: the PR head under test may supply source for assembleStaging,
+      # but MUST NOT supply the Telegram uploader or its pip deps. A malicious PR
+      # could otherwise exfiltrate HELPER_BOT_TOKEN or redirect the APK. Always take
+      # upload_private_beta.py + requirements.txt from origin/main into a trusted path.
+      - name: Pin upload script from main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          mkdir -p /tmp/trusted-private-beta
+          git show origin/main:Tools/scripts/upload_private_beta.py \
+            > /tmp/trusted-private-beta/upload_private_beta.py
+          git show origin/main:Tools/scripts/requirements.txt \
+            > /tmp/trusted-private-beta/requirements.txt
+          # Overwrite in-tree copies so nothing accidental uses the PR versions.
+          cp /tmp/trusted-private-beta/upload_private_beta.py Tools/scripts/upload_private_beta.py
+          cp /tmp/trusted-private-beta/requirements.txt Tools/scripts/requirements.txt
+          echo "Pinned upload_private_beta.py + requirements.txt from origin/main"
+          sha256sum /tmp/trusted-private-beta/upload_private_beta.py \
+            /tmp/trusted-private-beta/requirements.txt
+
       - name: Send APK to private target only
         env:
           APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
@@ -154,11 +174,11 @@ jobs:
             echo "FATAL: HELPER_BOT_PRIVATE_TARGET empty at upload step"
             exit 1
           fi
-          python -m pip install -r Tools/scripts/requirements.txt
+          python -m pip install -r /tmp/trusted-private-beta/requirements.txt
           COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
           export COMMIT_MESSAGE
-          # Dedicated private uploader — no public fallback, no metadata/#update*, no Release.
-          python Tools/scripts/upload_private_beta.py \
+          # Dedicated private uploader from main — no public fallback, no metadata/#update*, no Release.
+          python /tmp/trusted-private-beta/upload_private_beta.py \
             "${{ secrets.HELPER_BOT_TOKEN }}" \
             "${HELPER_BOT_PRIVATE_TARGET}"
 
