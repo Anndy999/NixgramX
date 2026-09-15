@@ -8,6 +8,11 @@ on:
         description: 'PR number whose head SHA will be built and sent to the private helper target'
         required: true
         type: string
+      version_code:
+        description: 'NIXGRAMX_VERSION_CODE override for installability over current device beta (must be higher)'
+        required: false
+        type: string
+        default: '1296'
 
 permissions:
   contents: read
@@ -51,8 +56,17 @@ jobs:
             echo "FATAL: pr_number must match ^[1-9][0-9]*$, got: ${PR}"
             exit 1
           fi
+          VC='${{ inputs.version_code }}'
+          if ! [[ "$VC" =~ ^[1-9][0-9]*$ ]]; then
+            echo "FATAL: version_code must match ^[1-9][0-9]*$, got: ${VC}"
+            exit 1
+          fi
+          if [ "$VC" -le 1295 ]; then
+            echo "FATAL: version_code must be > 1295 (device beta), got: ${VC}"
+            exit 1
+          fi
           echo "pr=${PR}" >> "$GITHUB_OUTPUT"
-          echo "Validated PR #${PR}"
+          echo "Validated PR #${PR} version_code=${VC}"
 
       - name: Resolve trusted PR HEAD SHA via API
         id: head
@@ -189,6 +203,8 @@ jobs:
         env:
           COMMIT_ID: ${{ steps.head.outputs.sha }}
           NIXGRAMX_CHANNEL: beta
+          # Private Beta installability: must exceed device beta (currently ~1295).
+          NIXGRAMX_VERSION_CODE: ${{ inputs.version_code }}
         run: |
           set -euo pipefail
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
