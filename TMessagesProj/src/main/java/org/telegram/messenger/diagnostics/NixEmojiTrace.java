@@ -480,6 +480,21 @@ public final class NixEmojiTrace {
         log(name + " " + details);
     }
 
+    /**
+     * One-shot diagnostic for reply AnimatedEmojiSpan isolation A/B.
+     * Never logs message text, chat ids, document ids, or usernames.
+     */
+    public static void replySpanIsolation(Object bodySpan, Object replySpanBefore, Object replySpanAfter, boolean sameInstanceBodyReply, boolean sameInstanceBeforeAfter) {
+        if (!ENABLED) {
+            return;
+        }
+        log("REPLY_SPAN_ISOLATION body=" + id(bodySpan)
+                + " replyBefore=" + id(replySpanBefore)
+                + " replyAfter=" + id(replySpanAfter)
+                + " sameInstanceBodyReply=" + (sameInstanceBodyReply ? 1 : 0)
+                + " sameInstanceBeforeAfter=" + (sameInstanceBeforeAfter ? 1 : 0));
+    }
+
     public static void log(String line) {
         if (!ENABLED || line == null) {
             return;

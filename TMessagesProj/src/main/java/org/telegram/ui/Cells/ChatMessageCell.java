@@ -19907,6 +19907,41 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 try {
                     replyTextWidth = dp(4) + (needReplyImage ? dp(33) : 0);
                     if (stringFinalText != null) {
+                        // DIAGNOSTIC A/B ONLY — DO NOT MERGE
+                        // Single variable: REPLY path uses independent AnimatedEmojiSpan
+                        // instances via cloneSpans; BODY path unchanged.
+                        CharSequence replyTextBeforeClone = stringFinalText;
+                        stringFinalText = AnimatedEmojiSpan.cloneSpans(stringFinalText);
+                        if (NixEmojiTrace.enabled()) {
+                            AnimatedEmojiSpan bodySpan = null;
+                            CharSequence bodyText = currentMessageObject != null ? currentMessageObject.messageText : null;
+                            if (bodyText instanceof Spanned) {
+                                AnimatedEmojiSpan[] bodySpans = ((Spanned) bodyText).getSpans(0, bodyText.length(), AnimatedEmojiSpan.class);
+                                if (bodySpans != null && bodySpans.length > 0) {
+                                    bodySpan = bodySpans[0];
+                                }
+                            }
+                            AnimatedEmojiSpan replyBefore = null;
+                            if (replyTextBeforeClone instanceof Spanned) {
+                                AnimatedEmojiSpan[] beforeSpans = ((Spanned) replyTextBeforeClone).getSpans(0, replyTextBeforeClone.length(), AnimatedEmojiSpan.class);
+                                if (beforeSpans != null && beforeSpans.length > 0) {
+                                    replyBefore = beforeSpans[0];
+                                }
+                            }
+                            AnimatedEmojiSpan replyAfter = null;
+                            if (stringFinalText instanceof Spanned) {
+                                AnimatedEmojiSpan[] afterSpans = ((Spanned) stringFinalText).getSpans(0, stringFinalText.length(), AnimatedEmojiSpan.class);
+                                if (afterSpans != null && afterSpans.length > 0) {
+                                    replyAfter = afterSpans[0];
+                                }
+                            }
+                            NixEmojiTrace.replySpanIsolation(
+                                    bodySpan,
+                                    replyBefore,
+                                    replyAfter,
+                                    bodySpan != null && replyAfter != null && bodySpan == replyAfter,
+                                    replyBefore != null && replyAfter != null && replyBefore == replyAfter);
+                        }
                         SpannableStringBuilder sb = new SpannableStringBuilder(stringFinalText);
                         boolean changed = false;
                         for (TextStyleSpan span : sb.getSpans(0, sb.length(), TextStyleSpan.class)) {
