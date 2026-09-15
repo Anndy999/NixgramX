@@ -9240,7 +9240,11 @@ public class MessageObject {
             }
         }
 
-        textWidth = shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
+        // Diagnostic test (A/B): keep official Telegram text width behavior.
+        // Do not shrink the final width after StaticLayout — may desynchronize
+        // Custom Emoji layout coordinates from bubble geometry.
+        // Restore by uncommenting the next line (keep method intact).
+        // textWidth = shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
         // lastLineWidth stays the real last-line width so the timestamp never sits on glyphs.
 
         hasWideCode = hasCode && textWidth > generatedWithMinSize - dp(80 + (needDrawAvatarInternal() && !isOutOwner() && !messageOwner.isThreadMessage ? 52 : 0));
@@ -9691,7 +9695,11 @@ public class MessageObject {
                     SpoilerEffect.addSpoilers(null, block.textLayout, -1, right, null, block.spoilers);
                 }
             }
-            textWidth = MessageObject.shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
+            // Diagnostic test (A/B): keep official Telegram text width behavior.
+            // Do not shrink the final width after StaticLayout — may desynchronize
+            // Custom Emoji layout coordinates from bubble geometry.
+            // Restore by uncommenting the next line (keep method intact).
+            // textWidth = MessageObject.shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
         }
 
     }
