@@ -123,7 +123,8 @@ jobs:
           export KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}"
           export ALIAS_PASS="${{ secrets.ALIAS_PASS }}"
           export ALIAS_NAME="${{ secrets.ALIAS_NAME }}"
-          export BUILD_TIMESTAMP=$(date +%s)
+          BUILD_TIMESTAMP=$(date +%s)
+          export BUILD_TIMESTAMP
           echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
           ./gradlew TMessagesProj:assembleStaging
           echo "Built APKs:"
@@ -154,7 +155,8 @@ jobs:
             exit 1
           fi
           python -m pip install -r Tools/scripts/requirements.txt
-          export COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
+          COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
+          export COMMIT_MESSAGE
           # Dedicated private uploader — no public fallback, no metadata/#update*, no Release.
           python Tools/scripts/upload_private_beta.py \
             "${{ secrets.HELPER_BOT_TOKEN }}" \
