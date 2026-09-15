@@ -227,10 +227,12 @@ jobs:
       - name: Send APK to private target only
         working-directory: ${{ github.workspace }}
         env:
-          APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
-          APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
-          TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
-          TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+          # Match canary/release/staging: uploader needs APP_ID/APP_HASH secrets
+          # (TELEGRAM_APP_* secrets are not configured in this repo).
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_HASH: ${{ secrets.APP_HASH }}
+          TELEGRAM_APP_ID: ${{ secrets.APP_ID }}
+          TELEGRAM_APP_HASH: ${{ secrets.APP_HASH }}
           HELPER_BOT_TOKEN: ${{ secrets.HELPER_BOT_TOKEN }}
           HELPER_BOT_PRIVATE_TARGET: ${{ secrets.HELPER_BOT_PRIVATE_TARGET }}
           HELPER_BOT_TARGET: ${{ secrets.HELPER_BOT_TARGET }}
