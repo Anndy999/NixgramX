@@ -277,7 +277,7 @@ async def main():
             chat_id = int(chat_id)
         # Resolve chat for send only — do not log id/username/title/full target.
         await client.get_chat(chat_id)
-        print("Private chat resolved (details redacted)", flush=True)
+        print("Private Telegram target resolved successfully.", flush=True)
         msg = await client.send_document(
             chat_id=chat_id,
             document=str(apk),

@@ -17,6 +17,9 @@ jobs:
   private-beta:
     name: Private Beta arm64
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: source
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_HARDLINK: "true"
@@ -28,6 +31,7 @@ jobs:
       TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
     steps:
       - name: Restrict to repository owner
+        working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
           if [ "${{ github.actor }}" != "${{ github.repository_owner }}" ]; then
@@ -39,6 +43,7 @@ jobs:
 
       - name: Validate pr_number
         id: prnum
+        working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
           PR='${{ inputs.pr_number }}'
@@ -51,6 +56,7 @@ jobs:
 
       - name: Resolve trusted PR HEAD SHA via API
         id: head
+        working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -88,23 +94,48 @@ jobs:
           echo "Trusted HEAD_SHA=${HEAD_SHA}"
           echo "sha=${HEAD_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout trusted HEAD SHA
+      # Trust boundary: CI control + uploader from main; PR code never decides upload.
+      - name: Checkout trusted main (uploader only)
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: trusted
+          fetch-depth: 1
+          sparse-checkout: |
+            Tools/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout untrusted PR source at HEAD_SHA
         uses: actions/checkout@v7
         with:
           ref: ${{ steps.head.outputs.sha }}
+          path: source
           fetch-depth: 1
           submodules: recursive
 
-      - name: Confirm checkout SHA
+      - name: Confirm source SHA and trusted uploader present
+        working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          GOT="$(git rev-parse HEAD)"
+          GOT="$(git -C source rev-parse HEAD)"
           WANT='${{ steps.head.outputs.sha }}'
           if [ "$GOT" != "$WANT" ]; then
-            echo "FATAL: checkout SHA mismatch got=${GOT} want=${WANT}"
+            echo "FATAL: source checkout SHA mismatch got=${GOT} want=${WANT}"
             exit 1
           fi
-          git log -1 --oneline
+          git -C source log -1 --oneline
+          if [ ! -f trusted/Tools/scripts/upload_private_beta.py ]; then
+            echo "FATAL: trusted uploader missing (main must contain Tools/scripts/upload_private_beta.py)"
+            exit 1
+          fi
+          if [ ! -f trusted/Tools/scripts/requirements.txt ]; then
+            echo "FATAL: trusted requirements.txt missing"
+            exit 1
+          fi
+          # Refuse to run any uploader from the PR tree.
+          echo "Using trusted uploader from main; source tree is build-only."
+          sha256sum trusted/Tools/scripts/upload_private_beta.py \
+            trusted/Tools/scripts/requirements.txt
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -126,7 +157,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.gradle
-          key: gradle-private-beta-${{ hashFiles('**/*.gradle') }}
+          key: gradle-private-beta-${{ hashFiles('source/**/*.gradle') }}
 
       - name: Set up Android SDK Tools
         uses: android-actions/setup-android@v4
@@ -134,6 +165,7 @@ jobs:
           packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0"
 
       - name: Install Native Build Dependencies
+        working-directory: ${{ github.workspace }}
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes nasm
@@ -192,24 +224,8 @@ jobs:
         with:
           python-version: 3.12
 
-      # Trust boundary: PR head may supply assemble sources only.
-      # Uploader + pip deps always from origin/main (chicken-egg: merge this PR first).
-      - name: Pin upload script from main
-        run: |
-          set -euo pipefail
-          git fetch --no-tags --depth=1 origin main
-          mkdir -p /tmp/trusted-private-beta
-          git show origin/main:Tools/scripts/upload_private_beta.py \
-            > /tmp/trusted-private-beta/upload_private_beta.py
-          git show origin/main:Tools/scripts/requirements.txt \
-            > /tmp/trusted-private-beta/requirements.txt
-          cp /tmp/trusted-private-beta/upload_private_beta.py Tools/scripts/upload_private_beta.py
-          cp /tmp/trusted-private-beta/requirements.txt Tools/scripts/requirements.txt
-          echo "Pinned upload_private_beta.py + requirements.txt from origin/main"
-          sha256sum /tmp/trusted-private-beta/upload_private_beta.py \
-            /tmp/trusted-private-beta/requirements.txt
-
       - name: Send APK to private target only
+        working-directory: ${{ github.workspace }}
         env:
           APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
           APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
@@ -248,10 +264,11 @@ jobs:
             echo "FATAL: PRIVATE_BETA_APK missing"
             exit 1
           fi
-          python -m pip install -r /tmp/trusted-private-beta/requirements.txt
-          COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
+          # Never execute source/Tools/scripts/upload_private_beta.py
+          python -m pip install -r trusted/Tools/scripts/requirements.txt
+          COMMIT_MESSAGE="$(git -C source log -1 --format=%s HEAD)"
           export COMMIT_MESSAGE
-          python /tmp/trusted-private-beta/upload_private_beta.py \
+          python trusted/Tools/scripts/upload_private_beta.py \
             "${HELPER_BOT_TOKEN}" \
             "${HELPER_BOT_PRIVATE_TARGET}"
 
