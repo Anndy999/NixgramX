@@ -1,0 +1,165 @@
+name: Private Beta Test
+
+# Manual only. Never runs on push / pull_request. Never publishes publicly.
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number whose head SHA will be built and sent to the private helper target'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  private-beta:
+    name: Private Beta arm64
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_HARDLINK: "true"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: "10G"
+      NATIVE_TARGET: "arm64-v8a"
+      TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
+      TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+    steps:
+      - name: Validate private target secret
+        env:
+          HELPER_BOT_PRIVATE_TARGET: ${{ secrets.HELPER_BOT_PRIVATE_TARGET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HELPER_BOT_PRIVATE_TARGET}" ]; then
+            echo "FATAL: HELPER_BOT_PRIVATE_TARGET secret is empty."
+            echo "Refusing public fallback (HELPER_BOT_TARGET / CANARY / DEFAULT_APK_CHAT_ID banned)."
+            exit 1
+          fi
+          echo "HELPER_BOT_PRIVATE_TARGET is set (value not printed)."
+
+      - name: Validate pr_number
+        run: |
+          set -euo pipefail
+          PR='${{ inputs.pr_number }}'
+          if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
+            echo "FATAL: pr_number must be a positive integer, got: ${PR}"
+            exit 1
+          fi
+          echo "Building PR #${PR}"
+
+      - name: Checkout PR head
+        uses: actions/checkout@v7
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/head
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Print final SHA
+        id: head
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse HEAD)"
+          echo "Checked out refs/pull/${{ inputs.pr_number }}/head"
+          echo "Final SHA: ${SHA}"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          git log -1 --oneline
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Ccache
+        uses: hendrikmuhs/ccache-action@v1.2.23
+        with:
+          append-timestamp: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true
+
+      - name: Set up Gradle cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.gradle
+          key: gradle-private-beta-${{ hashFiles('**/*.gradle') }}
+
+      - name: Set up Android SDK Tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0"
+
+      - name: Install Native Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes nasm
+
+      - name: Configure Android SDK Path
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" >> local.properties
+
+      - name: Modify Gradle JVM Args
+        run: |
+          MEMORY_KB=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+          MEMORY_GB=$((MEMORY_KB / 1024 / 1024))
+          echo "Detected memory size: ${MEMORY_GB}GB"
+          if [ $MEMORY_GB -ge 12 ]; then
+            sed -i '/^org\.gradle\.jvmargs=/d' gradle.properties
+            echo "org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=2G -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
+          fi
+          cat gradle.properties
+
+      - name: Assemble Staging (beta channel, arm64 only)
+        id: build
+        env:
+          COMMIT_ID: ${{ steps.head.outputs.sha }}
+          NIXGRAMX_CHANNEL: beta
+        run: |
+          set -euo pipefail
+          export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
+          export KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}"
+          export ALIAS_PASS="${{ secrets.ALIAS_PASS }}"
+          export ALIAS_NAME="${{ secrets.ALIAS_NAME }}"
+          export BUILD_TIMESTAMP=$(date +%s)
+          echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
+          ./gradlew TMessagesProj:assembleStaging
+          echo "Built APKs:"
+          ls -la TMessagesProj/build/outputs/apk/staging/*-arm64-v8a.apk
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: 3.12
+
+      - name: Send APK to private target only
+        env:
+          APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
+          APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+          TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
+          TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+          HELPER_BOT_PRIVATE_TARGET: ${{ secrets.HELPER_BOT_PRIVATE_TARGET }}
+          COMMIT_ID: ${{ steps.head.outputs.sha }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.head.outputs.sha }}
+          BUILD_TIMESTAMP: ${{ steps.build.outputs.build_timestamp }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          # Explicit ban: never reference public/canary secrets as destinations.
+          unset HELPER_BOT_TARGET HELPER_BOT_CANARY_TARGET DEFAULT_APK_CHAT_ID || true
+          if [ -z "${HELPER_BOT_PRIVATE_TARGET}" ]; then
+            echo "FATAL: HELPER_BOT_PRIVATE_TARGET empty at upload step"
+            exit 1
+          fi
+          python -m pip install -r Tools/scripts/requirements.txt
+          export COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
+          # Dedicated private uploader — no public fallback, no metadata/#update*, no Release.
+          python Tools/scripts/upload_private_beta.py \
+            "${{ secrets.HELPER_BOT_TOKEN }}" \
+            "${HELPER_BOT_PRIVATE_TARGET}"
+
+      # Intentionally NO actions/upload-artifact
+      # Intentionally NO softprops/action-gh-release / GitHub Release
+      # Intentionally NO HELPER_BOT_TARGET / CANARY / #updateBeta / metadata publish
