@@ -7,6 +7,7 @@ Hard rules:
   - Never fall back to HELPER_BOT_TARGET, HELPER_BOT_CANARY_TARGET,
     DEFAULT_APK_CHAT_ID, public channels, metadata/#update* JSON,
     or GitHub Releases.
+  - Never print chat.id / username / title / full target value.
 """
 
 from __future__ import annotations
@@ -47,13 +48,14 @@ def normalize_chat_ref(value):
 
 
 def describe_chat_ref(value) -> str:
+    """Redacted shape only — never the full target."""
     if value is None:
         return "None"
     s = str(value)
     if s.lstrip("-").isdigit():
         return f"numeric(len={len(s)})"
     if s.startswith("@"):
-        return f"username(@…{s[-4:]},len={len(s)})"
+        return f"username(len={len(s)})"
     return f"other(len={len(s)})"
 
 
@@ -72,20 +74,36 @@ def _read_gradle_property(key: str) -> str | None:
 
 
 def find_arm64_apk() -> Path:
+    """Prefer PRIVATE_BETA_APK; else unique arm64 under staging outputs."""
+    explicit = (os.environ.get("PRIVATE_BETA_APK") or "").strip()
+    if explicit:
+        p = Path(explicit)
+        if not p.is_file():
+            raise FileNotFoundError(f"PRIVATE_BETA_APK not a file: {p}")
+        if ABI not in p.name:
+            raise FileNotFoundError(f"PRIVATE_BETA_APK is not arm64-v8a: {p.name}")
+        return p
+
     search_roots = [
-        Path("artifacts"),
         Path("TMessagesProj/build/outputs/apk/staging"),
         Path("TMessagesProj/build/outputs/apk"),
     ]
+    found: list[Path] = []
     for root in search_roots:
         if not root.exists():
             continue
-        for apk in root.rglob("*.apk"):
+        for apk in sorted(root.rglob("*.apk")):
             if ABI in apk.name:
-                return apk
-    raise FileNotFoundError(
-        f"No {ABI} APK found under artifacts/ or TMessagesProj/build/outputs/apk/"
-    )
+                found.append(apk)
+    if not found:
+        raise FileNotFoundError(
+            f"No {ABI} APK found; set PRIVATE_BETA_APK or build staging first"
+        )
+    if len(found) > 1:
+        raise FileNotFoundError(
+            f"Expected exactly 1 {ABI} APK, found {len(found)}"
+        )
+    return found[0]
 
 
 def resolve_version(apk: Path) -> tuple[str, int]:
@@ -189,30 +207,31 @@ def get_caption(apk: Path) -> str:
 
 def require_private_target() -> str:
     """Resolve private target; fail hard with no public fallback."""
-    banned_env = (
-        "HELPER_BOT_TARGET",
-        "HELPER_BOT_CANARY_TARGET",
-        "DEFAULT_APK_CHAT_ID",
-        "CANARY",
-    )
-    for name in banned_env:
-        # Presence is fine; we never *read* them as a destination.
-        # Explicitly ignore so a misconfigured CI cannot silently use them.
-        _ = os.environ.get(name)
-
-    raw = ""
+    private_raw = ""
     if len(argv) > 2:
-        raw = argv[2]
-    if not str(raw).strip():
-        raw = os.environ.get("HELPER_BOT_PRIVATE_TARGET") or ""
-    target = normalize_chat_ref(raw)
+        private_raw = argv[2]
+    if not str(private_raw).strip():
+        private_raw = os.environ.get("HELPER_BOT_PRIVATE_TARGET") or ""
+    target = normalize_chat_ref(private_raw)
     if not target:
         raise SystemExit(
             "FATAL: HELPER_BOT_PRIVATE_TARGET is empty. "
             "Private beta upload refuses public fallback "
             "(no HELPER_BOT_TARGET / CANARY / DEFAULT_APK_CHAT_ID)."
         )
-    # Refuse accidental use of known public/canary argv slots.
+
+    # Equality vs public/canary without printing values.
+    for banned_name in (
+        "HELPER_BOT_TARGET",
+        "HELPER_BOT_CANARY_TARGET",
+        "DEFAULT_APK_CHAT_ID",
+    ):
+        other = normalize_chat_ref(os.environ.get(banned_name) or "")
+        if other and other == target:
+            raise SystemExit(
+                f"FATAL: HELPER_BOT_PRIVATE_TARGET equals {banned_name}"
+            )
+
     if len(argv) > 3 and str(argv[3]).strip():
         raise SystemExit(
             "FATAL: upload_private_beta.py accepts only bot_token + private target. "
@@ -223,7 +242,9 @@ def require_private_target() -> str:
 
 async def main():
     if len(argv) < 2 or not str(argv[1]).strip():
-        raise SystemExit("Usage: upload_private_beta.py <HELPER_BOT_TOKEN> [HELPER_BOT_PRIVATE_TARGET]")
+        raise SystemExit(
+            "Usage: upload_private_beta.py <HELPER_BOT_TOKEN> [HELPER_BOT_PRIVATE_TARGET]"
+        )
 
     bot_token = argv[1].strip()
     chat_id = require_private_target()
@@ -231,12 +252,14 @@ async def main():
     api_id = os.environ.get("APP_ID") or os.environ.get("TELEGRAM_APP_ID")
     api_hash = os.environ.get("APP_HASH") or os.environ.get("TELEGRAM_APP_HASH")
     if not api_id or not api_hash:
-        raise SystemExit("FATAL: APP_ID/APP_HASH (or TELEGRAM_APP_ID/TELEGRAM_APP_HASH) required")
+        raise SystemExit(
+            "FATAL: APP_ID/APP_HASH (or TELEGRAM_APP_ID/TELEGRAM_APP_HASH) required"
+        )
 
     apk = find_arm64_apk()
     caption = get_caption(apk)
     print(
-        f"Private beta upload target={describe_chat_ref(chat_id)} apk={apk}",
+        f"Private beta upload target={describe_chat_ref(chat_id)} apk={apk.name}",
         flush=True,
     )
     print("Caption preview:", flush=True)
@@ -252,21 +275,19 @@ async def main():
     try:
         with contextlib.suppress(ValueError):
             chat_id = int(chat_id)
-        chat = await client.get_chat(chat_id)
-        print(
-            f"Resolved private chat.id={chat.id} "
-            f"username={getattr(chat, 'username', None)} "
-            f"title={getattr(chat, 'title', None)}",
-            flush=True,
-        )
-        # Single APK (arm64 only) — send_document, not media group / metadata.
+        # Resolve chat for send only — do not log id/username/title/full target.
+        await client.get_chat(chat_id)
+        print("Private chat resolved (details redacted)", flush=True)
         msg = await client.send_document(
             chat_id=chat_id,
             document=str(apk),
             caption=caption,
             parse_mode=ParseMode.HTML,
         )
-        print(f"Private APK message_id={msg.id} (no metadata/#update*/public)", flush=True)
+        print(
+            f"Private APK message_id={msg.id} (no metadata/#update*/public)",
+            flush=True,
+        )
     finally:
         await client.log_out()
 

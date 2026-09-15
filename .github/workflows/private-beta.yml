@@ -23,46 +23,87 @@ jobs:
       CCACHE_NOHASHDIR: "true"
       CCACHE_MAXSIZE: "10G"
       NATIVE_TARGET: "arm64-v8a"
+      # Build-time Telegram app secrets only (not bot token / private target).
       TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
       TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
     steps:
-      - name: Validate private target secret
-        env:
-          HELPER_BOT_PRIVATE_TARGET: ${{ secrets.HELPER_BOT_PRIVATE_TARGET }}
+      - name: Restrict to repository owner
         run: |
           set -euo pipefail
-          if [ -z "${HELPER_BOT_PRIVATE_TARGET}" ]; then
-            echo "FATAL: HELPER_BOT_PRIVATE_TARGET secret is empty."
-            echo "Refusing public fallback (HELPER_BOT_TARGET / CANARY / DEFAULT_APK_CHAT_ID banned)."
+          if [ "${{ github.actor }}" != "${{ github.repository_owner }}" ]; then
+            echo "FATAL: only repository owner may dispatch Private Beta Test."
+            echo "actor=${{ github.actor }} owner=${{ github.repository_owner }}"
             exit 1
           fi
-          echo "HELPER_BOT_PRIVATE_TARGET is set (value not printed)."
+          echo "Dispatcher is repository owner."
 
       - name: Validate pr_number
+        id: prnum
         run: |
           set -euo pipefail
           PR='${{ inputs.pr_number }}'
-          if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
-            echo "FATAL: pr_number must be a positive integer, got: ${PR}"
+          if ! [[ "$PR" =~ ^[1-9][0-9]*$ ]]; then
+            echo "FATAL: pr_number must match ^[1-9][0-9]*$, got: ${PR}"
             exit 1
           fi
-          echo "Building PR #${PR}"
+          echo "pr=${PR}" >> "$GITHUB_OUTPUT"
+          echo "Validated PR #${PR}"
 
-      - name: Checkout PR head
+      - name: Resolve trusted PR HEAD SHA via API
+        id: head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PR='${{ steps.prnum.outputs.pr }}'
+          OWNER='${{ github.repository_owner }}'
+          REPO='${{ github.event.repository.name }}'
+          JSON="$(gh api "repos/${OWNER}/${REPO}/pulls/${PR}")"
+          HEAD_REPO="$(printf '%s' "$JSON" | jq -r '.head.repo.full_name')"
+          HEAD_USER="$(printf '%s' "$JSON" | jq -r '.user.login')"
+          BASE_REF="$(printf '%s' "$JSON" | jq -r '.base.ref')"
+          STATE="$(printf '%s' "$JSON" | jq -r '.state')"
+          HEAD_SHA="$(printf '%s' "$JSON" | jq -r '.head.sha')"
+          EXPECTED="${OWNER}/${REPO}"
+          if [ "$HEAD_REPO" != "$EXPECTED" ]; then
+            echo "FATAL: PR head repo must be ${EXPECTED}, got ${HEAD_REPO}"
+            exit 1
+          fi
+          if [ "$HEAD_USER" != "$OWNER" ]; then
+            echo "FATAL: PR author must be repository owner (${OWNER}), got ${HEAD_USER}"
+            exit 1
+          fi
+          if [ "$BASE_REF" != "main" ]; then
+            echo "FATAL: PR base must be main, got ${BASE_REF}"
+            exit 1
+          fi
+          if [ "$STATE" != "open" ]; then
+            echo "FATAL: PR must be open, got ${STATE}"
+            exit 1
+          fi
+          if ! [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "FATAL: invalid head sha"
+            exit 1
+          fi
+          echo "Trusted HEAD_SHA=${HEAD_SHA}"
+          echo "sha=${HEAD_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout trusted HEAD SHA
         uses: actions/checkout@v7
         with:
-          ref: refs/pull/${{ inputs.pr_number }}/head
+          ref: ${{ steps.head.outputs.sha }}
           fetch-depth: 1
           submodules: recursive
 
-      - name: Print final SHA
-        id: head
+      - name: Confirm checkout SHA
         run: |
           set -euo pipefail
-          SHA="$(git rev-parse HEAD)"
-          echo "Checked out refs/pull/${{ inputs.pr_number }}/head"
-          echo "Final SHA: ${SHA}"
-          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          GOT="$(git rev-parse HEAD)"
+          WANT='${{ steps.head.outputs.sha }}'
+          if [ "$GOT" != "$WANT" ]; then
+            echo "FATAL: checkout SHA mismatch got=${GOT} want=${WANT}"
+            exit 1
+          fi
           git log -1 --oneline
 
       - name: Set up JDK
@@ -110,7 +151,6 @@ jobs:
             sed -i '/^org\.gradle\.jvmargs=/d' gradle.properties
             echo "org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=2G -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> gradle.properties
           fi
-          cat gradle.properties
 
       - name: Assemble Staging (beta channel, arm64 only)
         id: build
@@ -127,18 +167,33 @@ jobs:
           export BUILD_TIMESTAMP
           echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
           ./gradlew TMessagesProj:assembleStaging
-          echo "Built APKs:"
-          ls -la TMessagesProj/build/outputs/apk/staging/*-arm64-v8a.apk
+
+      - name: Select unique arm64 APK
+        id: apk
+        run: |
+          set -euo pipefail
+          mapfile -t APKS < <(find TMessagesProj/build/outputs/apk/staging -type f -name '*-arm64-v8a.apk' | sort)
+          COUNT="${#APKS[@]}"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "FATAL: no arm64-v8a APK found"
+            exit 1
+          fi
+          if [ "$COUNT" -gt 1 ]; then
+            echo "FATAL: expected exactly 1 arm64-v8a APK, found ${COUNT}"
+            printf '%s\n' "${APKS[@]}"
+            exit 1
+          fi
+          APK_PATH="$(pwd)/${APKS[0]}"
+          echo "PRIVATE_BETA_APK=${APK_PATH}"
+          echo "path=${APK_PATH}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: 3.12
 
-      # Trust boundary: the PR head under test may supply source for assembleStaging,
-      # but MUST NOT supply the Telegram uploader or its pip deps. A malicious PR
-      # could otherwise exfiltrate HELPER_BOT_TOKEN or redirect the APK. Always take
-      # upload_private_beta.py + requirements.txt from origin/main into a trusted path.
+      # Trust boundary: PR head may supply assemble sources only.
+      # Uploader + pip deps always from origin/main (chicken-egg: merge this PR first).
       - name: Pin upload script from main
         run: |
           set -euo pipefail
@@ -148,7 +203,6 @@ jobs:
             > /tmp/trusted-private-beta/upload_private_beta.py
           git show origin/main:Tools/scripts/requirements.txt \
             > /tmp/trusted-private-beta/requirements.txt
-          # Overwrite in-tree copies so nothing accidental uses the PR versions.
           cp /tmp/trusted-private-beta/upload_private_beta.py Tools/scripts/upload_private_beta.py
           cp /tmp/trusted-private-beta/requirements.txt Tools/scripts/requirements.txt
           echo "Pinned upload_private_beta.py + requirements.txt from origin/main"
@@ -161,25 +215,44 @@ jobs:
           APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
           TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
           TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+          HELPER_BOT_TOKEN: ${{ secrets.HELPER_BOT_TOKEN }}
           HELPER_BOT_PRIVATE_TARGET: ${{ secrets.HELPER_BOT_PRIVATE_TARGET }}
+          HELPER_BOT_TARGET: ${{ secrets.HELPER_BOT_TARGET }}
+          HELPER_BOT_CANARY_TARGET: ${{ secrets.HELPER_BOT_CANARY_TARGET }}
           COMMIT_ID: ${{ steps.head.outputs.sha }}
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.head.outputs.sha }}
           BUILD_TIMESTAMP: ${{ steps.build.outputs.build_timestamp }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ steps.prnum.outputs.pr }}
+          PRIVATE_BETA_APK: ${{ steps.apk.outputs.path }}
         run: |
           set -euo pipefail
-          # Explicit ban: never reference public/canary secrets as destinations.
-          unset HELPER_BOT_TARGET HELPER_BOT_CANARY_TARGET DEFAULT_APK_CHAT_ID || true
           if [ -z "${HELPER_BOT_PRIVATE_TARGET}" ]; then
             echo "FATAL: HELPER_BOT_PRIVATE_TARGET empty at upload step"
+            exit 1
+          fi
+          if [ -z "${HELPER_BOT_TOKEN}" ]; then
+            echo "FATAL: HELPER_BOT_TOKEN empty at upload step"
+            exit 1
+          fi
+          # Equality checks without printing secret values.
+          if [ -n "${HELPER_BOT_TARGET}" ] && [ "${HELPER_BOT_PRIVATE_TARGET}" = "${HELPER_BOT_TARGET}" ]; then
+            echo "FATAL: HELPER_BOT_PRIVATE_TARGET equals HELPER_BOT_TARGET (public)"
+            exit 1
+          fi
+          if [ -n "${HELPER_BOT_CANARY_TARGET}" ] && [ "${HELPER_BOT_PRIVATE_TARGET}" = "${HELPER_BOT_CANARY_TARGET}" ]; then
+            echo "FATAL: HELPER_BOT_PRIVATE_TARGET equals HELPER_BOT_CANARY_TARGET"
+            exit 1
+          fi
+          unset HELPER_BOT_TARGET HELPER_BOT_CANARY_TARGET DEFAULT_APK_CHAT_ID || true
+          if [ -z "${PRIVATE_BETA_APK}" ] || [ ! -f "${PRIVATE_BETA_APK}" ]; then
+            echo "FATAL: PRIVATE_BETA_APK missing"
             exit 1
           fi
           python -m pip install -r /tmp/trusted-private-beta/requirements.txt
           COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
           export COMMIT_MESSAGE
-          # Dedicated private uploader from main — no public fallback, no metadata/#update*, no Release.
           python /tmp/trusted-private-beta/upload_private_beta.py \
-            "${{ secrets.HELPER_BOT_TOKEN }}" \
+            "${HELPER_BOT_TOKEN}" \
             "${HELPER_BOT_PRIVATE_TARGET}"
 
       # Intentionally NO actions/upload-artifact
