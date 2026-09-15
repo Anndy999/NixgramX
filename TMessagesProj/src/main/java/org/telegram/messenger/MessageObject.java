@@ -8745,14 +8745,12 @@ public class MessageObject {
             final CharSequence text = /* Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ?
                 PrecomputedText.create(text_, new PrecomputedText.Params.Builder(paint).build()) :*/ text_;
 
-            final int breakStrategy = containsCjk(text)
-                    ? StaticLayout.BREAK_STRATEGY_SIMPLE
-                    : StaticLayout.BREAK_STRATEGY_HIGH_QUALITY;
-
+            // Match official Telegram: always start HIGH_QUALITY; SIMPLE only if a line overflows width.
+            // Do not force SIMPLE for CJK (2323cc765b caused custom-emoji/CJK overlap).
             StaticLayout.Builder builder =
                     StaticLayout.Builder.obtain(text, 0, text.length(), paint, width)
                             .setLineSpacing(lineSpacingAdd, lineSpacingMult)
-                            .setBreakStrategy(breakStrategy)
+                            .setBreakStrategy(StaticLayout.BREAK_STRATEGY_HIGH_QUALITY)
                             .setHyphenationFrequency(StaticLayout.HYPHENATION_FREQUENCY_NONE)
                             .setAlignment(alignment);
             if (dontIncludePad) {
@@ -9242,7 +9240,11 @@ public class MessageObject {
             }
         }
 
-        textWidth = shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
+        // Diagnostic test (A/B): keep official Telegram text width behavior.
+        // Do not shrink the final width after StaticLayout — may desynchronize
+        // Custom Emoji layout coordinates from bubble geometry.
+        // Restore by uncommenting the next line (keep method intact).
+        // textWidth = shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
         // lastLineWidth stays the real last-line width so the timestamp never sits on glyphs.
 
         hasWideCode = hasCode && textWidth > generatedWithMinSize - dp(80 + (needDrawAvatarInternal() && !isOutOwner() && !messageOwner.isThreadMessage ? 52 : 0));
@@ -9693,7 +9695,11 @@ public class MessageObject {
                     SpoilerEffect.addSpoilers(null, block.textLayout, -1, right, null, block.spoilers);
                 }
             }
-            textWidth = MessageObject.shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
+            // Diagnostic test (A/B): keep official Telegram text width behavior.
+            // Do not shrink the final width after StaticLayout — may desynchronize
+            // Custom Emoji layout coordinates from bubble geometry.
+            // Restore by uncommenting the next line (keep method intact).
+            // textWidth = MessageObject.shrinkWidthToVisualContent(textLayoutBlocks, textWidth);
         }
 
     }
