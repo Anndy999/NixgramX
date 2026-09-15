@@ -176,6 +176,7 @@ import org.telegram.messenger.FactCheckController;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.FlagSecureReason;
+import org.telegram.messenger.diagnostics.NixEmojiTrace;
 import org.telegram.messenger.HashtagSearchController;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
@@ -25934,6 +25935,31 @@ public class ChatActivity extends BaseFragment implements
      * neighbor-slide. Incoming-only glyph fade (animateOut* = null) keeps
      * EN/ZH from sharing pixels.
      */
+    private void nixTraceCellRebindBegin(ChatMessageCell cell) {
+        if (!NixEmojiTrace.enabled() || cell == null) {
+            return;
+        }
+        MessageObject msg = cell.getMessageObject();
+        int anim = (chatListView != null && chatListView.getItemAnimator() != null) ? 1 : 0;
+        NixEmojiTrace.rebindBegin(cell, msg, msg, msg != null && msg.isTranslated(),
+                msg != null ? msg.textLayoutBlocks : null, cell.replyTextLayout,
+                cell.animatedEmojiStack, cell.animatedEmojiReplyStack, anim);
+    }
+
+    private void nixTraceCellRebindEnd(ChatMessageCell cell) {
+        if (!NixEmojiTrace.enabled() || cell == null) {
+            return;
+        }
+        MessageObject msg = cell.getMessageObject();
+        ChatMessageCell.TransitionParams tp = cell.getTransitionParams();
+        boolean chg = tp != null && tp.animateChange && tp.animateChangeProgress != 1f;
+        float p = tp != null ? tp.animateChangeProgress : 1f;
+        int anim = (chatListView != null && chatListView.getItemAnimator() != null) ? 1 : 0;
+        NixEmojiTrace.rebindEnd(cell, msg, msg != null && msg.isTranslated(),
+                msg != null ? msg.textLayoutBlocks : null, cell.replyTextLayout,
+                cell.animatedEmojiStack, cell.animatedEmojiReplyStack, chg, p, anim);
+    }
+
     private void applyDialogTranslation() {
         if (chatListView == null || chatAdapter == null) {
             return;
@@ -25982,6 +26008,8 @@ public class ChatActivity extends BaseFragment implements
         }
         boolean notifiedAll = false;
         ArrayList<Long> notifiedGroups = new ArrayList<>();
+        NixEmojiTrace.enterRebind();
+        try {
         for (int i = 0; i < chatListView.getChildCount(); ++i) {
             View child = chatListView.getChildAt(i);
             if (!(child instanceof ChatMessageCell)) {
@@ -25993,7 +26021,9 @@ public class ChatActivity extends BaseFragment implements
                 continue;
             }
             messageObject.forceUpdate = true;
+            nixTraceCellRebindBegin(cell);
             cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+            nixTraceCellRebindEnd(cell);
             MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();
             if (group != null) {
                 if (!notifiedGroups.contains(group.groupId)) {
@@ -26020,6 +26050,9 @@ public class ChatActivity extends BaseFragment implements
                 cell.requestLayout();
                 cell.invalidate();
             }
+        }
+        } finally {
+            NixEmojiTrace.exitRebind();
         }
         chatListView.invalidate();
     }
@@ -26094,7 +26127,11 @@ public class ChatActivity extends BaseFragment implements
                         chatLayoutManager.scrollToPositionWithOffset(chatListView.getChildAdapterPosition(child), cell.getTop() - (int) chatListViewPaddingTop, false);
                     }
                     cellMessageObject.forceUpdate = true;
+                    NixEmojiTrace.enterRebind();
+                    try {
+                    nixTraceCellRebindBegin(cell);
                     cell.setMessageObject(cellMessageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+                    nixTraceCellRebindEnd(cell);
                     if (group != null) {
                         if (chatListItemAnimator != null) {
                             chatListItemAnimator.groupWillChanged(group);
@@ -26110,6 +26147,9 @@ public class ChatActivity extends BaseFragment implements
                         cell.startChangeAnimation();
                         cell.requestLayout();
                         cell.invalidate();
+                    }
+                    } finally {
+                        NixEmojiTrace.exitRebind();
                     }
                     updated = true;
                 }
@@ -26139,12 +26179,19 @@ public class ChatActivity extends BaseFragment implements
                 }
                 if (update) {
                     cellMessageObject.forceUpdate = true;
+                    NixEmojiTrace.enterRebind();
+                    try {
+                    nixTraceCellRebindBegin(cell);
                     cell.setMessageObject(cellMessageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+                    nixTraceCellRebindEnd(cell);
                     chatAdapter.updateRowAtPosition(chatListView.getChildAdapterPosition(child));
                     if (chatListView.getItemAnimator() == null) {
                         cell.startChangeAnimation();
                         cell.requestLayout();
                         cell.invalidate();
+                    }
+                    } finally {
+                        NixEmojiTrace.exitRebind();
                     }
                     updated = true;
                 }
