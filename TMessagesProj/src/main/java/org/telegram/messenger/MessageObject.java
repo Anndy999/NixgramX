@@ -8745,14 +8745,12 @@ public class MessageObject {
             final CharSequence text = /* Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ?
                 PrecomputedText.create(text_, new PrecomputedText.Params.Builder(paint).build()) :*/ text_;
 
-            final int breakStrategy = containsCjk(text)
-                    ? StaticLayout.BREAK_STRATEGY_SIMPLE
-                    : StaticLayout.BREAK_STRATEGY_HIGH_QUALITY;
-
+            // Match official Telegram: always start HIGH_QUALITY; SIMPLE only if a line overflows width.
+            // Do not force SIMPLE for CJK (2323cc765b caused custom-emoji/CJK overlap).
             StaticLayout.Builder builder =
                     StaticLayout.Builder.obtain(text, 0, text.length(), paint, width)
                             .setLineSpacing(lineSpacingAdd, lineSpacingMult)
-                            .setBreakStrategy(breakStrategy)
+                            .setBreakStrategy(StaticLayout.BREAK_STRATEGY_HIGH_QUALITY)
                             .setHyphenationFrequency(StaticLayout.HYPHENATION_FREQUENCY_NONE)
                             .setAlignment(alignment);
             if (dontIncludePad) {
