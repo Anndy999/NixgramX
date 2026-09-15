@@ -35,6 +35,7 @@ import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.diagnostics.NixEmojiTrace;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.spoilers.SpoilerEffect;
@@ -350,16 +351,27 @@ public class AnimatedEmojiSpan extends ReplacementSpan {
             spanDrawn = true;
             float cx = x + measuredSize / 2f;
             float cy = top + (bottom - top) / 2f;
+            final float previousCx = lastDrawnCx;
+            final float previousCy = lastDrawnCy;
             if ((cy != lastDrawnCy && lastDrawnCy != 0 || cx != lastDrawnCx && lastDrawnCx != 0) && animateChanges(cx, cy)) {
+                if (NixEmojiTrace.enabled()) {
+                    NixEmojiTrace.spanWrite(this, previousCx, previousCy, cx, cy, lastDrawnCx, lastDrawnCy, measuredSize, lockPositionChanging, true, positionChanged, moveAnimator != null, "ANIMATE_INTERCEPT");
+                }
                 return;
             }
             if (lockPositionChanging) {
+                if (NixEmojiTrace.enabled()) {
+                    NixEmojiTrace.spanWrite(this, previousCx, previousCy, cx, cy, lastDrawnCx, lastDrawnCy, measuredSize, true, animateChanges, positionChanged, moveAnimator != null, "LOCK_SKIP");
+                }
                 return;
             }
             if (cx != lastDrawnCx || cy != lastDrawnCy) {
                 lastDrawnCx = cx;
                 lastDrawnCy = cy;
                 positionChanged = true;
+                if (NixEmojiTrace.enabled()) {
+                    NixEmojiTrace.spanWrite(this, previousCx, previousCy, cx, cy, lastDrawnCx, lastDrawnCy, measuredSize, false, animateChanges, true, moveAnimator != null, "WRITE");
+                }
             }
         }
     }
@@ -382,12 +394,19 @@ public class AnimatedEmojiSpan extends ReplacementSpan {
         }
 
         long time = System.currentTimeMillis();
+        boolean matchedChunk = false;
         for (int k = 0; k < stack.backgroundDrawingArray.size(); k++) {
             SpansChunk chunk = stack.backgroundDrawingArray.get(k);
             if (chunk.layout == layout) {
+                matchedChunk = true;
                 chunk.draw(canvas, spoilers, time, boundTop, boundBottom, drawingYOffset, alpha, colorFilter);
                 break;
             }
+        }
+        if (!matchedChunk && NixEmojiTrace.enabled()) {
+            NixEmojiTrace.DrawCtx ctx = NixEmojiTrace.ctx();
+            String role = ctx != null ? ctx.role : "UNKNOWN";
+            NixEmojiTrace.emojiDrawNoChunk(role, layout, stack, stack.holders.size());
         }
 
         if (needRestore) {
@@ -550,8 +569,12 @@ public class AnimatedEmojiSpan extends ReplacementSpan {
     }
 
     public static EmojiGroupedSpans update(int cacheType, View view, boolean invalidateParent, EmojiGroupedSpans prev, boolean clone, Layout... layouts) {
+        final EmojiGroupedSpans prevIdentity = prev;
         if (layouts == null || layouts.length <= 0) {
             if (prev != null) {
+                if (NixEmojiTrace.enabled()) {
+                    NixEmojiTrace.stackReleased(view, prevIdentity);
+                }
                 prev.holders.clear();
                 prev.release();
             }
@@ -609,8 +632,16 @@ public class AnimatedEmojiSpan extends ReplacementSpan {
                         holder.drawableBounds = new Rect();
                         holder.span = span;
                         prev.add(textLayout, holder);
+                        if (NixEmojiTrace.enabled()) {
+                            NixEmojiTrace.stackAction("CREATE", view, prev, prevIdentity, textLayout, span,
+                                    spanned.getSpanStart(span), spanned.getSpanEnd(span), spanned.length(), holder.layout);
+                        }
                     } else {
                         holder.insideSpoiler = isInsideSpoiler(textLayout, spanned.getSpanStart(span), spanned.getSpanEnd(span));
+                        if (NixEmojiTrace.enabled()) {
+                            NixEmojiTrace.stackAction("REUSE", view, prev, prevIdentity, textLayout, span,
+                                    spanned.getSpanStart(span), spanned.getSpanEnd(span), spanned.length(), holder.layout);
+                        }
                     }
                 }
             }
@@ -628,6 +659,17 @@ public class AnimatedEmojiSpan extends ReplacementSpan {
                             }
                         }
                         if (!found) {
+                            if (NixEmojiTrace.enabled()) {
+                                int spanStart = -1;
+                                int spanEnd = -1;
+                                int textLength = textLayout != null && textLayout.getText() != null ? textLayout.getText().length() : -1;
+                                if (textLayout != null && textLayout.getText() instanceof Spanned && span != null) {
+                                    spanStart = ((Spanned) textLayout.getText()).getSpanStart(span);
+                                    spanEnd = ((Spanned) textLayout.getText()).getSpanEnd(span);
+                                }
+                                NixEmojiTrace.stackAction("REMOVE", view, prev, prevIdentity, textLayout, span,
+                                        spanStart, spanEnd, textLength, holder.layout);
+                            }
                             prev.remove(i);
                             i--;
                         }
@@ -647,6 +689,10 @@ public class AnimatedEmojiSpan extends ReplacementSpan {
                     }
                 }
                 if (!found) {
+                    if (NixEmojiTrace.enabled()) {
+                        NixEmojiTrace.stackAction("REMOVE", view, prev, prevIdentity, layout, prev.holders.get(i).span,
+                                -1, -1, -1, layout);
+                    }
                     prev.remove(i);
                     i--;
                 }
@@ -1006,6 +1052,14 @@ public class AnimatedEmojiSpan extends ReplacementSpan {
                 cx = holder.span.lastDrawnCx;
                 cy = holder.span.lastDrawnCy;
                 holder.drawableBounds.set((int) (cx - halfSide), (int) (cy - halfSide), (int) (cx + halfSide), (int) (cy + halfSide));
+
+                if (NixEmojiTrace.enabled()) {
+                    NixEmojiTrace.DrawCtx ctx = NixEmojiTrace.ctx();
+                    String role = ctx != null ? ctx.role : "UNKNOWN";
+                    NixEmojiTrace.emojiDraw(role, layout, null, holder, holder.layout, holder.span,
+                            cx, cy, holder.drawableBounds.left, holder.drawableBounds.top,
+                            holder.drawableBounds.right, holder.drawableBounds.bottom, holder.span.measuredSize);
+                }
 
                 float spoilerAlpha = 1f;
                 if (spoilers != null && !spoilers.isEmpty() && holder.insideSpoiler) {

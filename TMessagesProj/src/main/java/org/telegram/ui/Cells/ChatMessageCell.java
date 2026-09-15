@@ -118,6 +118,7 @@ import org.telegram.messenger.Emoji;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.FlagSecureReason;
+import org.telegram.messenger.diagnostics.NixEmojiTrace;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
@@ -6269,13 +6270,41 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         int cache = currentMessageObject.wasJustSent ? AnimatedEmojiDrawable.getCacheTypeForEnterView() : AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES;
         if (captionLayout != null && captionLayout.textLayoutBlocks != null) {
-            animatedEmojiStack = AnimatedEmojiSpan.update(cache, this, false, animatedEmojiStack, captionLayout.textLayoutBlocks);
+            nixTraceEnter("CAPTION", NixEmojiTrace.firstLayoutId(captionLayout.textLayoutBlocks) != 0 ? captionLayout.textLayoutBlocks.get(0).textLayout : null, animatedEmojiStack);
+            try {
+                animatedEmojiStack = AnimatedEmojiSpan.update(cache, this, false, animatedEmojiStack, captionLayout.textLayoutBlocks);
+            } finally {
+                nixTraceExit();
+            }
         } else {
-            animatedEmojiStack = AnimatedEmojiSpan.update(cache, this, delegate == null || !delegate.canDrawOutboundsContent(), animatedEmojiStack, currentMessageObject.textLayoutBlocks);
+            android.text.Layout bodyLayout = currentMessageObject.textLayoutBlocks != null && !currentMessageObject.textLayoutBlocks.isEmpty() && currentMessageObject.textLayoutBlocks.get(0) != null
+                    ? currentMessageObject.textLayoutBlocks.get(0).textLayout : null;
+            nixTraceEnter("BODY", bodyLayout, animatedEmojiStack);
+            try {
+                animatedEmojiStack = AnimatedEmojiSpan.update(cache, this, delegate == null || !delegate.canDrawOutboundsContent(), animatedEmojiStack, currentMessageObject.textLayoutBlocks);
+            } finally {
+                nixTraceExit();
+            }
         }
         if (currentMessageObject.type == MessageObject.TYPE_ARTICLE && currentMessageObject.richLayout != null) {
             currentMessageObject.richLayout.invalidateAnimatedEmojiInParent = delegate == null || !delegate.canDrawOutboundsContent();
             currentMessageObject.richLayout.updateAnimatedEmojis(cache);
+        }
+    }
+
+    private void nixTraceEnter(String role, Object layout, Object stack) {
+        if (!NixEmojiTrace.enabled()) {
+            return;
+        }
+        boolean translated = currentMessageObject != null && currentMessageObject.isTranslated();
+        boolean changing = transitionParams != null && transitionParams.animateChange && transitionParams.animateChangeProgress != 1f;
+        float progress = transitionParams != null ? transitionParams.animateChangeProgress : 1f;
+        NixEmojiTrace.enterRole(role, this, layout, stack, translated, changing, progress, NixEmojiTrace.animatorState(this)[1] == 1);
+    }
+
+    private void nixTraceExit() {
+        if (NixEmojiTrace.enabled()) {
+            NixEmojiTrace.exitRole();
         }
     }
 
@@ -6705,7 +6734,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 } else {
                     updateButtonState(false, false, false);
                 }
-                animatedEmojiReplyStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, this, false, animatedEmojiReplyStack, replyTextLayout);
+                nixTraceEnter("REPLY", replyTextLayout, animatedEmojiReplyStack);
+                try {
+                    animatedEmojiReplyStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, this, false, animatedEmojiReplyStack, replyTextLayout);
+                } finally {
+                    nixTraceExit();
+                }
                 animatedEmojiDescriptionStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, this, false, animatedEmojiDescriptionStack, descriptionLayout);
                 updateAnimatedEmojis();
             } else {
@@ -16916,6 +16950,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (textLayoutBlocks == null || textLayoutBlocks.isEmpty() || alpha == 0 || currentMessageObject == null) {
             return;
         }
+        android.text.Layout nixBodyLayout = textLayoutBlocks.get(0) != null ? textLayoutBlocks.get(0).textLayout : null;
+        nixTraceEnter(caption ? "CAPTION" : "BODY", nixBodyLayout, animatedEmojiStack);
+        if (!caption) {
+            NixEmojiTrace.bodyLayoutDraw(this, nixBodyLayout, textX, textY,
+                    nixBodyLayout != null ? nixBodyLayout.getWidth() : 0,
+                    nixBodyLayout != null ? nixBodyLayout.getHeight() : 0,
+                    nixBodyLayout != null ? nixBodyLayout.getLineCount() : 0,
+                    animatedEmojiStack, currentMessageObject.isTranslated());
+        }
+        try {
         if (shouldTranslucentDeleted() && ayuDeleted && caption) {
             Theme.chat_msgTextPaint.setAlpha((int) (255 * 0.75f));
         }
@@ -17270,6 +17314,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (restore != Integer.MIN_VALUE) {
                 canvas.restoreToCount(restore);
             }
+        }
+        } finally {
+            nixTraceExit();
         }
     }
 
@@ -19860,6 +19907,41 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 try {
                     replyTextWidth = dp(4) + (needReplyImage ? dp(33) : 0);
                     if (stringFinalText != null) {
+                        // DIAGNOSTIC A/B ONLY — DO NOT MERGE
+                        // Single variable: REPLY path uses independent AnimatedEmojiSpan
+                        // instances via cloneSpans; BODY path unchanged.
+                        CharSequence replyTextBeforeClone = stringFinalText;
+                        stringFinalText = AnimatedEmojiSpan.cloneSpans(stringFinalText);
+                        if (NixEmojiTrace.enabled()) {
+                            AnimatedEmojiSpan bodySpan = null;
+                            CharSequence bodyText = currentMessageObject != null ? currentMessageObject.messageText : null;
+                            if (bodyText instanceof Spanned) {
+                                AnimatedEmojiSpan[] bodySpans = ((Spanned) bodyText).getSpans(0, bodyText.length(), AnimatedEmojiSpan.class);
+                                if (bodySpans != null && bodySpans.length > 0) {
+                                    bodySpan = bodySpans[0];
+                                }
+                            }
+                            AnimatedEmojiSpan replyBefore = null;
+                            if (replyTextBeforeClone instanceof Spanned) {
+                                AnimatedEmojiSpan[] beforeSpans = ((Spanned) replyTextBeforeClone).getSpans(0, replyTextBeforeClone.length(), AnimatedEmojiSpan.class);
+                                if (beforeSpans != null && beforeSpans.length > 0) {
+                                    replyBefore = beforeSpans[0];
+                                }
+                            }
+                            AnimatedEmojiSpan replyAfter = null;
+                            if (stringFinalText instanceof Spanned) {
+                                AnimatedEmojiSpan[] afterSpans = ((Spanned) stringFinalText).getSpans(0, stringFinalText.length(), AnimatedEmojiSpan.class);
+                                if (afterSpans != null && afterSpans.length > 0) {
+                                    replyAfter = afterSpans[0];
+                                }
+                            }
+                            NixEmojiTrace.replySpanIsolation(
+                                    bodySpan,
+                                    replyBefore,
+                                    replyAfter,
+                                    bodySpan != null && replyAfter != null && bodySpan == replyAfter,
+                                    replyBefore != null && replyAfter != null && replyBefore == replyAfter);
+                        }
                         SpannableStringBuilder sb = new SpannableStringBuilder(stringFinalText);
                         boolean changed = false;
                         for (TextStyleSpan span : sb.getSpans(0, sb.length(), TextStyleSpan.class)) {
@@ -19926,7 +20008,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if (hasReplyQuote || getMessageObject().replyMessageObject != null && !getMessageObject().replyMessageObject.isSpoilersRevealed) {
                             SpoilerEffect.addSpoilers(this, replyTextLayout, replyTextOffset, replyTextOffset + replyTextWidth, replySpoilersPool, replySpoilers);
                         }
-                        animatedEmojiReplyStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, this, false, animatedEmojiReplyStack, replyTextLayout);
+                        nixTraceEnter("REPLY", replyTextLayout, animatedEmojiReplyStack);
+                        try {
+                            animatedEmojiReplyStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, this, false, animatedEmojiReplyStack, replyTextLayout);
+                        } finally {
+                            nixTraceExit();
+                        }
                     }
                     if (replyNameWidth > replyTextWidth) {
                         replyNameWidth += dp(Math.max(2, SharedConfig.bubbleRadius / 4f));
@@ -21730,6 +21817,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (transitionParams.animateTextY) {
             textY = transitionParams.animateFromTextY * (1f - transitionParams.animateChangeProgress) + this.textY * transitionParams.animateChangeProgress;
         }
+        android.text.Layout nixBodyLayout = currentMessageObject.textLayoutBlocks != null && !currentMessageObject.textLayoutBlocks.isEmpty() && currentMessageObject.textLayoutBlocks.get(0) != null
+                ? currentMessageObject.textLayoutBlocks.get(0).textLayout : null;
+        nixTraceEnter("BODY", nixBodyLayout, animatedEmojiStack);
+        try {
         if (transitionParams.animateChangeProgress != 1.0f && transitionParams.animateMessageText && !(botDraftTypingAnimator != null && botDraftTypingAnimator.isRunning())) {
             canvas.save();
             if (currentBackgroundDrawable != null) {
@@ -21751,6 +21842,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             canvas.restore();
         } else {
             drawAnimatedEmojiMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, animatedEmojiStack, true, alpha, currentMessageObject.textXOffset, false);
+        }
+        } finally {
+            nixTraceExit();
         }
     }
 
@@ -21871,9 +21965,19 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
         if (transitionParams.animateReplaceCaptionLayout && transitionParams.animateChangeProgress != 1f) {
+            nixTraceEnter("CAPTION", captionLayout != null && captionLayout.textLayoutBlocks != null && !captionLayout.textLayoutBlocks.isEmpty() && captionLayout.textLayoutBlocks.get(0) != null ? captionLayout.textLayoutBlocks.get(0).textLayout : null, animatedEmojiStack);
+            try {
             drawAnimatedEmojiMessageText(captionX, captionY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha * transitionParams.animateChangeProgress, captionLayout != null ? captionLayout.textXOffset : 0, true);
+            } finally {
+                nixTraceExit();
+            }
         } else {
+            nixTraceEnter("CAPTION", captionLayout != null && captionLayout.textLayoutBlocks != null && !captionLayout.textLayoutBlocks.isEmpty() && captionLayout.textLayoutBlocks.get(0) != null ? captionLayout.textLayoutBlocks.get(0).textLayout : null, animatedEmojiStack);
+            try {
             drawAnimatedEmojiMessageText(captionX, captionY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha, captionLayout != null ? captionLayout.textXOffset : 0, true);
+            } finally {
+                nixTraceExit();
+            }
         }
     }
 
@@ -23241,8 +23345,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     }
                     canvas.translate(left, top);
                     final TextPaint paint = replyTextLayout.getPaint();
+                    nixTraceEnter("REPLY", replyTextLayout, animatedEmojiReplyStack);
+                    NixEmojiTrace.replyLayoutDraw(this, replyTextLayout, animatedEmojiReplyStack, replyTextOffset,
+                            left, top,
+                            replyTextLayout.getWidth(), replyTextLayout.getHeight(),
+                            currentMessageObject != null && currentMessageObject.isTranslated());
+                    try {
                     SpoilerEffect.renderWithRipple(this, invalidateSpoilersParent, spoilersColor, -dp(2), spoilersPatchedReplyTextLayout, 0, replyTextLayout, replySpoilers, canvas, false);
                     AnimatedEmojiSpan.drawAnimatedEmojis(canvas, replyTextLayout, animatedEmojiReplyStack, 0, replySpoilers, 0, 0, 0, alpha, getAdaptiveEmojiColorFilter(2, paint.getColor()));
+                    } finally {
+                        nixTraceExit();
+                    }
                     canvas.restore();
                 }
 
@@ -28945,7 +29058,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             break;
                         } else {
                             if (animatedEmojiStack != null) {
-                                animatedEmojiStack.replaceLayout(currentMessageObject.textLayoutBlocks.get(i).textLayout, lastDrawingTextBlocks.get(i).textLayout);
+                                android.text.Layout oldL = lastDrawingTextBlocks.get(i).textLayout;
+                                android.text.Layout newL = currentMessageObject.textLayoutBlocks.get(i).textLayout;
+                                animatedEmojiStack.replaceLayout(newL, oldL);
+                                if (NixEmojiTrace.enabled() && oldL != newL) {
+                                    NixEmojiTrace.log("EMOJI_STACK_UPDATE role=BODY action=REPLACE_LAYOUT stack=" + Integer.toHexString(System.identityHashCode(animatedEmojiStack))
+                                            + " oldL=" + Integer.toHexString(System.identityHashCode(oldL))
+                                            + " newL=" + Integer.toHexString(System.identityHashCode(newL)));
+                                }
                             }
                         }
                     }
@@ -28957,10 +29077,20 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     // the same textX/textY is the EN/ZH overlay.
                     animateMessageText = true;
                     animateOutTextBlocks = null;
+                    nixTraceEnter("BODY", currentMessageObject.textLayoutBlocks != null && !currentMessageObject.textLayoutBlocks.isEmpty() && currentMessageObject.textLayoutBlocks.get(0) != null ? currentMessageObject.textLayoutBlocks.get(0).textLayout : null, animatedEmojiStack);
+                    try {
                     animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animatedEmojiStack, currentMessageObject.textLayoutBlocks);
+                    } finally {
+                        nixTraceExit();
+                    }
                     changed = true;
                 } else {
+                    nixTraceEnter("BODY", currentMessageObject.textLayoutBlocks != null && !currentMessageObject.textLayoutBlocks.isEmpty() && currentMessageObject.textLayoutBlocks.get(0) != null ? currentMessageObject.textLayoutBlocks.get(0).textLayout : null, animatedEmojiStack);
+                    try {
                     animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animatedEmojiStack, currentMessageObject.textLayoutBlocks);
+                    } finally {
+                        nixTraceExit();
+                    }
                 }
             }
 
@@ -29153,7 +29283,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 ) {
                     animateReplaceCaptionLayout = true;
                     animateOutCaptionLayout = null;
+                    nixTraceEnter("CAPTION", captionLayout != null && captionLayout.textLayoutBlocks != null && !captionLayout.textLayoutBlocks.isEmpty() && captionLayout.textLayoutBlocks.get(0) != null ? captionLayout.textLayoutBlocks.get(0).textLayout : null, animatedEmojiStack);
+                    try {
                     animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, ChatMessageCell.this, animatedEmojiStack, captionLayout == null ? null : captionLayout.textLayoutBlocks);
+                    } finally {
+                        nixTraceExit();
+                    }
                     if (lastDrawingSideMenuEnabled != isSideMenuEnabled || lastDrawingSummarized != summarized) {
                         moveCaption = true;
                         captionFromX = lastDrawingCaptionX;
@@ -29391,6 +29526,18 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             }
 
+            if (changed) {
+                NixEmojiTrace.animateChange(ChatMessageCell.this,
+                        currentMessageObject != null && currentMessageObject.isTranslated(),
+                        animateMessageText,
+                        animateOutTextBlocks,
+                        animatedEmojiStack,
+                        replyTextLayout,
+                        animatedEmojiReplyStack,
+                        true,
+                        animateChangeProgress,
+                        NixEmojiTrace.animatorState(ChatMessageCell.this)[1] == 1);
+            }
             return changed;
         }
 
