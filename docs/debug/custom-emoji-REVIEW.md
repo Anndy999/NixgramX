@@ -6,8 +6,8 @@ Reviewer: Grok (Independent Reviewer). **Did not implement.** Device **not** tes
 
 Code intent matches the agreed minimal fix and upstream Telegram break-strategy shape. Residual product risk: EN→ZH “replace original” bubbles may again stay English-wide (the original reason for `2323cc765b`). Hold merge until that scenario is device-checked; not a BLOCK on the emoji-overlap logic itself.
 
-PR: https://github.com/Anndy999/NixgramX/pull/59  
-Commit: `968371fc51494060e92eaa5acb6d0a29d03d9cfc`  
+PR: https://github.com/Anndy999/NixgramX/pull/59
+Commit: `968371fc51494060e92eaa5acb6d0a29d03d9cfc`
 Production diff: `MessageObject.makeStaticLayout` only (docs + ROOT_CAUSE also in PR).
 
 ## What changed (code)
@@ -48,4 +48,3 @@ Production diff: `MessageObject.makeStaticLayout` only (docs + ROOT_CAUSE also i
 - **WARNING** — OK to proceed to device Beta / QA for: ZH+custom emoji overlap, EN→ZH bubble width, multi-line ZH wrap, caption emoji.
 - Do **not** merge as “fully verified” until those device checks pass.
 - Do **not** expand patch (no emoji padding, no AnimatedEmojiSpan rewrite) unless device fails after this HQ-first restore.
-
