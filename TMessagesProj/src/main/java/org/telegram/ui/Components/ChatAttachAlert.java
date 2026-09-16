@@ -5208,6 +5208,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         applyWriteButtonOpenState(show);
         if (animated) {
             commentsAnimator = new AnimatorSet();
+            updateSelectionChromeAnimating();
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(writeButtonContainer, View.SCALE_X, show ? 1.0f : 0.2f));
             animators.add(ObjectAnimator.ofFloat(writeButtonContainer, View.SCALE_Y, show ? 1.0f : 0.2f));
@@ -5234,6 +5235,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                             }
                         }
                         commentsAnimator = null;
+                        updateSelectionChromeAnimating();
                     }
                 }
 
@@ -5241,6 +5243,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 public void onAnimationCancel(Animator animation) {
                     if (animation.equals(commentsAnimator)) {
                         commentsAnimator = null;
+                        updateSelectionChromeAnimating();
                     }
                 }
             });
@@ -5295,6 +5298,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         final boolean above = allowAbove && captionAbove;
         if (animated) {
             commentsAnimator = new AnimatorSet();
+            updateSelectionChromeAnimating();
             if (above) {
                 topCommentContainer.setVisibility(View.VISIBLE);
             }
@@ -5348,6 +5352,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                             topCommentContainer.setVisibility(show ? View.VISIBLE : View.GONE);
                         }
                         commentsAnimator = null;
+                        updateSelectionChromeAnimating();
                     }
                 }
 
@@ -5355,6 +5360,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 public void onAnimationCancel(Animator animation) {
                     if (animation.equals(commentsAnimator)) {
                         commentsAnimator = null;
+                        updateSelectionChromeAnimating();
                     }
                 }
             });
@@ -6114,6 +6120,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 }
             } else {
                 menuAnimator = new AnimatorSet();
+                updateSelectionChromeAnimating();
                 ArrayList<Animator> animators = new ArrayList<>();
                 if (actionBar.getTag() == null && avatarPicker == 0 && !storyMediaPicker) {
                     animators.add(ObjectAnimator.ofFloat(selectedMenuItem, View.ALPHA, menuShowed ? 1.0f : 0.0f));
@@ -6129,6 +6136,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                     @Override
                     public void onAnimationEnd(Animator animation) {
                         menuAnimator = null;
+                        updateSelectionChromeAnimating();
                         if (!menuShowed) {
                             if (actionBar.getTag() == null && avatarPicker == 0 && !storyMediaPicker) {
                                 selectedMenuItem.setVisibility(View.INVISIBLE);
@@ -6137,6 +6145,12 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                         } else if (searchItem != null) {
                             searchItem.setVisibility(View.INVISIBLE);
                         }
+                    }
+
+                    @Override
+                    public void onAnimationCancel(Animator animation) {
+                        menuAnimator = null;
+                        updateSelectionChromeAnimating();
                     }
                 });
                 menuAnimator.setDuration(180);
@@ -7378,8 +7392,27 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     private final ArrayList<RectF> iBlur3PositionsMerged = new ArrayList<>();
 
+    private boolean selectionChromeAnimating;
+
+    private void updateSelectionChromeAnimating() {
+        boolean animating = commentsAnimator != null || menuAnimator != null;
+        if (selectionChromeAnimating == animating) {
+            return;
+        }
+        selectionChromeAnimating = animating;
+        if (!animating) {
+            blur3_InvalidateBlur();
+            if (containerView != null) {
+                containerView.invalidate();
+            }
+        }
+    }
+
     public void blur3_InvalidateBlur() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
+            return;
+        }
+        if (selectionChromeAnimating) {
             return;
         }
 
