@@ -52,7 +52,6 @@ import org.telegram.ui.ChatActivity;
 import org.telegram.ui.RestrictedLanguagesSelectActivity;
 import org.telegram.ui.Stories.recorder.ButtonWithCounterView;
 import org.telegram.ui.Stories.recorder.HintView2;
-import org.telegram.ui.recyclerview.ChatListItemAnimator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +71,7 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
     private TextView textView;
     private final Drawable translateDrawable;
     public final SpannableString translateIcon;
+    private int barTextAnimationToken;
 
     private ImageView menuView;
 
@@ -416,24 +416,33 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
         if (TextUtils.equals(textView.getText(), text) && textView.getAlpha() > 0.99f) {
             return;
         }
+        final int animationToken = ++barTextAnimationToken;
         textView.animate().cancel();
+        textView.setAlpha(1f);
+        textView.setTranslationY(0f);
         if (!isAttachedToWindow() || TextUtils.isEmpty(textView.getText())) {
             textView.setText(text);
-            textView.setAlpha(1f);
             return;
         }
         final CharSequence next = text;
-        // Sequential whole-label fade: never draw both 翻译为中文 and 显示原文.
+        // Sequential whole-label change: never draw both 翻译为中文 and 显示原文.
         textView.animate()
                 .alpha(0f)
-                .setDuration(ChatListItemAnimator.DEFAULT_DURATION / 2)
-                .setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR)
+                .translationY(-dp(2f))
+                .setDuration(75)
+                .setInterpolator(CubicBezierInterpolator.EASE_IN)
                 .withEndAction(() -> {
+                    if (animationToken != barTextAnimationToken) {
+                        return;
+                    }
                     textView.setText(next);
+                    textView.setAlpha(0f);
+                    textView.setTranslationY(dp(2f));
                     textView.animate()
                             .alpha(1f)
-                            .setDuration(ChatListItemAnimator.DEFAULT_DURATION / 2)
-                            .setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR)
+                            .translationY(0f)
+                            .setDuration(140)
+                            .setInterpolator(new CubicBezierInterpolator(.2f, .8f, .2f, 1f))
                             .start();
                 })
                 .start();
