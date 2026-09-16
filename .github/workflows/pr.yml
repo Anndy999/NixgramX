@@ -13,6 +13,10 @@ jobs:
   quick-verify:
     if: ${{ !startsWith(github.head_ref, 'upstream-sync/') }}
     uses: ./.github/workflows/quick-verify.yml
+    # Reusable workflows do not receive repository secrets unless inherited.
+    # Canary / Full Verify / Private Beta run as top-level jobs and can read
+    # secrets.TELEGRAM_APP_* directly; this caller must pass them through.
+    secrets: inherit
     with:
       source_sha: ${{ github.event.pull_request.head.sha }}
       base_sha: ${{ github.event.pull_request.base.sha }}
@@ -21,5 +25,6 @@ jobs:
   upstream-sync:
     if: ${{ startsWith(github.head_ref, 'upstream-sync/') }}
     uses: ./.github/workflows/upstream-sync-ci.yml
+    secrets: inherit
     with:
       source_sha: ${{ github.event.pull_request.head.sha }}

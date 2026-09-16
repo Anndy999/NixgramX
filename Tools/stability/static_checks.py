@@ -14,6 +14,7 @@ pr = Path('.github/workflows/pr.yml').read_text()
 assert "'**.xml'" not in pr, 'Android XML must trigger CI'
 assert 'quick-verify.yml' in pr, 'Ordinary PRs must use quick-verify'
 assert 'upstream-sync-ci.yml' in pr, 'upstream-sync PRs must keep using upstream-sync-ci'
+assert pr.count('secrets: inherit') >= 2, 'PR reusable workflows must inherit TELEGRAM_APP_* secrets'
 assert "!startsWith(github.head_ref, 'upstream-sync/')" in pr
 assert "startsWith(github.head_ref, 'upstream-sync/')" in pr
 qv = Path('.github/workflows/quick-verify.yml').read_text()
