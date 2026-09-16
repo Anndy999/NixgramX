@@ -217,6 +217,25 @@ public final class NgxDiagnosticCore {
         return remaining > 0;
     }
 
+    int remaining() {
+        return remaining;
+    }
+
+    /**
+     * Stops capture and restores the original level. The ring is kept.
+     * CAPTURE_CANCEL is emitted with the capture sid when possible.
+     */
+    public synchronized boolean cancelCapture() {
+        if (remaining <= 0) return false;
+        try {
+            emit(Category.APP, "CAPTURE_CANCEL");
+        } catch (Throwable ignored) {
+            drop();
+        }
+        finishCapture();
+        return true;
+    }
+
     private String emit(Category category, String name, Value... values) {
         return event(category, name, values);
     }

@@ -68,8 +68,10 @@ artifact and metadata; and automated privacy checks. Its existing custom store
 duplicates IO and has legacy event callers, so adding another store would
 increase, rather than reduce, risk.
 
-This Core freeze does not add FileLog persistence, Settings UI, export zip, or
-production instrumentation. Those are later phases.
+This Core freeze is paired with an Android infrastructure layer in the same PR:
+`NgxDiagnostics` facade, bounded local persistence, Settings/Capture/Export,
+and a developer-only synthetic self-test. Production Telegram paths are not
+instrumented.
 
 ## Frozen Core semantics
 
@@ -142,14 +144,17 @@ is `REQUEST_ID`, not `REQUEST_TOKEN`.
 Diagnostics may fail and may drop events. They must never crash NixgramX.
 No public Core API throws because of diagnostic-only input.
 
-## Proposed later architecture
+## Infrastructure (this PR)
 
-`NgxDiagnostics` remains a small facade above `FileLog`, not another logger.
-Later phases may persist the same line form:
+`NgxDiagnostics` is the Android facade over Core. Persistence is a dedicated
+bounded writer (`current.log` / `previous.log`, 512 KB each, 1 MB total) on a
+128-deep drop-on-overflow queue. FileLog is not used: its queue is private,
+unbounded, and mixed with MTProto/network dumps.
 
-```
-[NGX]|CATEGORY|sid=AB12|event=CAN_BEGIN_SLIDE|direction=NEXT|result=FALSE|reason=NO_TARGET
-```
+Settings live under N-Settings as a developer page: level, capture, cancel,
+export ZIP, clear, and self-test. Export is a local share-sheet ZIP with
+allowlisted metadata plus `ngx_diagnostics.log`. No Telegram Send Logs
+replacement, no remote upload.
 
-Persistence, Settings UI, Capture button, export zip, and production
-instrumentation are out of scope for this Core freeze.
+Production instrumentation of ChatActivity / PhotoViewer / ConnectionsManager /
+Ghost / translation / media is out of scope.

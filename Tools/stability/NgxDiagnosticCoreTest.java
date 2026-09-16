@@ -130,6 +130,14 @@ public class NgxDiagnosticCoreTest {
         captureCount(Level.DIAGNOSTIC);
         captureCount(Level.TRACE);
 
+        NgxDiagnosticCore cancel = new NgxDiagnosticCore();
+        cancel.setLevel(Level.OFF);
+        ok(cancel.capture(), "cancel capture start");
+        ok(e(cancel, 5000) != null, "event during cancel capture");
+        ok(cancel.cancelCapture(), "cancel capture");
+        ok(!capturing(cancel) && cancel.level() == Level.OFF, "cancel restores off");
+        ok(!cancel.snapshot().isEmpty(), "cancel keeps ring");
+
         NgxDiagnosticCore cc = new NgxDiagnosticCore();
         cc.setLevel(Level.DIAGNOSTIC);
         Thread[] ts = new Thread[4];

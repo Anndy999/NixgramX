@@ -356,4 +356,19 @@
     <string name="ImportAyuDBAlert">The current message database will be replaced. The app will restart after the import.</string>
     <string name="DisableSwipeToNext">Disable Swipe to Next</string>
     <string name="ForceFontWeightFallback">Force Font Weight Fallback</string>
+    <string name="NgxDiagnostics">NGX Diagnostics</string>
+    <string name="NgxDiagnosticsLevel">Diagnostics Level</string>
+    <string name="NgxDiagnosticsLevelOff">Off</string>
+    <string name="NgxDiagnosticsLevelDiagnostic">Diagnostic</string>
+    <string name="NgxDiagnosticsLevelTrace">Trace</string>
+    <string name="NgxDiagnosticsCapture">Capture Next Action</string>
+    <string name="NgxDiagnosticsCapturing">Capturing…</string>
+    <string name="NgxDiagnosticsCancelCapture">Cancel Capture</string>
+    <string name="NgxDiagnosticsExport">Export Diagnostics</string>
+    <string name="NgxDiagnosticsClear">Clear Diagnostics</string>
+    <string name="NgxDiagnosticsClearInfo">Clears NGX diagnostic events and files. Telegram logs are not removed.</string>
+    <string name="NgxDiagnosticsSelfTest">Run Diagnostics Self-Test</string>
+    <string name="NgxDiagnosticsSelfTestDone">Diagnostics self-test finished</string>
+    <string name="NgxDiagnosticsStatus">Stored events</string>
+    <string name="NgxDiagnosticsInfo">Developer diagnostic tool. Capture the next actions, then export a local ZIP. No chat content, accounts, or tokens are recorded.</string>
 </resources>
