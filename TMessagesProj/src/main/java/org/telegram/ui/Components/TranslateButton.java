@@ -429,8 +429,8 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
         textView.animate()
                 .alpha(0f)
                 .translationY(-dp(2f))
-                .setDuration(75)
-                .setInterpolator(CubicBezierInterpolator.EASE_IN)
+                .setDuration(ChatListItemAnimator.DEFAULT_DURATION / 2)
+                .setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR)
                 .withEndAction(() -> {
                     if (animationToken != barTextAnimationToken) {
                         return;
@@ -441,8 +441,8 @@ public class TranslateButton extends FrameLayout implements Theme.Colorable {
                     textView.animate()
                             .alpha(1f)
                             .translationY(0f)
-                            .setDuration(140)
-                            .setInterpolator(new CubicBezierInterpolator(.2f, .8f, .2f, 1f))
+                            .setDuration(ChatListItemAnimator.DEFAULT_DURATION / 2)
+                            .setInterpolator(ChatListItemAnimator.DEFAULT_INTERPOLATOR)
                             .start();
                 })
                 .start();

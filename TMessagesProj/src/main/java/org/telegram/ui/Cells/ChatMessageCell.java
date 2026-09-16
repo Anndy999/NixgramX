@@ -28448,20 +28448,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return transitionParams;
     }
 
-    // Keep translation content on the same 250 ms clock as RecyclerView MOVE. This
-    // deliberately affects drawing only: moving the cell would compound MOVE's Y.
-    private static final float TRANSLATION_TEXT_DELAY_FRACTION = 30f / ChatListItemAnimator.DEFAULT_DURATION;
-    private static final float TRANSLATION_TEXT_DURATION_FRACTION = 180f / ChatListItemAnimator.DEFAULT_DURATION;
-    private static final float TRANSLATION_TEXT_OFFSET_DP = 2.5f;
-    private static final Interpolator TRANSLATION_TEXT_INTERPOLATOR = new CubicBezierInterpolator(.2f, .8f, .2f, 1f);
+    // Follow the official RecyclerView MOVE clock. Only the incoming translation
+    // glyphs receive a small draw offset; moving the cell would compound MOVE's Y.
+    private static final float TRANSLATION_TEXT_OFFSET_DP = 2f;
 
     private float getTranslationIncomingTextProgress() {
-        if (!transitionParams.animateTranslationText) {
-            return transitionParams.animateChangeProgress;
-        }
-        final float localProgress = Math.max(0f, Math.min(1f,
-                (transitionParams.animateChangeProgress - TRANSLATION_TEXT_DELAY_FRACTION) / TRANSLATION_TEXT_DURATION_FRACTION));
-        return TRANSLATION_TEXT_INTERPOLATOR.getInterpolation(localProgress);
+        return transitionParams.animateChangeProgress;
     }
 
     private float getTranslationIncomingTextOffsetY(float incomingProgress) {
