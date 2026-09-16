@@ -21,6 +21,7 @@ jobs:
       NATIVE_TARGET: arm64-v8a
       TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
       TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+      LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -50,8 +51,18 @@ jobs:
           python3 Tools/stability/static_checks.py
           python3 -m unittest discover -s Tools/stability -p 'test_*.py'
           mkdir -p /tmp/diagnostic-tests
-          javac -d /tmp/diagnostic-tests TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java Tools/stability/DiagnosticStoreTest.java
+          javac -d /tmp/diagnostic-tests \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticCore.java \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticStore.java \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticExport.java \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticSelfTest.java \
+            Tools/stability/NgxDiagnosticCoreTest.java \
+            Tools/stability/NgxDiagnosticInfrastructureTest.java \
+            Tools/stability/DiagnosticStoreTest.java
           java -cp /tmp/diagnostic-tests DiagnosticStoreTest
+          java -cp /tmp/diagnostic-tests NgxDiagnosticCoreTest
+          java -cp /tmp/diagnostic-tests NgxDiagnosticInfrastructureTest
           git fetch origin main --depth=1
           git diff --check FETCH_HEAD HEAD
 
