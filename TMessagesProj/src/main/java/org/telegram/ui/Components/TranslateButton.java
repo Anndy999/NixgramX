@@ -52,6 +52,7 @@ import org.telegram.ui.ChatActivity;
 import org.telegram.ui.RestrictedLanguagesSelectActivity;
 import org.telegram.ui.Stories.recorder.ButtonWithCounterView;
 import org.telegram.ui.Stories.recorder.HintView2;
+import org.telegram.ui.recyclerview.ChatListItemAnimator;
 
 import java.util.ArrayList;
 import java.util.List;
