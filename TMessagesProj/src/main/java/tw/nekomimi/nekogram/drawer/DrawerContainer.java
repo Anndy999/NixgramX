@@ -9,6 +9,8 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -27,6 +29,8 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.MainTabsActivity;
+import org.telegram.ui.ProxyListActivity;
+import org.telegram.ui.ThemeActivity;
 
 import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
 
@@ -41,8 +45,11 @@ public class DrawerContainer extends FrameLayout {
 
     private final FrameLayout drawerPanel;
     private final DrawerHeaderView headerView;
+    private final DrawerAccountPickerView accountPickerView;
     private final DrawerMenuView menuView;
     private final Paint scrimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path panelClipPath = new Path();
+    private final float[] panelRadii = new float[8];
 
     private int drawerWidth;
     private float progress;
@@ -75,19 +82,38 @@ public class DrawerContainer extends FrameLayout {
         LinearLayout content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
         headerView = new DrawerHeaderView(context);
-        content.addView(headerView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, dp(168)));
+        content.addView(headerView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, dp(160)));
+
+        accountPickerView = new DrawerAccountPickerView(context);
+        content.addView(accountPickerView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         ScrollView scrollView = new ScrollView(context);
         menuView = new DrawerMenuView(context);
         scrollView.addView(menuView, new FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         content.addView(scrollView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, 0, 1f));
         drawerPanel.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        headerView.setOnProfile(() -> openMenuItem(MainMenuItem.PROFILE.getId()));
+        headerView.setOnAccounts(() -> {
+            accountPickerView.toggleExpand();
+            headerView.setChevronExpanded(accountPickerView.isExpanded());
+        });
+        accountPickerView.setOnAccountSelected(() -> closeDrawer(true));
+        headerView.setChevronExpanded(accountPickerView.isExpanded());
+        headerView.setOnTheme(() -> {
+            Theme.ThemeInfo target = Theme.isCurrentThemeDark() ? Theme.getCurrentTheme() : Theme.getCurrentNightTheme();
+            if (target != null) {
+                Theme.applyTheme(target, !Theme.isCurrentThemeDark());
+            }
+        });
+        headerView.setOnThemeLongPress(() -> presentFromDrawer(new ThemeActivity(ThemeActivity.THEME_TYPE_NIGHT)));
+        headerView.setOnProxy(() -> presentFromDrawer(new ProxyListActivity()));
     }
 
     public void dispose() {
         cancelTracking();
         progress = 0f;
         isOpen = false;
+        accountPickerView.dispose();
         setVisibility(GONE);
     }
 
@@ -356,9 +382,28 @@ public class DrawerContainer extends FrameLayout {
 
     private void refreshContents() {
         headerView.updateUserInfo();
+        accountPickerView.rebuild();
         BaseFragment fragment = getContentFragment();
         int account = fragment != null ? fragment.getCurrentAccount() : org.telegram.messenger.UserConfig.selectedAccount;
         menuView.rebuild(fragment, account, () -> closeDrawer(true));
+    }
+
+    private void openMenuItem(int id) {
+        BaseFragment fragment = getContentFragment();
+        if (fragment == null) return;
+        MainMenuHelper.MenuItemInfo item = MainMenuHelper.resolve(id, fragment, fragment.getCurrentAccount());
+        if (item != null && item.onClick != null) {
+            item.onClick.run();
+            closeDrawer(true);
+        }
+    }
+
+    private void presentFromDrawer(BaseFragment fragment) {
+        BaseFragment current = getContentFragment();
+        if (current != null) {
+            current.presentFragment(fragment);
+            closeDrawer(true);
+        }
     }
 
     private BaseFragment getContentFragment() {
@@ -378,8 +423,9 @@ public class DrawerContainer extends FrameLayout {
     }
 
     private int calculateDrawerWidth() {
-        int w = AndroidUtilities.displaySize.x;
-        return Math.min(dp(320), Math.max(dp(280), (int) (w * 0.82f)));
+        // Exteraless geometry: min(300dp, screen width - 56dp).  No arbitrary
+        // percentage means split-screen and narrow devices retain a usable scrim.
+        return Math.min(dp(300), Math.max(0, AndroidUtilities.displaySize.x - dp(56)));
     }
 
     private VelocityTracker obtainVelocity() {
@@ -411,6 +457,31 @@ public class DrawerContainer extends FrameLayout {
             canvas.drawRect(0, 0, getWidth(), getHeight(), scrimPaint);
         }
         super.dispatchDraw(canvas);
+    }
+
+    @Override
+    protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+        if (child != drawerPanel || NixNavigationConfig.isImmersiveDrawerEnabled()) {
+            return super.drawChild(canvas, child, drawingTime);
+        }
+        final float radius = dp(24);
+        final boolean rtl = NixDrawerEdgeHelper.isRtl(this);
+        // Only the edge facing the content is rounded, matching Exteraless' ordinary drawer.
+        if (rtl) {
+            panelRadii[0] = radius; panelRadii[1] = radius; panelRadii[2] = 0; panelRadii[3] = 0;
+            panelRadii[4] = 0; panelRadii[5] = 0; panelRadii[6] = radius; panelRadii[7] = radius;
+        } else {
+            panelRadii[0] = 0; panelRadii[1] = 0; panelRadii[2] = radius; panelRadii[3] = radius;
+            panelRadii[4] = radius; panelRadii[5] = radius; panelRadii[6] = 0; panelRadii[7] = 0;
+        }
+        RectF bounds = new RectF(child.getX(), child.getY(), child.getX() + child.getWidth(), child.getY() + child.getHeight());
+        panelClipPath.rewind();
+        panelClipPath.addRoundRect(bounds, panelRadii, Path.Direction.CW);
+        int save = canvas.save();
+        canvas.clipPath(panelClipPath);
+        boolean result = super.drawChild(canvas, child, drawingTime);
+        canvas.restoreToCount(save);
+        return result;
     }
 
     @Override

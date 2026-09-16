@@ -9111,7 +9111,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void updateFloatingButtonVisibility(boolean animated) {
-        final boolean isVisible = !(onlySelect && initialDialogsType != 10 || folderId != 0 || communityId != 0 || inPreviewMode || (searching && !onlySelect) || floatingButtonHidden);
+        // This is the single visibility gate for both compose and stories FABs.  Keep the
+        // preference here as well as in hideFloatingButton(): search, preview and story
+        // updates all reach this method and must not resurrect a disabled button.
+        final boolean floatingButtonDisabled = NaConfig.INSTANCE.getDisableDialogsFloatingButton().Bool();
+        if (floatingButtonDisabled) {
+            floatingForceVisible = false;
+            floatingButtonHidden = true;
+        }
+        final boolean isVisible = !(floatingButtonDisabled || onlySelect && initialDialogsType != 10 || folderId != 0 || communityId != 0 || inPreviewMode || (searching && !onlySelect) || floatingButtonHidden);
 
         if (floatingButton3 != null) {
             floatingButton3.setButtonVisible(isVisible, animated);
