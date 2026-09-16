@@ -58,7 +58,7 @@ class PhotoViewerTransitionPathTest(unittest.TestCase):
         self.assertIn("applyPendingWindowHdrColorMode();", blur)
         self.assertLess(blur.index("applyPendingWindowHdrColorMode();"), blur.index("invalidateAllGlassAttachedViews()"))
 
-    def test_no_reuse_delay_or_photoviewer_transition_workarounds_are_present(self):
+    def test_no_reuse_delay_or_synthetic_menu_workarounds_are_present(self):
         forbidden_viewer = (
             "showPhotoViewerWindow",
             "hidePhotoViewerWindow",
@@ -70,6 +70,9 @@ class PhotoViewerTransitionPathTest(unittest.TestCase):
             self.assertNotIn(symbol, self.viewer)
 
         self.assertNotIn("postDelayed", self.open_photo)
+        self.assertNotIn("glassMenuMinimumItems", self.action_bar)
+        self.assertNotIn("calculateGlassMenuGeometryWidth", self.action_bar)
+        self.assertNotIn("setGlassMenuMinimumItems", self.chat_activity)
 
 
 if __name__ == "__main__":
