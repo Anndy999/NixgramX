@@ -4037,6 +4037,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     return;
                 }
                 if (id == -1) {
+                    if (NixNavigationConfig.isDrawerEnabled() && canOpenDrawer() && openNavigationDrawer()) {
+                        return;
+                    }
                     if (rightSlidingDialogContainer != null && rightSlidingDialogContainer.hasFragment()) {
                         if (actionBar.isActionModeShowed()) {
                             if (searchViewPager != null && searchViewPager.getVisibility() == View.VISIBLE && searchViewPager.actionModeShowing()) {
@@ -13996,20 +13999,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (NixNavigationConfig.isDrawerEnabled()) {
             MenuDrawable menuDrawable = new MenuDrawable();
             menuDrawable.setRotateToBack(false);
-            optionsItem.setIcon(menuDrawable);
-            optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrOpenMenu));
-            optionsItem.setOnClickListener(v -> {
-                if (getParentActivity() instanceof LaunchActivity) {
-                    DrawerContainer container = ((LaunchActivity) getParentActivity()).drawerLayoutContainer.getDrawerContainer();
-                    if (container != null) {
-                        container.openDrawer(true);
-                    }
-                }
-            });
-            optionsItem.setOnLongClickListener(null);
+            actionBar.setBackButtonImage(R.drawable.ic_ab_other);
+            actionBar.getBackButton().setImageDrawable(menuDrawable);
+            actionBar.getBackButton().setContentDescription(LocaleController.getString(R.string.AccDescrOpenMenu));
+            optionsItem.setVisibility(View.GONE);
         } else {
+            actionBar.setBackButtonImage(0);
             optionsItem.setIcon(R.drawable.ic_ab_other);
             optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
+            optionsItem.setVisibility(View.VISIBLE);
             optionsItem.setOnClickListener(v -> {
                 getContactsController().loadGlobalPrivacySetting();
                 showItemOptions();
@@ -14020,6 +14018,18 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 return true;
             });
         }
+    }
+
+    private boolean openNavigationDrawer() {
+        if (!(getParentActivity() instanceof LaunchActivity)) {
+            return false;
+        }
+        DrawerContainer container = ((LaunchActivity) getParentActivity()).drawerLayoutContainer.getDrawerContainer();
+        if (container == null) {
+            return false;
+        }
+        container.openDrawer(true);
+        return true;
     }
 
     private void showItemOptions() {
@@ -14552,6 +14562,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void checkUi_itemOptionsVisibility() {
+        if (NixNavigationConfig.isDrawerEnabled()) {
+            FragmentFloatingButton.setAnimatedVisibility(optionsItem, 0f);
+            return;
+        }
         final float factor1 = 1f - animatorSearchVisible.getFloatValue();
         final float factor2 = 1f - getRightSlidingProgress();
         final float factor3 = 1f - animatorDoneButtonVisible.getFloatValue();

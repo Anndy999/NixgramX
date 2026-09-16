@@ -1,2 +1,3 @@
 - Switch to the active NixgramX Telegram API application.
-- Beta build versionCode: 1313.
+- Move the navigation drawer button from the right side to the left side.
+- Beta build versionCode: 1314.
