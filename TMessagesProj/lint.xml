@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- AGP JoinEffectDetector/ThreadConstraint crashes lintAnalyzeDebug with
+         ConcurrentModificationException in kotlinx persistent maps. Lint's own
+         recovery hint is to disable ThreadConstraint. -->
+    <issue id="ThreadConstraint" severity="ignore" />
+</lint>

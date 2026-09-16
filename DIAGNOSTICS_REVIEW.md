@@ -49,6 +49,11 @@ Head under review is the `diagnostic/ngx-diagnostics-framework` branch of PR #76
 
 BLOCKER / HIGH remaining: 0.
 
+Full Verify `lintAnalyzeDebug` later crashed inside AGP's `JoinEffectDetector`
+(`ThreadConstraint`) with `ConcurrentModificationException` on a kotlinx
+persistent map. That is a lint-runtime bug, not an NGX finding. Workaround:
+disable `ThreadConstraint` in `TMessagesProj/lint.xml` and `android.lint`.
+
 ## FileLog decision
 
 Telegram `FileLog.logQueue` is private, unbounded, and writes app/MTProto/network files. NGX diagnostics need a privacy-safe, independently exportable, size-capped artifact. A 1-thread bounded queue with drop-on-overflow is the smallest writer that cannot starve Telegram logs or mix dumps.

@@ -121,6 +121,12 @@ if (nativeTarget == 'SKIP') {
 android {
     defaultConfig.applicationId = appPackage
 
+    lint {
+        // AGP JoinEffectDetector crash: "Hash code of a key ... EndOfChain has changed".
+        // Lint itself recommends disabling ThreadConstraint; this is not a product issue.
+        disable 'ThreadConstraint'
+    }
+
     packaging {
         jniLibs {
             useLegacyPackaging = true
