@@ -1,2 +1,2 @@
-- Brand identity: use NixgramX consistently for the network map client identifier.
-- Beta build versionCode: 1312.
+- Switch to the active NixgramX Telegram API application.
+- Beta build versionCode: 1313.
