@@ -51,7 +51,6 @@ public class DrawerHeaderView extends FrameLayout {
     public DrawerHeaderView(Context context) {
         super(context);
         avatarView = new BackupImageView(context);
-        avatarView.getImageReceiver().setAvatarCornersApplied(true);
         avatarView.setRoundRadius(dp(36));
         avatarView.setOnClickListener(v -> run(onProfile));
         addView(avatarView, LayoutHelper.createFrame(72, 72, Gravity.START | Gravity.TOP, 16, 16, 0, 0));

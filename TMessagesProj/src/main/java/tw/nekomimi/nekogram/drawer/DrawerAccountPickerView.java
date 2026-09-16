@@ -104,7 +104,7 @@ public class DrawerAccountPickerView extends FrameLayout {
         name.setText(user == null ? "" : ContactsController.formatName(user.first_name, user.last_name));
         row.addView(name, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.START, 54, 0, reorderMode ? 72 : 58, 0));
         int unread = MessagesStorage.getInstance(account).getMainUnreadCount();
-        if (unread > 0 && UserConfig.getVisibleAccountsCount() > 1) {
+        if (unread > 0 && accounts.size() > 1) {
             TextView badge = new TextView(getContext());
             badge.setText(Integer.toString(unread));
             badge.setTextSize(12);
