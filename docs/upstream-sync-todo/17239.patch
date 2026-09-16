@@ -1,0 +1,40 @@
+diff --git a/TMessagesProj_AppStandalone/build.gradle b/TMessagesProj_AppStandalone/build.gradle
+index 96dbbbf027344d6cc2aebed1060c5e86b7962b6e..1fd239aa5b25830f82b8a200302bc9d748e20313 100644
+--- a/TMessagesProj_AppStandalone/build.gradle
++++ b/TMessagesProj_AppStandalone/build.gradle
+@@ -1,4 +1,5 @@
+ apply plugin: 'com.android.application'
++apply plugin: 'org.telegram.build-app-plugin'
+ 
+ repositories {
+     mavenCentral()
+@@ -44,7 +45,8 @@ android {
+     }
+ 
+     androidResources {
+-        localeFilters += ["en", "ar", "de", "es", "it", "ko", "nl", "pt-rBR", "ru", "uk"]
++        noCompress += "pack"
++        localeFilters += ["zz"]
+     }
+ 
+     signingConfigs {
+@@ -71,7 +73,7 @@ android {
+             applicationIdSuffix ".web"
+             minifyEnabled false
+             multiDexEnabled true
+-            proguardFiles getDefaultProguardFile('proguard-android.txt'), '../TMessagesProj/proguard-rules.pro', '../TMessagesProj/proguard-rules-beta.pro'
++            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../TMessagesProj/proguard-rules.pro', '../TMessagesProj/proguard-rules-beta.pro'
+             ndk.debugSymbolLevel = 'FULL'
+         }
+         standalone {
+@@ -81,8 +83,9 @@ android {
+             signingConfig signingConfigs.release
+             applicationIdSuffix ".web"
+             minifyEnabled true
++            shrinkResources true
+             multiDexEnabled true
+-            proguardFiles getDefaultProguardFile('proguard-android.txt'), '../TMessagesProj/proguard-rules.pro'
++            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), '../TMessagesProj/proguard-rules.pro'
+             ndk.debugSymbolLevel = 'FULL'
+         }
+     }

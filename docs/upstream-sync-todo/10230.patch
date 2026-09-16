@@ -1,0 +1,14 @@
+diff --git a/TMessagesProj/jni/boringssl/pki/testdata/verify_certificate_chain_unittest/intermediate-lacks-signing-key-usage/main.test b/TMessagesProj/jni/boringssl/pki/testdata/verify_certificate_chain_unittest/intermediate-lacks-signing-key-usage/main.test
+deleted file mode 100644
+index 8364daa729ebc8890373a5939185d42ee1457da9..0000000000000000000000000000000000000000
+--- a/TMessagesProj/jni/boringssl/pki/testdata/verify_certificate_chain_unittest/intermediate-lacks-signing-key-usage/main.test
++++ /dev/null
+@@ -1,8 +0,0 @@
+-chain: chain.pem
+-last_cert_trust: TRUSTED_ANCHOR
+-utc_time: DEFAULT
+-key_purpose: SERVER_AUTH
+-expected_errors:
+------ Certificate i=1 (CN=Intermediate) -----
+-ERROR: keyCertSign bit is not set
+-

@@ -1,0 +1,11 @@
+diff --git a/TMessagesProj/jni/boringssl/ssl/test/runner/channel_id_key.pem b/TMessagesProj/jni/boringssl/ssl/test/runner/channel_id_key.pem
+deleted file mode 100644
+index 83eb53a459a6db5c33b635dc3fd18bdc8b5ef9c4..0000000000000000000000000000000000000000
+--- a/TMessagesProj/jni/boringssl/ssl/test/runner/channel_id_key.pem
++++ /dev/null
+@@ -1,5 +0,0 @@
+------BEGIN PRIVATE KEY-----
+-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg/DG7nRzssSFU1Fgk
+-VFYFSehrPslKiz3pPmEGniuPKm2hRANCAATMVJVMTmC7ElFDRVtnx2Jw+zl78NPv
+-Glbthz2GrRU5yG/txte4j9MLBp0OMZZf+hrPR+0WqtWZ+TBm74LnyKha
+------END PRIVATE KEY-----

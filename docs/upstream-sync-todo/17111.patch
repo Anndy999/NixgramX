@@ -1,0 +1,13 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ChannelAdminLogActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ChannelAdminLogActivity.java
+index 7804a1616cbf36c760364e6aca733d3a49a80a32..6ce8510ce2b09f09aea36f6b7f8f0fc7f88a7348 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ChannelAdminLogActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ChannelAdminLogActivity.java
+@@ -76,8 +76,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
+ import org.telegram.ui.recyclerview.LinearSmoothScrollerCustom;
+ import androidx.recyclerview.widget.RecyclerView;
+ 
+-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
+-
+ import org.telegram.messenger.AndroidUtilities;
+ import org.telegram.messenger.AnimationNotificationsLocker;
+ import org.telegram.messenger.ApplicationLoader;

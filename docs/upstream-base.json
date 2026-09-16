@@ -4,6 +4,18 @@
     "build": "7038",
     "commit": "62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c"
   },
-  "synced_commits": ["62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c"],
-  "pending": null
+  "synced_commits": [
+    "62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c"
+  ],
+  "pending": {
+    "version": "12.10.2",
+    "build": "7086",
+    "commit": "163356809fa4bd81e64969700753e0a15664a288"
+  },
+  "prepared_target": {
+    "version": "12.10.2",
+    "build": "7086",
+    "commit": "163356809fa4bd81e64969700753e0a15664a288"
+  },
+  "prepared_base": "beta"
 }

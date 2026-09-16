@@ -1,0 +1,19 @@
+diff --git a/settings.gradle b/settings.gradle
+index f1be926e4ec20a81eeff0225f29ab8210fd53919..7d4f1ab10371a33d29979f1dee3520da048ef3a2 100644
+--- a/settings.gradle
++++ b/settings.gradle
+@@ -6,3 +6,13 @@ include ':TMessagesProj_AppStandalone'
+ include ':TMessagesProj_AppTests'
+ include ':jlatexmath'
+ project(':jlatexmath').projectDir = file('TMessagesProj/lib/jlatexmath/jlatexmath')
++
++dependencyResolutionManagement {
++    repositories {
++        google()
++        mavenCentral()
++    }
++}
++
++gradle.ext.androidxMediaModulePrefix = 'TMessagesProj_Modules:media3:media-'
++apply from: file("TMessagesProj_Modules/media/core_settings.gradle")
+\ No newline at end of file

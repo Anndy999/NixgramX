@@ -1,0 +1,25 @@
+diff --git a/gradle.properties b/gradle.properties
+index 38299bed6c89ec6527d99aa7768a51e0e5de52f4..4ea38096d01f8b534ca2eb8c7d74f5cbb781e36b 100644
+--- a/gradle.properties
++++ b/gradle.properties
+@@ -13,8 +13,8 @@
+ # http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
+ # org.gradle.parallel=true
+ #Sat Mar 12 05:53:50 MSK 2016
+-APP_VERSION_CODE=7038
+-APP_VERSION_NAME=12.10.1
++APP_VERSION_CODE=7086
++APP_VERSION_NAME=12.10.2
+ APP_PACKAGE=org.telegram.messenger
+ IS_PRIVATE=false
+ RELEASE_KEY_PASSWORD=android
+@@ -27,6 +27,7 @@ org.gradle.configureondemand=false
+ android.useAndroidX=true
+ android.enableJetifier=true
+ android.defaults.buildfeatures.buildconfig=true
+-android.nonTransitiveRClass=false
+-android.nonFinalResIds=false
+ android.enableR8.fullMode=true
++android.r8.optimizedResourceShrinking=true
++android.enableResourceOptimizations=true
++org.gradle.tooling.parallel=true
