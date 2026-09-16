@@ -19860,6 +19860,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 try {
                     replyTextWidth = dp(4) + (needReplyImage ? dp(33) : 0);
                     if (stringFinalText != null) {
+                        // Reply layout must not share AnimatedEmojiSpan instances with BODY:
+                        // lastDrawnCx/lastDrawnCy are span-local and would otherwise be overwritten.
+                        stringFinalText = AnimatedEmojiSpan.cloneSpans(stringFinalText);
                         SpannableStringBuilder sb = new SpannableStringBuilder(stringFinalText);
                         boolean changed = false;
                         for (TextStyleSpan span : sb.getSpans(0, sb.length(), TextStyleSpan.class)) {
