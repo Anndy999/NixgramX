@@ -244,7 +244,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         Bulletin.Delegate delegate = new Bulletin.Delegate() {
             @Override
             public int getBottomOffset(int tag) {
-                return navigationBarHeight + additionNavigationBarHeight;
+                return navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
             }
         };
         Bulletin.addDelegate(this, delegate);
@@ -2248,7 +2248,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
         undoView = new UndoView(getContext(), this, false, resourceProvider);
         FrameLayout.LayoutParams layoutParams = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8);
-        layoutParams.bottomMargin += navigationBarHeight + additionNavigationBarHeight;
+        layoutParams.bottomMargin += navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
         contentView.addView(undoView, layoutParams);
         return undoView;
     }

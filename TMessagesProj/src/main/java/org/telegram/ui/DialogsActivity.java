@@ -10464,7 +10464,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             };
 
             FrameLayout.LayoutParams lp = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8);
-            lp.bottomMargin += navigationBarHeight + additionNavigationBarHeight;
+            lp.bottomMargin += navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
             ((ContentView) fragmentView).addView(undoView[a], ++undoViewIndex, lp);
         }
     }
@@ -14249,7 +14249,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         ViewGroup.MarginLayoutParams lp;
         for (UndoView undoView : undoView) {
             if (undoView != null) {
-                final int bottomMargin = navigationBarHeight + additionNavigationBarHeight;
+                final int bottomMargin = navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
                 lp = (ViewGroup.MarginLayoutParams) undoView.getLayoutParams();
                 if (lp != null && lp.bottomMargin != bottomMargin) {
                     lp.bottomMargin = bottomMargin;
