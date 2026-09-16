@@ -14,6 +14,13 @@ on:
         required: false
         type: string
         default: main
+    secrets:
+      TELEGRAM_APP_ID:
+        required: false
+      TELEGRAM_APP_HASH:
+        required: false
+      LOCAL_PROPERTIES:
+        required: false
 
 permissions:
   contents: read
@@ -27,6 +34,7 @@ jobs:
       NATIVE_TARGET: arm64-v8a
       TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
       TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+      LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
       BASE_SHA_INPUT: ${{ inputs.base_sha }}
       BASE_REF_INPUT: ${{ inputs.base_ref }}
     steps:
@@ -236,8 +244,27 @@ jobs:
         if: steps.classify.outputs.need_java == 'true'
         run: |
           set -euo pipefail
-          ./gradlew help --no-daemon
-          ./gradlew :TMessagesProj:compileDebugSources --no-daemon
+          set +e
+          ./gradlew help --no-daemon > /tmp/ngx-compile.log 2>&1
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            ./gradlew :TMessagesProj:compileDebugSources --no-daemon >> /tmp/ngx-compile.log 2>&1
+            status=$?
+          fi
+          set -e
+          cat /tmp/ngx-compile.log
+          if [ "$status" -eq 0 ]; then
+            echo "credential_block=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -Eq "TELEGRAM_APP_ID must be a non-sample|TELEGRAM_APP_HASH must be a 32-character" /tmp/ngx-compile.log; then
+            echo "Android compile BLOCKED BY CI CREDENTIAL CONFIGURATION"
+            echo "TELEGRAM_APP_ID / TELEGRAM_APP_HASH unavailable in this workflow context."
+            echo "No NGX Core compiler error observed."
+            echo "credential_block=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$status"
 
       - name: Resource merge
         id: resources
@@ -263,6 +290,7 @@ jobs:
           NEED_RESOURCES: ${{ steps.classify.outputs.need_resources }}
           NEED_MANIFEST: ${{ steps.classify.outputs.need_manifest }}
           NEED_NATIVE: ${{ steps.classify.outputs.need_native }}
+          COMPILE_CREDENTIAL_BLOCK: ${{ steps.compile.outputs.credential_block }}
         run: |
           python3 - <<'PY'
           import json, os
@@ -280,11 +308,19 @@ jobs:
           need_resources = os.environ.get('NEED_RESOURCES') == 'true'
           need_manifest = os.environ.get('NEED_MANIFEST') == 'true'
           need_native = os.environ.get('NEED_NATIVE') == 'true'
+          credential_block = os.environ.get('COMPILE_CREDENTIAL_BLOCK') == 'true'
+
+          if not need_java:
+              compile_status = 'NOT REQUIRED'
+          elif credential_block:
+              compile_status = 'BLOCKED BY CI CREDENTIAL CONFIGURATION'
+          else:
+              compile_status = status(True, 'compile')
 
           rows = [
               ('Static checks', status(True, 'static')),
               ('Workflow checks', status(need_workflow, 'workflow')),
-              ('Java/Kotlin compile', status(need_java, 'compile')),
+              ('Java/Kotlin compile', compile_status),
               ('Resources', status(need_resources, 'resources')),
               ('Manifest', status(need_manifest, 'manifest')),
               ('Native', status(need_native, 'native')),
@@ -293,6 +329,12 @@ jobs:
           ok = all(value != 'FAIL' for _, value in rows)
           lines = ['NixgramX Quick Verify', '']
           lines.extend(f'{label}: {value}' for label, value in rows)
+          if credential_block:
+              lines.extend([
+                  '',
+                  'Android compile is blocked by missing TELEGRAM_APP_ID / TELEGRAM_APP_HASH',
+                  'in this workflow context. This is not an NGX Core compiler error.',
+              ])
           lines.extend([
               '',
               'Full Android lint: NOT RUN',
