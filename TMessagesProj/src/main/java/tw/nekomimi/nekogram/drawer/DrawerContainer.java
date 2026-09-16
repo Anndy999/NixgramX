@@ -21,6 +21,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.diagnostics.Diagnostics;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
@@ -57,6 +58,8 @@ public class DrawerContainer extends FrameLayout {
     private boolean tracking;
     private boolean edgeGestureCandidate;
     private boolean drawerTakenOver;
+    private boolean tapClosePending;
+    private boolean drawerTrackLogged;
     private float downX;
     private float downY;
     private float startProgress;
@@ -207,9 +210,6 @@ public class DrawerContainer extends FrameLayout {
         if (!NixNavigationConfig.isDrawerEnabled()) {
             return false;
         }
-        if (getVisibility() == VISIBLE && progress > 0.001f && !drawerTakenOver && !tracking) {
-            return handleOpenDrawerTouch(ev);
-        }
         if (!drawerTakenOver && !tracking) {
             return false;
         }
@@ -229,45 +229,143 @@ public class DrawerContainer extends FrameLayout {
         return true;
     }
 
-    private boolean handleOpenDrawerTouch(MotionEvent ev) {
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if (!isVisibleDrawer()) {
+            return false;
+        }
         int action = ev.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN) {
-            downX = ev.getX();
-            downY = ev.getY();
-            startProgress = progress;
-            tracking = false;
-            return true;
+            beginVisibleDrawerTracking(ev);
+            return tapClosePending;
         }
         if (action == MotionEvent.ACTION_MOVE) {
-            float dx = ev.getX() - downX;
-            if (!tracking && Math.abs(dx) >= AndroidUtilities.getPixelsInCM(OPEN_SLOP_CM, true)) {
+            if (tapClosePending) {
+                return true;
+            }
+            if (!tracking && shouldStartVisibleDrawerTracking(ev)) {
                 tracking = true;
+                drawerGestureEvent("start", ev.getX() - downX, ev.getY() - downY, "pending");
+                return true;
+            }
+            return tracking;
+        }
+        return tracking || tapClosePending;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent ev) {
+        if (!isVisibleDrawer()) {
+            return super.onTouchEvent(ev);
+        }
+        int action = ev.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            beginVisibleDrawerTracking(ev);
+            return true;
+        }
+        obtainVelocity().addMovement(ev);
+        if (action == MotionEvent.ACTION_MOVE) {
+            if (!tracking && !tapClosePending && shouldStartVisibleDrawerTracking(ev)) {
+                tracking = true;
+                drawerGestureEvent("start", ev.getX() - downX, ev.getY() - downY, "pending");
             }
             if (tracking) {
-                float width = Math.max(1, drawerWidth);
-                float signed = NixDrawerEdgeHelper.isRtl(this) ? -dx : dx;
-                setProgress(Math.max(0f, Math.min(1f, startProgress + signed / width)));
+                updateVisibleDrawerTracking(ev);
+                if (!drawerTrackLogged) {
+                    drawerTrackLogged = true;
+                    drawerGestureEvent("track", ev.getX() - downX, ev.getY() - downY, "pending");
+                }
             }
             return true;
         }
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+        if (action == MotionEvent.ACTION_UP) {
             if (tracking) {
-                finishTracking();
-            } else if (action == MotionEvent.ACTION_UP) {
-                float panelEdge = NixDrawerEdgeHelper.isRtl(this)
-                        ? getWidth() - drawerPanel.getTranslationX()
-                        : drawerPanel.getTranslationX() + drawerWidth;
-                boolean outside = NixDrawerEdgeHelper.isRtl(this)
-                        ? ev.getX() < getWidth() - drawerWidth
-                        : ev.getX() > panelEdge;
-                if (outside) {
-                    closeDrawer(true);
-                }
+                finishVisibleDrawerTracking();
+            } else if (tapClosePending) {
+                closeDrawer(true);
+                finishVisibleDrawerGesture();
+            } else {
+                finishVisibleDrawerGesture();
             }
-            tracking = false;
+            return true;
+        }
+        if (action == MotionEvent.ACTION_CANCEL) {
+            if (tracking) {
+                isOpen = true;
+                drawerGestureEvent("cancel", 0f, 0f, "restore");
+                animateProgress(1f);
+            }
+            finishVisibleDrawerGesture();
             return true;
         }
         return true;
+    }
+
+    private boolean isVisibleDrawer() {
+        return NixNavigationConfig.isDrawerEnabled() && getVisibility() == VISIBLE && progress > 0.001f;
+    }
+
+    private void beginVisibleDrawerTracking(MotionEvent ev) {
+        downX = ev.getX();
+        downY = ev.getY();
+        startProgress = progress;
+        tracking = false;
+        tapClosePending = !isPointInsideDrawerPanel(downX, downY);
+        drawerTrackLogged = false;
+        VelocityTracker tracker = obtainVelocity();
+        tracker.clear();
+        tracker.addMovement(ev);
+        drawerGestureEvent("down", 0f, 0f, "pending");
+    }
+
+    private boolean shouldStartVisibleDrawerTracking(MotionEvent ev) {
+        float dx = ev.getX() - downX;
+        float dy = ev.getY() - downY;
+        float slop = AndroidUtilities.getPixelsInCM(OPEN_SLOP_CM, true);
+        return Math.abs(dx) >= slop
+                && Math.abs(dx) > Math.abs(dy)
+                && !NixDrawerEdgeHelper.isOpeningHorizontal(this, dx);
+    }
+
+    private void updateVisibleDrawerTracking(MotionEvent ev) {
+        float width = Math.max(1, drawerWidth);
+        float dx = ev.getX() - downX;
+        float signed = NixDrawerEdgeHelper.isRtl(this) ? -dx : dx;
+        setProgress(Math.max(0f, Math.min(1f, startProgress + signed / width)));
+    }
+
+    private void finishVisibleDrawerTracking() {
+        velocityTracker.computeCurrentVelocity(1000);
+        float vx = velocityTracker.getXVelocity();
+        float vy = velocityTracker.getYVelocity();
+        float openingVx = NixDrawerEdgeHelper.isRtl(this) ? -vx : vx;
+        boolean horizontalFling = Math.abs(vx) > Math.abs(vy);
+        boolean close = progress < 0.5f || horizontalFling && openingVx < -400;
+        isOpen = !close;
+        drawerGestureEvent("finish", 0f, 0f, close ? "close" : "restore");
+        animateProgress(close ? 0f : 1f);
+        finishVisibleDrawerGesture();
+    }
+
+    private void finishVisibleDrawerGesture() {
+        tracking = false;
+        tapClosePending = false;
+        recycleVelocity();
+    }
+
+    private void drawerGestureEvent(String phase, float dx, float dy, String result) {
+        Diagnostics.navigationEvent("DRAWER_CLOSE_GESTURE", "phase=" + phase
+                + " progress=" + Math.round(progress * 100)
+                + " dx=" + Math.round(dx)
+                + " dy=" + Math.round(dy)
+                + " result=" + result);
+    }
+
+    private boolean isPointInsideDrawerPanel(float x, float y) {
+        return x >= drawerPanel.getLeft() + drawerPanel.getTranslationX()
+                && x <= drawerPanel.getRight() + drawerPanel.getTranslationX()
+                && y >= drawerPanel.getTop() + drawerPanel.getTranslationY()
+                && y <= drawerPanel.getBottom() + drawerPanel.getTranslationY();
     }
 
     private boolean canStartEdgeCandidate(MotionEvent ev) {

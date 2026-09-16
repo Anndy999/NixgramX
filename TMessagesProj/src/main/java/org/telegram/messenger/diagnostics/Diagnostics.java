@@ -63,6 +63,20 @@ public final class Diagnostics {
         } catch (Throwable failure) { ioFailed = true; }
     }
 
+    /** Local gesture capture for Debug/Beta investigation. Values are fixed labels and rounded geometry only. */
+    public static void navigationEvent(String name, String fields) {
+        if (!BuildConfig.DEBUG && "stable".equals(BuildConfig.NIXGRAMX_CHANNEL)) {
+            return;
+        }
+        final long time = System.currentTimeMillis();
+        try {
+            IO.execute(() -> {
+                try { store().append(time + " STATE " + name + " " + fields + "\n"); }
+                catch (Throwable failure) { ioFailed = true; }
+            });
+        } catch (Throwable failure) { ioFailed = true; }
+    }
+
     public static void received(int provider) {
         final long time = System.currentTimeMillis();
         SharedConfig.pushLastReceivedTime = time;

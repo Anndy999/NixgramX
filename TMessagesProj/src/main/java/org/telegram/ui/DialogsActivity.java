@@ -4734,7 +4734,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                     goingDown = firstVisiblePosition > prevPosition;
                                 }
                                 if (changed && scrollUpdated && (goingDown || scrollingManually)) {
-                                    hideFloatingButton(goingDown);
+                                    hideFloatingButton(goingDown, true);
                                 }
                                 prevPosition = firstVisiblePosition;
                                 prevTop = firstViewTop;
@@ -7437,6 +7437,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     return navigationBarHeight + dp(12 + 48);
                 }
                 return calculateListViewPaddingBottom();
+            }
+
+            @Override
+            public boolean bottomOffsetAnimated() {
+                return !NixNavigationConfig.isBottomNavigationFloating();
             }
         });
         if (searchIsShowed) {
@@ -11443,8 +11448,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     boolean floatingButtonHidden;
+    private boolean mainTabsHiddenByScroll;
+    private Boolean lastDiagnosticMainTabsVisible;
 
     private void hideFloatingButton(boolean hide) {
+        hideFloatingButton(hide, false);
+    }
+
+    private void hideFloatingButton(boolean hide, boolean byScroll) {
+        final boolean hideByScroll = hide;
         if (NaConfig.INSTANCE.getDisableDialogsFloatingButton().Bool()) {
             floatingForceVisible = false;
             hide = true;
@@ -11458,7 +11470,18 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         floatingButtonHidden = hide;
+        if (byScroll) {
+            boolean previous = mainTabsHiddenByScroll;
+            mainTabsHiddenByScroll = NixNavigationConfig.isBottomNavigationFloating() && hideByScroll;
+            if (previous != mainTabsHiddenByScroll) {
+                org.telegram.messenger.diagnostics.Diagnostics.navigationEvent("FLOATING_SCROLL",
+                        "mode=" + NixNavigationConfig.getBottomNavigationMode()
+                                + " goingDown=" + hideByScroll
+                                + " mainTabsHiddenByScroll=" + mainTabsHiddenByScroll);
+            }
+        }
         updateFloatingButtonVisibility(true);
+        checkUi_mainTabsVisible();
 
         if (hide) {
             if (storyHint != null) {
@@ -14457,7 +14480,17 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void checkUi_mainTabsVisible() {
-        final boolean mainTabsVisible = !searching && (blurredView == null || blurredView.getBackground() == null || blurredView.getAlpha() < 0.01f || blurredView.getVisibility() == View.GONE);
+        final boolean mainTabsVisible = !searching
+                && !mainTabsHiddenByScroll
+                && NixNavigationConfig.isBottomNavigationVisible()
+                && (blurredView == null || blurredView.getBackground() == null || blurredView.getAlpha() < 0.01f || blurredView.getVisibility() == View.GONE);
+        if (lastDiagnosticMainTabsVisible == null || lastDiagnosticMainTabsVisible != mainTabsVisible) {
+            lastDiagnosticMainTabsVisible = mainTabsVisible;
+            org.telegram.messenger.diagnostics.Diagnostics.navigationEvent("MAIN_TABS_VISIBLE",
+                    "mode=" + NixNavigationConfig.getBottomNavigationMode()
+                            + " visible=" + mainTabsVisible
+                            + " reason=" + (mainTabsHiddenByScroll ? "scroll" : searching ? "search" : "state"));
+        }
         if (mainTabsActivityController != null) {
             mainTabsActivityController.setTabsVisible(mainTabsVisible);
         }
