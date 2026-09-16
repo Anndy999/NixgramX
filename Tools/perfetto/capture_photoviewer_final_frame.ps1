@@ -1,6 +1,6 @@
 param(
     [string]$Adb = "adb",
-    [string]$PackageName = "org.telegram.messenger",
+    [string]$PackageName = "app.nixgramx.android",
     [int]$DurationSeconds = 15,
     [string]$OutputPath = (Join-Path $PWD "ngx-photoviewer-final-frame.perfetto-trace")
 )
