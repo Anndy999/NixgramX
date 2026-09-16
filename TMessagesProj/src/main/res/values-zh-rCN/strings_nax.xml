@@ -191,6 +191,16 @@
     <string name="ResetChatNameOverrides">重置聊天名称覆盖</string>
     <string name="ResetChatNameNotification">聊天名称覆盖已清除。</string>
     <string name="LeftBottomButtonAction">左侧按钮操作</string>
+    <string name="BottomNavigationMode">底部导航</string>
+    <string name="BottomNavigationModeShow">显示</string>
+    <string name="BottomNavigationModeHide">隐藏</string>
+    <string name="BottomNavigationModeFloating">悬浮</string>
+    <string name="SideDrawerHeader">侧边栏</string>
+    <string name="NavigationDrawer">启用侧边栏</string>
+    <string name="ImmersiveDrawerAnimation">沉浸式侧边栏动画</string>
+    <string name="CustomizeDrawerMenu">自定义菜单</string>
+    <string name="DrawerMenuVisible">已显示</string>
+    <string name="DrawerMenuHidden">已隐藏</string>
     <string name="TranscribeProviderOpenAI">OpenAI-Compatible API</string>
     <string name="OpenAiApiCredentialsDialog">配置 OpenAI 兼容的 API。您可以参考此 **文档**。\n</string>
     <string name="OpenAiApiBaseUrlHint">API URL ([…]/chat/completions)</string>

@@ -9,6 +9,8 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -19,6 +21,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.diagnostics.Diagnostics;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
@@ -27,6 +30,8 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.MainTabsActivity;
+import org.telegram.ui.ProxyListActivity;
+import org.telegram.ui.ThemeActivity;
 
 import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
 
@@ -41,8 +46,11 @@ public class DrawerContainer extends FrameLayout {
 
     private final FrameLayout drawerPanel;
     private final DrawerHeaderView headerView;
+    private final DrawerAccountPickerView accountPickerView;
     private final DrawerMenuView menuView;
     private final Paint scrimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path panelClipPath = new Path();
+    private final float[] panelRadii = new float[8];
 
     private int drawerWidth;
     private float progress;
@@ -50,6 +58,8 @@ public class DrawerContainer extends FrameLayout {
     private boolean tracking;
     private boolean edgeGestureCandidate;
     private boolean drawerTakenOver;
+    private boolean tapClosePending;
+    private boolean drawerTrackLogged;
     private float downX;
     private float downY;
     private float startProgress;
@@ -75,19 +85,38 @@ public class DrawerContainer extends FrameLayout {
         LinearLayout content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
         headerView = new DrawerHeaderView(context);
-        content.addView(headerView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, dp(168)));
+        content.addView(headerView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, dp(160)));
+
+        accountPickerView = new DrawerAccountPickerView(context);
+        content.addView(accountPickerView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         ScrollView scrollView = new ScrollView(context);
         menuView = new DrawerMenuView(context);
         scrollView.addView(menuView, new FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         content.addView(scrollView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, 0, 1f));
         drawerPanel.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        headerView.setOnProfile(() -> openMenuItem(MainMenuItem.PROFILE.getId()));
+        headerView.setOnAccounts(() -> {
+            accountPickerView.toggleExpand();
+            headerView.setChevronExpanded(accountPickerView.isExpanded());
+        });
+        accountPickerView.setOnAccountSelected(() -> closeDrawer(true));
+        headerView.setChevronExpanded(accountPickerView.isExpanded());
+        headerView.setOnTheme(() -> {
+            Theme.ThemeInfo target = Theme.isCurrentThemeDark() ? Theme.getCurrentTheme() : Theme.getCurrentNightTheme();
+            if (target != null) {
+                Theme.applyTheme(target, !Theme.isCurrentThemeDark());
+            }
+        });
+        headerView.setOnThemeLongPress(() -> presentFromDrawer(new ThemeActivity(ThemeActivity.THEME_TYPE_NIGHT)));
+        headerView.setOnProxy(() -> presentFromDrawer(new ProxyListActivity()));
     }
 
     public void dispose() {
         cancelTracking();
         progress = 0f;
         isOpen = false;
+        accountPickerView.dispose();
         setVisibility(GONE);
     }
 
@@ -181,9 +210,6 @@ public class DrawerContainer extends FrameLayout {
         if (!NixNavigationConfig.isDrawerEnabled()) {
             return false;
         }
-        if (getVisibility() == VISIBLE && progress > 0.001f && !drawerTakenOver && !tracking) {
-            return handleOpenDrawerTouch(ev);
-        }
         if (!drawerTakenOver && !tracking) {
             return false;
         }
@@ -203,45 +229,143 @@ public class DrawerContainer extends FrameLayout {
         return true;
     }
 
-    private boolean handleOpenDrawerTouch(MotionEvent ev) {
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if (!isVisibleDrawer()) {
+            return false;
+        }
         int action = ev.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN) {
-            downX = ev.getX();
-            downY = ev.getY();
-            startProgress = progress;
-            tracking = false;
-            return true;
+            beginVisibleDrawerTracking(ev);
+            return tapClosePending;
         }
         if (action == MotionEvent.ACTION_MOVE) {
-            float dx = ev.getX() - downX;
-            if (!tracking && Math.abs(dx) >= AndroidUtilities.getPixelsInCM(OPEN_SLOP_CM, true)) {
+            if (tapClosePending) {
+                return true;
+            }
+            if (!tracking && shouldStartVisibleDrawerTracking(ev)) {
                 tracking = true;
+                drawerGestureEvent("start", ev.getX() - downX, ev.getY() - downY, "pending");
+                return true;
+            }
+            return tracking;
+        }
+        return tracking || tapClosePending;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent ev) {
+        if (!isVisibleDrawer()) {
+            return super.onTouchEvent(ev);
+        }
+        int action = ev.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            beginVisibleDrawerTracking(ev);
+            return true;
+        }
+        obtainVelocity().addMovement(ev);
+        if (action == MotionEvent.ACTION_MOVE) {
+            if (!tracking && !tapClosePending && shouldStartVisibleDrawerTracking(ev)) {
+                tracking = true;
+                drawerGestureEvent("start", ev.getX() - downX, ev.getY() - downY, "pending");
             }
             if (tracking) {
-                float width = Math.max(1, drawerWidth);
-                float signed = NixDrawerEdgeHelper.isRtl(this) ? -dx : dx;
-                setProgress(Math.max(0f, Math.min(1f, startProgress + signed / width)));
+                updateVisibleDrawerTracking(ev);
+                if (!drawerTrackLogged) {
+                    drawerTrackLogged = true;
+                    drawerGestureEvent("track", ev.getX() - downX, ev.getY() - downY, "pending");
+                }
             }
             return true;
         }
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+        if (action == MotionEvent.ACTION_UP) {
             if (tracking) {
-                finishTracking();
-            } else if (action == MotionEvent.ACTION_UP) {
-                float panelEdge = NixDrawerEdgeHelper.isRtl(this)
-                        ? getWidth() - drawerPanel.getTranslationX()
-                        : drawerPanel.getTranslationX() + drawerWidth;
-                boolean outside = NixDrawerEdgeHelper.isRtl(this)
-                        ? ev.getX() < getWidth() - drawerWidth
-                        : ev.getX() > panelEdge;
-                if (outside) {
-                    closeDrawer(true);
-                }
+                finishVisibleDrawerTracking();
+            } else if (tapClosePending) {
+                closeDrawer(true);
+                finishVisibleDrawerGesture();
+            } else {
+                finishVisibleDrawerGesture();
             }
-            tracking = false;
+            return true;
+        }
+        if (action == MotionEvent.ACTION_CANCEL) {
+            if (tracking) {
+                isOpen = true;
+                drawerGestureEvent("cancel", 0f, 0f, "restore");
+                animateProgress(1f);
+            }
+            finishVisibleDrawerGesture();
             return true;
         }
         return true;
+    }
+
+    private boolean isVisibleDrawer() {
+        return NixNavigationConfig.isDrawerEnabled() && getVisibility() == VISIBLE && progress > 0.001f;
+    }
+
+    private void beginVisibleDrawerTracking(MotionEvent ev) {
+        downX = ev.getX();
+        downY = ev.getY();
+        startProgress = progress;
+        tracking = false;
+        tapClosePending = !isPointInsideDrawerPanel(downX, downY);
+        drawerTrackLogged = false;
+        VelocityTracker tracker = obtainVelocity();
+        tracker.clear();
+        tracker.addMovement(ev);
+        drawerGestureEvent("down", 0f, 0f, "pending");
+    }
+
+    private boolean shouldStartVisibleDrawerTracking(MotionEvent ev) {
+        float dx = ev.getX() - downX;
+        float dy = ev.getY() - downY;
+        float slop = AndroidUtilities.getPixelsInCM(OPEN_SLOP_CM, true);
+        return Math.abs(dx) >= slop
+                && Math.abs(dx) > Math.abs(dy)
+                && !NixDrawerEdgeHelper.isOpeningHorizontal(this, dx);
+    }
+
+    private void updateVisibleDrawerTracking(MotionEvent ev) {
+        float width = Math.max(1, drawerWidth);
+        float dx = ev.getX() - downX;
+        float signed = NixDrawerEdgeHelper.isRtl(this) ? -dx : dx;
+        setProgress(Math.max(0f, Math.min(1f, startProgress + signed / width)));
+    }
+
+    private void finishVisibleDrawerTracking() {
+        velocityTracker.computeCurrentVelocity(1000);
+        float vx = velocityTracker.getXVelocity();
+        float vy = velocityTracker.getYVelocity();
+        float openingVx = NixDrawerEdgeHelper.isRtl(this) ? -vx : vx;
+        boolean horizontalFling = Math.abs(vx) > Math.abs(vy);
+        boolean close = progress < 0.5f || horizontalFling && openingVx < -400;
+        isOpen = !close;
+        drawerGestureEvent("finish", 0f, 0f, close ? "close" : "restore");
+        animateProgress(close ? 0f : 1f);
+        finishVisibleDrawerGesture();
+    }
+
+    private void finishVisibleDrawerGesture() {
+        tracking = false;
+        tapClosePending = false;
+        recycleVelocity();
+    }
+
+    private void drawerGestureEvent(String phase, float dx, float dy, String result) {
+        Diagnostics.navigationEvent("DRAWER_CLOSE_GESTURE", "phase=" + phase
+                + " progress=" + Math.round(progress * 100)
+                + " dx=" + Math.round(dx)
+                + " dy=" + Math.round(dy)
+                + " result=" + result);
+    }
+
+    private boolean isPointInsideDrawerPanel(float x, float y) {
+        return x >= drawerPanel.getLeft() + drawerPanel.getTranslationX()
+                && x <= drawerPanel.getRight() + drawerPanel.getTranslationX()
+                && y >= drawerPanel.getTop() + drawerPanel.getTranslationY()
+                && y <= drawerPanel.getBottom() + drawerPanel.getTranslationY();
     }
 
     private boolean canStartEdgeCandidate(MotionEvent ev) {
@@ -356,9 +480,28 @@ public class DrawerContainer extends FrameLayout {
 
     private void refreshContents() {
         headerView.updateUserInfo();
+        accountPickerView.rebuild();
         BaseFragment fragment = getContentFragment();
         int account = fragment != null ? fragment.getCurrentAccount() : org.telegram.messenger.UserConfig.selectedAccount;
         menuView.rebuild(fragment, account, () -> closeDrawer(true));
+    }
+
+    private void openMenuItem(int id) {
+        BaseFragment fragment = getContentFragment();
+        if (fragment == null) return;
+        MainMenuHelper.MenuItemInfo item = MainMenuHelper.resolve(id, fragment, fragment.getCurrentAccount());
+        if (item != null && item.onClick != null) {
+            item.onClick.run();
+            closeDrawer(true);
+        }
+    }
+
+    private void presentFromDrawer(BaseFragment fragment) {
+        BaseFragment current = getContentFragment();
+        if (current != null) {
+            current.presentFragment(fragment);
+            closeDrawer(true);
+        }
     }
 
     private BaseFragment getContentFragment() {
@@ -378,8 +521,9 @@ public class DrawerContainer extends FrameLayout {
     }
 
     private int calculateDrawerWidth() {
-        int w = AndroidUtilities.displaySize.x;
-        return Math.min(dp(320), Math.max(dp(280), (int) (w * 0.82f)));
+        // Exteraless geometry: min(300dp, screen width - 56dp).  No arbitrary
+        // percentage means split-screen and narrow devices retain a usable scrim.
+        return Math.min(dp(300), Math.max(0, AndroidUtilities.displaySize.x - dp(56)));
     }
 
     private VelocityTracker obtainVelocity() {
@@ -411,6 +555,31 @@ public class DrawerContainer extends FrameLayout {
             canvas.drawRect(0, 0, getWidth(), getHeight(), scrimPaint);
         }
         super.dispatchDraw(canvas);
+    }
+
+    @Override
+    protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+        if (child != drawerPanel || NixNavigationConfig.isImmersiveDrawerEnabled()) {
+            return super.drawChild(canvas, child, drawingTime);
+        }
+        final float radius = dp(24);
+        final boolean rtl = NixDrawerEdgeHelper.isRtl(this);
+        // Only the edge facing the content is rounded, matching Exteraless' ordinary drawer.
+        if (rtl) {
+            panelRadii[0] = radius; panelRadii[1] = radius; panelRadii[2] = 0; panelRadii[3] = 0;
+            panelRadii[4] = 0; panelRadii[5] = 0; panelRadii[6] = radius; panelRadii[7] = radius;
+        } else {
+            panelRadii[0] = 0; panelRadii[1] = 0; panelRadii[2] = radius; panelRadii[3] = radius;
+            panelRadii[4] = radius; panelRadii[5] = radius; panelRadii[6] = 0; panelRadii[7] = 0;
+        }
+        RectF bounds = new RectF(child.getX(), child.getY(), child.getX() + child.getWidth(), child.getY() + child.getHeight());
+        panelClipPath.rewind();
+        panelClipPath.addRoundRect(bounds, panelRadii, Path.Direction.CW);
+        int save = canvas.save();
+        canvas.clipPath(panelClipPath);
+        boolean result = super.drawChild(canvas, child, drawingTime);
+        canvas.restoreToCount(save);
+        return result;
     }
 
     @Override

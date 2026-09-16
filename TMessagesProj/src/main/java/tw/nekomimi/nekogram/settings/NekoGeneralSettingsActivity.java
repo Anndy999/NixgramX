@@ -390,7 +390,9 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
             } else if (key.equals(NekoConfig.typeface.getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NaConfig.INSTANCE.getDisableDialogsFloatingButton().getKey())) {
-                tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
+                // DialogsActivity reads the setting from its unified visibility gate;
+                // rebuilding makes it take effect as soon as the user returns.
+                parentLayout.rebuildFragments(0);
             } else if (key.equals(NaConfig.INSTANCE.getHidePremiumSection().getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NaConfig.INSTANCE.getHideHelpSection().getKey())) {
