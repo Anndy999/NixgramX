@@ -13,9 +13,9 @@ Head under review is the `diagnostic/ngx-diagnostics-framework` branch of PR #76
 | Can sensitive content enter events? | PASS | Typed Value API only. Names containing TOKEN/PASSWORD/USERNAME/SECRET are dropped. Dummy secrets are absent from the synthetic log. |
 | Can sensitive content enter metadata? | PASS | Allowlisted keys only. `Meta.safe` rejects TOKEN/PASSWORD/USERNAME/SECRET/PHONE/`@`. No phone/account fields. |
 | Can sensitive content enter export? | PASS | ZIP contains only `metadata.txt` and `ngx_diagnostics.log`. Privacy scan of both passed. |
-| Can Capture get stuck? | PASS | Auto-stop after 50 events; `cancelCapture()` restores level and keeps the ring. UI disables level changes while capturing. |
-| Can level restoration fail? | PASS | Core `finishCapture()` / `cancelCapture()` restore the pre-capture level. Tests cover OFF/DIAGNOSTIC/TRACE. |
-| Can clear leave old disk data? | PASS | `NgxDiagnostics.clear()` clears Core and `current.log`/`previous.log`. Test asserted file count 0. |
+| Can Capture get stuck? | PASS | Auto-stop after 50 events; `cancelCapture()` restores level and keeps the ring. UI disables level changes while capturing. remaining==1 cancel no longer double-finishes to OFF. |
+| Can level restoration fail? | PASS | Core `finishCapture()` / `cancelCapture()` restore the pre-capture level. Tests cover OFF/DIAGNOSTIC/TRACE and remaining==1 cancel. |
+| Can clear leave old disk data? | PASS | Writer epoch skips stale queued lines; `clear()` drains LineJobs then clears the sink. Test: persist old, clear, persist new. |
 | Can export produce corrupt ZIP? | PASS | Write to `.tmp` then rename. Test opened the ZIP and read both entries. |
 | Can concurrency deadlock? | PASS | Core methods are synchronized; store methods are synchronized; writer is a single thread. Concurrent event/capture/cancel/snapshot/append test passed. |
 | Did legacy Diagnostics change? | PASS | `Diagnostics.java` / `DiagnosticStore.java` unchanged. Existing N-Settings diagnostics dialog remains. |
@@ -43,16 +43,19 @@ Head under review is the `diagnostic/ngx-diagnostics-framework` branch of PR #76
 | `setLevel` during capture corrupting restore | HIGH | Facade rejects `setLevel` while capturing; Settings disables the selector. |
 | `REQUEST_TOKEN` field inviting auth tokens | HIGH | Already removed in Core freeze (`REQUEST_ID`). |
 | Cancel capture wiping useful events | MEDIUM | `cancelCapture()` restores level but keeps the ring. `clear()` is explicit. |
-| Writer overflow silently dropping lines | MEDIUM | Accepted; overflow increments persist-dropped. Diagnostics may drop. |
+| Writer overflow silently dropping lines | MEDIUM | Events may drop (bounded queue). Export must `flush()` successfully; a full queue fails export instead of writing a truncated ZIP. |
+| `cancelCapture()` remaining==1 double `finishCapture()` | HIGH | remaining is zeroed before emit so record() cannot finish capture; `finishCapture()` runs once. |
+| Clear vs writer race rewriting old lines | HIGH | Epoch + drain LineJobs under the same lock as append. |
 | ApplicationLoader reference | LOW | Init is fail-safe, default OFF, no production behavior. |
 | FileProvider `file://` fallback on API < 24 | LOW | Matches existing Telegram share pattern; min-API 24 devices use content URI. |
 
 BLOCKER / HIGH remaining: 0.
 
-Full Verify `lintAnalyzeDebug` later crashed inside AGP's `JoinEffectDetector`
-(`ThreadConstraint`) with `ConcurrentModificationException` on a kotlinx
-persistent map. That is a lint-runtime bug, not an NGX finding. Workaround:
-disable `ThreadConstraint` in `TMessagesProj/lint.xml` and `android.lint`.
+Full Verify `lintAnalyzeDebug` can crash inside AGP's `JoinEffectDetector`
+(`ThreadConstraint`). That is a lint-runtime bug, not an NGX finding. The
+workaround is CI-only: Full Verify writes a disposable `TMessagesProj/lint.xml`
+in the checkout. Product `build.gradle` / committed lint config do not disable
+`ThreadConstraint`.
 
 ## FileLog decision
 

@@ -223,10 +223,13 @@ public final class NgxDiagnosticCore {
 
     /**
      * Stops capture and restores the original level. The ring is kept.
-     * CAPTURE_CANCEL is emitted with the capture sid when possible.
+     * CAPTURE_CANCEL is emitted with the capture sid when possible and does
+     * not consume remaining. remaining is cleared before emit so record()
+     * cannot call finishCapture() when remaining was 1.
      */
     public synchronized boolean cancelCapture() {
         if (remaining <= 0) return false;
+        remaining = 0;
         try {
             emit(Category.APP, "CAPTURE_CANCEL");
         } catch (Throwable ignored) {

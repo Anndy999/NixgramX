@@ -138,6 +138,14 @@ public class NgxDiagnosticCoreTest {
         ok(!capturing(cancel) && cancel.level() == Level.OFF, "cancel restores off");
         ok(!cancel.snapshot().isEmpty(), "cancel keeps ring");
 
+        NgxDiagnosticCore last = new NgxDiagnosticCore();
+        last.setLevel(Level.DIAGNOSTIC);
+        ok(last.capture(), "remaining-1 capture");
+        for (int i = 0; i < 49; i++) ok(e(last, 6000 + i) != null, "remaining-1 event " + i);
+        ok(capturing(last), "remaining 1 still capturing");
+        ok(last.cancelCapture(), "remaining-1 cancel");
+        ok(!capturing(last) && last.level() == Level.DIAGNOSTIC, "remaining-1 cancel keeps diagnostic");
+
         NgxDiagnosticCore cc = new NgxDiagnosticCore();
         cc.setLevel(Level.DIAGNOSTIC);
         Thread[] ts = new Thread[4];

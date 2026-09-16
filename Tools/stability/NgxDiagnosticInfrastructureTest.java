@@ -6,6 +6,7 @@ import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Value;
 import org.telegram.messenger.diagnostics.NgxDiagnosticExport;
 import org.telegram.messenger.diagnostics.NgxDiagnosticSelfTest;
 import org.telegram.messenger.diagnostics.NgxDiagnosticStore;
+import org.telegram.messenger.diagnostics.NgxDiagnosticWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -13,7 +14,10 @@ import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -184,6 +188,39 @@ public class NgxDiagnosticInfrastructureTest {
         core.setLevel(Level.DIAGNOSTIC);
         ok(core.event(null, "X") == null, "bridge null category");
         ok(Value.enumValue(null, Level.OFF) == null, "null enum");
+
+        List<String> mem = Collections.synchronizedList(new ArrayList<>());
+        NgxDiagnosticWriter idle = new NgxDiagnosticWriter(new NgxDiagnosticWriter.Sink() {
+            public void append(String line) { mem.add(line); }
+            public void clear() { mem.clear(); }
+        });
+        ok(!idle.isStarted(), "writer lazy until persist");
+        idle.persist("old");
+        ok(idle.flush(2000), "writer flush old");
+        ok(mem.contains("old"), "writer wrote old");
+        idle.clear();
+        ok(!mem.contains("old"), "clear drops disk");
+        idle.persist("new");
+        ok(idle.flush(2000), "writer flush new");
+        ok(mem.contains("new") && !mem.contains("old"), "clear does not revive old");
+
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch hold = new CountDownLatch(1);
+        List<String> blocked = Collections.synchronizedList(new ArrayList<>());
+        NgxDiagnosticWriter stuck = new NgxDiagnosticWriter(new NgxDiagnosticWriter.Sink() {
+            public void append(String line) throws Exception {
+                entered.countDown();
+                if (!hold.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("hold");
+                blocked.add(line);
+            }
+            public void clear() { blocked.clear(); }
+        });
+        stuck.persist("first");
+        ok(entered.await(2, TimeUnit.SECONDS), "writer entered append");
+        for (int i = 0; i < 200; i++) stuck.persist("queued-" + i);
+        ok(!stuck.flush(300), "flush fails when queue cannot take flush token");
+        hold.countDown();
+        ok(stuck.flush(2000), "flush succeeds after writer unblocks");
 
         System.out.println("NGX infrastructure PASS");
     }

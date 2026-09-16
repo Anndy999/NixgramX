@@ -160,6 +160,7 @@ jobs:
             TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java \
             TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticCore.java \
             TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticStore.java \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticWriter.java \
             TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticExport.java \
             TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticSelfTest.java \
             Tools/stability/NgxDiagnosticCoreTest.java \

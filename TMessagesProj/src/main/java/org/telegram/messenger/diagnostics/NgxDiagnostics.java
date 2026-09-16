@@ -17,10 +17,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Android facade over {@link NgxDiagnosticCore}. Diagnostics may drop events
@@ -35,26 +31,14 @@ public final class NgxDiagnostics {
 
     private static final Object LOCK = new Object();
     private static final NgxDiagnosticCore CORE = new NgxDiagnosticCore();
-    private static final AtomicLong persistDropped = new AtomicLong();
     private static final ArrayList<Listener> listeners = new ArrayList<>();
-    private static final ArrayBlockingQueue<Job> queue = new ArrayBlockingQueue<>(128);
 
     private static volatile boolean inited;
-    private static volatile boolean writerStarted;
     private static SharedPreferences prefs;
     private static NgxDiagnosticStore store;
+    private static NgxDiagnosticWriter writer;
     private static File zipDir;
     private static volatile boolean lastCapturing;
-
-    private interface Job {}
-    private static final class LineJob implements Job {
-        final String line;
-        LineJob(String line) { this.line = line; }
-    }
-    private static final class FlushJob implements Job {
-        final CountDownLatch latch;
-        FlushJob(CountDownLatch latch) { this.latch = latch; }
-    }
 
     private NgxDiagnostics() {}
 
@@ -75,7 +59,8 @@ public final class NgxDiagnostics {
     }
 
     public static long dropped() {
-        return CORE.dropped() + persistDropped.get();
+        NgxDiagnosticWriter current = writer;
+        return CORE.dropped() + (current == null ? 0 : current.dropped());
     }
 
     public static List<String> snapshot() {
@@ -91,9 +76,19 @@ public final class NgxDiagnostics {
                 if (inited) return;
                 prefs = app.getSharedPreferences("ngx_diagnostics", Context.MODE_PRIVATE);
                 store = new NgxDiagnosticStore(new File(app.getNoBackupFilesDir(), "ngx_diagnostics"));
+                writer = new NgxDiagnosticWriter(new NgxDiagnosticWriter.Sink() {
+                    @Override
+                    public void append(String line) throws Exception {
+                        store.append(line);
+                    }
+
+                    @Override
+                    public void clear() throws Exception {
+                        store.clear();
+                    }
+                });
                 zipDir = new File(app.getCacheDir(), "diagnostics");
                 CORE.setLevel(parseLevel(prefs.getString("level", "OFF")));
-                startWriter();
                 inited = true;
                 lastCapturing = CORE.isCapturing();
             }
@@ -179,8 +174,7 @@ public final class NgxDiagnostics {
         try {
             CORE.clear();
             lastCapturing = false;
-            persistDropped.set(0);
-            if (store != null) store.clear();
+            if (writer != null) writer.clear();
             persistLevel(CORE.level());
             notifyChanged();
         } catch (Throwable ignored) {
@@ -189,7 +183,8 @@ public final class NgxDiagnostics {
 
     public static File exportZip() {
         try {
-            flush(2000);
+            NgxDiagnosticWriter current = writer;
+            if (current != null && !current.flush(2000)) return null;
             String log = "";
             if (store != null) log = store.readAll();
             if (log.isEmpty()) {
@@ -293,55 +288,9 @@ public final class NgxDiagnostics {
     }
 
     private static void persistLine(String line) {
-        if (line == null || !inited) return;
-        if (!queue.offer(new LineJob(line))) persistDropped.incrementAndGet();
-    }
-
-    private static void startWriter() {
-        if (writerStarted) return;
-        writerStarted = true;
-        Thread thread = new Thread(() -> {
-            while (true) {
-                try {
-                    Job job = queue.take();
-                    handle(job);
-                    Job extra;
-                    while ((extra = queue.poll()) != null) handle(extra);
-                } catch (InterruptedException ignored) {
-                    return;
-                } catch (Throwable ignored) {
-                    persistDropped.incrementAndGet();
-                }
-            }
-        }, "ngx-diag");
-        thread.setDaemon(true);
-        thread.start();
-    }
-
-    private static void handle(Job job) {
-        try {
-            if (job instanceof FlushJob) {
-                ((FlushJob) job).latch.countDown();
-                return;
-            }
-            if (job instanceof LineJob && store != null) {
-                store.append(((LineJob) job).line);
-            }
-        } catch (Throwable ignored) {
-            persistDropped.incrementAndGet();
-            if (job instanceof FlushJob) ((FlushJob) job).latch.countDown();
-        }
-    }
-
-    private static void flush(long timeoutMs) {
-        try {
-            CountDownLatch latch = new CountDownLatch(1);
-            if (!queue.offer(new FlushJob(latch))) {
-                latch.countDown();
-            }
-            latch.await(timeoutMs, TimeUnit.MILLISECONDS);
-        } catch (Throwable ignored) {
-        }
+        NgxDiagnosticWriter current = writer;
+        if (line == null || current == null) return;
+        current.persist(line);
     }
 
     private static void notifyChanged() {
