@@ -233,6 +233,17 @@ public final class NgxDiagnostics {
         }
     }
 
+    public static boolean hasDiagnostics() {
+        try {
+            if (CORE.isCapturing()) return true;
+            if (!CORE.snapshot().isEmpty()) return true;
+            NgxDiagnosticStore current = store;
+            return current != null && current.totalBytes() > 0;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     static NgxDiagnosticCore core() {
         return CORE;
     }

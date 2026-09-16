@@ -247,6 +247,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
         };
         Bulletin.addDelegate(this, delegate);
+        if (listView != null && listView.adapter != null) {
+            listView.adapter.update(true);
+        }
     }
 
     @Override
@@ -804,15 +807,26 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(SettingCell.Factory.of(19, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_policy, getString(R.string.PrivacyPolicy)));
         }
 
+        items.add(UItem.asShadow(null));
+        items.add(UItem.asHeader(getString(R.string.SettingsDebug)));
+        items.add(SettingCell.Factory.of(24, 0xFF55CA47, 0xFF27B434, R.drawable.msg_info, getString(R.string.ProblemDiagnostics), null, problemDiagnosticsStatus()));
         if (BuildVars.LOGS_ENABLED || BuildVars.DEBUG_PRIVATE_VERSION) {
-            items.add(UItem.asShadow(null));
-            items.add(UItem.asHeader(getString(R.string.SettingsDebug)));
             items.add(SettingCell.Factory.of(20, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.DebugSendLogs)));
             items.add(SettingCell.Factory.of(21, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.DebugSendLastLogs)));
             items.add(SettingCell.Factory.of(22, 0xFFF45255, 0xFFDF3955, 0, getString(R.string.DebugClearLogs)));
         }
 
         items.add(UItem.asCustomShadow(versionView));
+    }
+
+    private String problemDiagnosticsStatus() {
+        if (org.telegram.messenger.diagnostics.NgxDiagnostics.isCapturing()) {
+            return getString(R.string.ProblemDiagnosticsRecording);
+        }
+        if (org.telegram.messenger.diagnostics.NgxDiagnostics.hasDiagnostics()) {
+            return getString(R.string.ProblemDiagnosticsAvailable);
+        }
+        return getString(R.string.ProblemDiagnosticsNotRunning);
     }
 
     private void presentSettingFragment(BaseFragment fragment) {
@@ -925,6 +939,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 Browser.openUrl(getParentActivity(), LocaleController.getString(R.string.PrivacyPolicyUrl));
                 break;
 
+            case 24:
+                presentSettingFragment(new tw.nekomimi.nekogram.settings.ProblemDiagnosticsActivity());
+                break;
             case 20:
                 ProfileActivity.sendLogs(getParentActivity(), false);
                 break;

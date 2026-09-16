@@ -356,4 +356,17 @@
     <string name="NgxDiagnosticsSelfTestDone">診斷自我測試已完成</string>
     <string name="NgxDiagnosticsStatus">已儲存事件</string>
     <string name="NgxDiagnosticsInfo">開發者診斷工具。擷取接下來的操作後可匯出本機 ZIP。不會記錄聊天內容、帳號或權杖。</string>
+    <string name="ProblemDiagnostics">問題診斷</string>
+    <string name="ProblemDiagnosticsNotRunning">未執行</string>
+    <string name="ProblemDiagnosticsRecording">正在記錄…</string>
+    <string name="ProblemDiagnosticsAvailable">已有診斷記錄</string>
+    <string name="ProblemDiagnosticsStart">開始診斷</string>
+    <string name="ProblemDiagnosticsStop">結束診斷</string>
+    <string name="ProblemDiagnosticsRecordingHint">現在返回 NixgramX 並重現問題。</string>
+    <string name="ProblemDiagnosticsDone">診斷完成。可匯出檔案提供給開發者。</string>
+    <string name="ProblemDiagnosticsExport">匯出最近診斷</string>
+    <string name="ProblemDiagnosticsClear">清除診斷記錄</string>
+    <string name="ProblemDiagnosticsClearConfirm">確定要清除所有 NGX 診斷記錄嗎？不會刪除 Telegram 日誌。</string>
+    <string name="ProblemDiagnosticsAdvanced">進階診斷設定</string>
+    <string name="ProblemDiagnosticsInfo">遇到問題時開始診斷，然後返回並重現問題。完成後結束診斷並匯出檔案提供給開發者。</string>
 </resources>

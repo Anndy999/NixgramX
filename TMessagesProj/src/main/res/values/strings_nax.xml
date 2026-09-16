@@ -371,4 +371,17 @@
     <string name="NgxDiagnosticsSelfTestDone">Diagnostics self-test finished</string>
     <string name="NgxDiagnosticsStatus">Stored events</string>
     <string name="NgxDiagnosticsInfo">Developer diagnostic tool. Capture the next actions, then export a local ZIP. No chat content, accounts, or tokens are recorded.</string>
+    <string name="ProblemDiagnostics">Problem Diagnostics</string>
+    <string name="ProblemDiagnosticsNotRunning">Not running</string>
+    <string name="ProblemDiagnosticsRecording">Recording…</string>
+    <string name="ProblemDiagnosticsAvailable">Diagnostics available</string>
+    <string name="ProblemDiagnosticsStart">Start diagnosis</string>
+    <string name="ProblemDiagnosticsStop">Stop diagnosis</string>
+    <string name="ProblemDiagnosticsRecordingHint">Go back to NixgramX and reproduce the problem.</string>
+    <string name="ProblemDiagnosticsDone">Diagnosis complete. Export the file for developers.</string>
+    <string name="ProblemDiagnosticsExport">Export recent diagnostics</string>
+    <string name="ProblemDiagnosticsClear">Clear diagnostics</string>
+    <string name="ProblemDiagnosticsClearConfirm">Clear all NGX diagnostic records? Telegram logs are not removed.</string>
+    <string name="ProblemDiagnosticsAdvanced">Advanced diagnostics</string>
+    <string name="ProblemDiagnosticsInfo">If something goes wrong, start diagnosis, then go back and reproduce the problem. When you are done, stop diagnosis and export a file for developers.</string>
 </resources>

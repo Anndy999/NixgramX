@@ -80,7 +80,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
     private int exportSettingsRow;
     private int resetSettingsRow;
     private int diagnosticsRow;
-    private int ngxDiagnosticsRow;
     private int appRestartRow;
     private int nSettingsEndRow;
 
@@ -106,7 +105,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
         importSettingsRow = addRow();
         resetSettingsRow = addRow();
         diagnosticsRow = addRow();
-        ngxDiagnosticsRow = addRow();
         appRestartRow = addRow();
         nSettingsEndRow = addRow();
 
@@ -337,8 +335,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == diagnosticsRow) {
             org.telegram.messenger.diagnostics.Diagnostics.show(getParentActivity());
-        } else if (position == ngxDiagnosticsRow) {
-            presentFragment(new NgxDiagnosticsSettingsActivity());
         } else if (position == chatRow) {
             presentFragment(new NekoChatSettingsActivity());
         } else if (position == generalRow) {
@@ -402,8 +398,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                     TextCell textCell = (TextCell) holder.itemView;
                     if (position == diagnosticsRow) {
                         textCell.setTextAndIcon(getString(R.string.NixDiagnostics), R.drawable.msg_info, true);
-                    } else if (position == ngxDiagnosticsRow) {
-                        textCell.setTextAndIcon(getString(R.string.NgxDiagnostics), R.drawable.msg_info, true);
                     } else if (position == chatRow) {
                         textCell.setTextAndIcon(getString(R.string.Chat), R.drawable.msg_discussion, true);
                     } else if (position == generalRow) {
@@ -437,7 +431,7 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                 return TYPE_SHADOW;
             } else if (position == chatRow || position == generalRow || position == passcodeRow || position == experimentRow || position == translatorRow ||
                     position == importSettingsRow || position == exportSettingsRow || position == resetSettingsRow || position == appRestartRow ||
-                    position == aboutRow || position == diagnosticsRow || position == ngxDiagnosticsRow) {
+                    position == aboutRow || position == diagnosticsRow) {
                 return TYPE_TEXT;
             }
             return TYPE_SHADOW;
