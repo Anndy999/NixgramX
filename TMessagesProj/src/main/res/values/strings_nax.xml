@@ -339,6 +339,16 @@
     <string name="StickerCopied">Sticker copied to clipboard.</string>
     <string name="StrokeOnViews">Glare effects</string>
     <string name="HideBottomNavigationBar">Hide Bottom Navigation Bar</string>
+    <string name="BottomNavigationMode">Bottom Navigation</string>
+    <string name="BottomNavigationModeShow">Show</string>
+    <string name="BottomNavigationModeHide">Hide</string>
+    <string name="BottomNavigationModeFloating">Floating</string>
+    <string name="SideDrawerHeader">Side Drawer</string>
+    <string name="NavigationDrawer">Enable Drawer</string>
+    <string name="ImmersiveDrawerAnimation">Immersive Drawer Animation</string>
+    <string name="CustomizeDrawerMenu">Customize Menu</string>
+    <string name="DrawerMenuVisible">Visible</string>
+    <string name="DrawerMenuHidden">Hidden</string>
     <string name="TranslatorMode">With Original Text</string>
     <string name="TranslatorWithOriginalTextOff">Off</string>
     <string name="TranslatorWithOriginalTextManualOnly">Manual Only</string>

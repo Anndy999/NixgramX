@@ -54,6 +54,12 @@ class TelegramApiCredentialsTest(unittest.TestCase):
             self.assertIn(expected_id, workflow, name)
             self.assertIn(expected_hash, workflow, name)
 
+    def test_pr_reusable_workflows_inherit_repository_secrets(self):
+        pr = (ROOT / ".github/workflows/pr.yml").read_text(encoding="utf-8")
+        self.assertIn("uses: ./.github/workflows/quick-verify.yml", pr)
+        self.assertIn("uses: ./.github/workflows/upstream-sync-ci.yml", pr)
+        self.assertGreaterEqual(pr.count("secrets: inherit"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

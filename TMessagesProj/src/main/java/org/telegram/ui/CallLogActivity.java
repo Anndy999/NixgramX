@@ -39,6 +39,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import tw.nekomimi.nekogram.helpers.MainTabsHelper;
+import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
@@ -124,8 +125,6 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
-import xyz.nextalone.nagram.NaConfig;
 
 public class CallLogActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, MainTabsActivity.TabFragmentDelegate {
 	private final int ADDITIONAL_LIST_HEIGHT_DP = Build.VERSION.SDK_INT >= 31 ? 48 : 0;
@@ -710,8 +709,8 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 			hasMainTabs = arguments.getBoolean("hasMainTabs", false);
 		}
 
-		additionNavigationBarHeight = hasMainTabs ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
-		additionFloatingButtonOffset = hasMainTabs ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
+		additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+		additionFloatingButtonOffset = hasMainTabs && NixNavigationConfig.isBottomNavigationVisible() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
 
 		return true;
 	}
@@ -730,8 +729,8 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 	@SuppressLint("UseCompatLoadingForDrawables")
     @Override
 	public View createView(Context context) {
-		additionNavigationBarHeight = hasMainTabs ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
-		additionFloatingButtonOffset = hasMainTabs ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
+		additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+		additionFloatingButtonOffset = hasMainTabs && NixNavigationConfig.isBottomNavigationVisible() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
 
 		if (!hasMainTabs) {
 			actionBar.setBackButtonDrawable(new BackDrawable(false));
@@ -960,7 +959,7 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 	private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
 		final boolean hasActiveCalls = !activeGroupCalls.isEmpty();
 		final boolean hasCalls = !calls.isEmpty();
-		final boolean hasVisibleBottomNavigationBar = !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool();
+		final boolean hasVisibleBottomNavigationBar = !NixNavigationConfig.isBottomNavigationHidden();
 
 		if (hasActiveCalls || hasCalls) {
 			items.add(UItem.asButton(ID_CREATE_CALL, R.drawable.menu_call_create, getString(R.string.GroupCallCreate2)).accent());
@@ -1049,7 +1048,7 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 
 	private void onClick(UItem item, View view, int position, float x, float y) {
 		if (item.id == ID_SHOW_IN_MAIN_TABS) {
-			if (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool()) {
+			if (NixNavigationConfig.isBottomNavigationHidden()) {
 				return;
 			}
 			setCallsTabVisible(true);
@@ -1127,7 +1126,7 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 	public void onBecomeFullyVisible() {
 		super.onBecomeFullyVisible();
 
-		if (!hideCallTabsHintWasShown && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && getUserConfig().showCallsTab && MessagesController.getGlobalMainSettings().getInt("hidecallshint", 0) < 2) {
+		if (!hideCallTabsHintWasShown && !NixNavigationConfig.isBottomNavigationHidden() && getUserConfig().showCallsTab && MessagesController.getGlobalMainSettings().getInt("hidecallshint", 0) < 2) {
 			hideCallTabsHintView = new HintView2(getContext(), HintView2.DIRECTION_TOP);
 			hideCallTabsHintView.setDuration(3000);
 			hideCallTabsHintView.setJoint(1, -(12 + 13));
@@ -1544,10 +1543,10 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 			0,
 			dp(ADDITIONAL_LIST_HEIGHT_DP) + actionBar.getMeasuredHeight() + (int) topPanelLayout.getAnimatedHeightWithPadding(dp(14)),
 			0,
-			dp(ADDITIONAL_LIST_HEIGHT_DP) + navigationBarHeight + additionNavigationBarHeight
+			dp(ADDITIONAL_LIST_HEIGHT_DP) + navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp())
 		);
 
-		emptyView.setPadding(0, 0, 0, navigationBarHeight + additionNavigationBarHeight);
+		emptyView.setPadding(0, 0, 0, navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp()));
 	}
 
 
@@ -2031,7 +2030,7 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 		ItemOptions io = ItemOptions.makeOptions(this, otherItem);
 		// io.setColors(getThemedColor(Theme.key_actionBarDefaultTitle), getThemedColor(Theme.key_actionBarDefaultTitle));
 		io.setDimAlpha(0x08);
-		if (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && getUserConfig().showCallsTab) {
+		if (!NixNavigationConfig.isBottomNavigationHidden() && getUserConfig().showCallsTab) {
 			io.add(R.drawable.msg_archive_hide, getString(R.string.HideCallTab), () -> {
 				setCallsTabVisible(false);
 				final BulletinFactory factory = hasMainTabs ? BulletinFactory.global() : BulletinFactory.of(CallLogActivity.this);

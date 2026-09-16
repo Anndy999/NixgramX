@@ -34,6 +34,7 @@ jobs:
       NATIVE_TARGET: arm64-v8a
       TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
       TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH }}
+      # Reuse the existing base64-encoded APK credential source used by Beta builds.
       LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
       BASE_SHA_INPUT: ${{ inputs.base_sha }}
       BASE_REF_INPUT: ${{ inputs.base_ref }}
