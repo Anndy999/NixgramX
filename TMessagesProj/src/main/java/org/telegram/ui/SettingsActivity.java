@@ -156,6 +156,7 @@ import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.android.animator.FactorAnimator;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MainTabsHelper;
+import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
 import tw.nekomimi.nekogram.helpers.MonetHelper;
 import tw.nekomimi.nekogram.helpers.PasscodeHelper;
 import tw.nekomimi.nekogram.helpers.remote.UpdateHelper;
@@ -233,7 +234,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             hasMainTabs = arguments.getBoolean("hasMainTabs", false);
         }
 
-        additionNavigationBarHeight = hasMainTabs ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+        additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
         return super.onFragmentCreate();
     }
 
@@ -243,10 +244,13 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         Bulletin.Delegate delegate = new Bulletin.Delegate() {
             @Override
             public int getBottomOffset(int tag) {
-                return navigationBarHeight + additionNavigationBarHeight;
+                return navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
             }
         };
         Bulletin.addDelegate(this, delegate);
+        if (listView != null && listView.adapter != null) {
+            listView.adapter.update(true);
+        }
     }
 
     @Override
@@ -264,7 +268,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
 
     @Override
     public View createView(Context context) {
-        additionNavigationBarHeight = hasMainTabs ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+        additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
 
         contentView = new SizeNotifierFrameLayout(context) {
             @Override
@@ -386,7 +390,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         listView = new UniversalRecyclerView(this, this::fillItems, this::onClick, this::onLongClick);
         listView.adapter.setApplyBackground(false);
         listView.setSections();
-        listView.setPadding(0, AndroidUtilities.statusBarHeight + dp(12), 0, AndroidUtilities.navigationBarHeight + additionNavigationBarHeight);
+        listView.setPadding(0, AndroidUtilities.statusBarHeight + dp(12), 0, AndroidUtilities.navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp()));
         listView.setClipToPadding(false);
         listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -804,15 +808,26 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(SettingCell.Factory.of(19, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_policy, getString(R.string.PrivacyPolicy)));
         }
 
+        items.add(UItem.asShadow(null));
+        items.add(UItem.asHeader(getString(R.string.SettingsDebug)));
+        items.add(SettingCell.Factory.of(24, 0xFF55CA47, 0xFF27B434, R.drawable.msg_info, getString(R.string.ProblemDiagnostics), null, problemDiagnosticsStatus()));
         if (BuildVars.LOGS_ENABLED || BuildVars.DEBUG_PRIVATE_VERSION) {
-            items.add(UItem.asShadow(null));
-            items.add(UItem.asHeader(getString(R.string.SettingsDebug)));
             items.add(SettingCell.Factory.of(20, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.DebugSendLogs)));
             items.add(SettingCell.Factory.of(21, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.DebugSendLastLogs)));
             items.add(SettingCell.Factory.of(22, 0xFFF45255, 0xFFDF3955, 0, getString(R.string.DebugClearLogs)));
         }
 
         items.add(UItem.asCustomShadow(versionView));
+    }
+
+    private String problemDiagnosticsStatus() {
+        if (org.telegram.messenger.diagnostics.NgxDiagnostics.isCapturing()) {
+            return getString(R.string.ProblemDiagnosticsRecording);
+        }
+        if (org.telegram.messenger.diagnostics.NgxDiagnostics.hasDiagnostics()) {
+            return getString(R.string.ProblemDiagnosticsAvailable);
+        }
+        return getString(R.string.ProblemDiagnosticsNotRunning);
     }
 
     private void presentSettingFragment(BaseFragment fragment) {
@@ -925,6 +940,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 Browser.openUrl(getParentActivity(), LocaleController.getString(R.string.PrivacyPolicyUrl));
                 break;
 
+            case 24:
+                presentSettingFragment(new tw.nekomimi.nekogram.settings.ProblemDiagnosticsActivity());
+                break;
             case 20:
                 ProfileActivity.sendLogs(getParentActivity(), false);
                 break;
@@ -1029,7 +1047,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         final Insets systemInsets = AndroidUtilities.getDefaultWindowInsets(insets, false);
         navigationBarHeight = systemInsets.bottom;
         final int statusBarHeight = systemInsets.top;
-        listView.setPadding(0, statusBarHeight + dp(12), 0, navigationBarHeight + additionNavigationBarHeight);
+        listView.setPadding(0, statusBarHeight + dp(12), 0, navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp()));
         return WindowInsetsCompat.CONSUMED;
     }
 
@@ -2247,7 +2265,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
         undoView = new UndoView(getContext(), this, false, resourceProvider);
         FrameLayout.LayoutParams layoutParams = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8);
-        layoutParams.bottomMargin += navigationBarHeight + additionNavigationBarHeight;
+        layoutParams.bottomMargin += navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
         contentView.addView(undoView, layoutParams);
         return undoView;
     }

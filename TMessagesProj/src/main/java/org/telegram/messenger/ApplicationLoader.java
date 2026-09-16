@@ -362,6 +362,11 @@ public class ApplicationLoader extends Application {
             applicationContext = getApplicationContext();
         }
 
+        try {
+            org.telegram.messenger.diagnostics.NgxDiagnostics.init(applicationContext);
+        } catch (Throwable ignored) {
+        }
+
         NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);
 
         try {

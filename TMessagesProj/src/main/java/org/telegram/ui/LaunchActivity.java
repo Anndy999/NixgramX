@@ -572,6 +572,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         setupActionBarLayout();
         drawerLayoutContainer.setParentActionBarLayout(actionBarLayout);
         actionBarLayout.setDrawerLayoutContainer(drawerLayoutContainer);
+        syncDrawerContainerEnabled();
         actionBarLayout.setFragmentStack(mainFragmentsStack);
         actionBarLayout.setFragmentStackChangedListener(() -> {
             checkSystemBarColors(true, false);
@@ -8478,7 +8479,24 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         }
     }
 
+    public void syncDrawerContainerEnabled() {
+        if (drawerLayoutContainer == null) {
+            return;
+        }
+        if (tw.nekomimi.nekogram.helpers.NixNavigationConfig.isDrawerEnabled()) {
+            if (drawerLayoutContainer.getDrawerContainer() == null) {
+                drawerLayoutContainer.setDrawerContainer(new tw.nekomimi.nekogram.drawer.DrawerContainer(this));
+            }
+        } else if (drawerLayoutContainer.getDrawerContainer() != null) {
+            drawerLayoutContainer.setDrawerContainer(null);
+        }
+    }
+
     public boolean onBackPressed(boolean invoked) {
+        if (drawerLayoutContainer != null && drawerLayoutContainer.getDrawerContainer() != null
+                && drawerLayoutContainer.getDrawerContainer().handleBackPressed()) {
+            return false;
+        }
         if (FloatingDebugController.onBackPressed(invoked)) {
             return false;
         }

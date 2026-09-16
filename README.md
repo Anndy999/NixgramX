@@ -1,5 +1,7 @@
 # NixgramX
 
+官方频道：[NixgramX](https://t.me/NixgramX)
+
 Independent long-term fork based on [NagramX](https://github.com/risin42/NagramX) `12.9.2.1260` (`4335a2e`), with Day-1 identity isolation from NagramX.
 
 **Priorities:** (1) track Telegram Android official upstream; (2) maximize stability / bugfixes. Phase 1 is not a large new-feature push.
@@ -19,7 +21,7 @@ NixgramX **cannot** overlay-install over NagramX (different package + signing). 
 
 Full builds include Save Deleted Messages and related enhancements (Telegram ToS / account risk). `_base` mirrors NagramX’s ToS-friendlier cut (without those advanced features). **No ban immunity.** See [`docs/BAN_RISK.md`](docs/BAN_RISK.md).
 
-Ghost Mode, hide-typing, and online-status hide/enhance are **removed-by-policy**.
+**Ghost Mode** (hide typing / read / online status) is a NixgramX feature restored from the NagramX lineage — **not** an official Telegram feature. Drawer shortcut and status indicator remain off by default.
 
 ## Docs
 

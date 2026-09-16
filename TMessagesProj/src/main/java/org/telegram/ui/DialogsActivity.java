@@ -289,6 +289,8 @@ import me.vkryl.android.util.ClickHelper;
 import tw.nekomimi.nekogram.BackButtonMenuRecent;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MainTabsHelper;
+import tw.nekomimi.nekogram.drawer.DrawerContainer;
+import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
 import tw.nekomimi.nekogram.helpers.PasscodeHelper;
 import tw.nekomimi.nekogram.helpers.TypefaceHelper;
 import tw.nekomimi.nekogram.helpers.remote.EmojiHelper;
@@ -3044,8 +3046,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         BirthdayController.getInstance(currentAccount).check();
-        additionNavigationBarHeight = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
-        additionFloatingButtonOffset = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
+        additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+        additionFloatingButtonOffset = hasMainTabs && NixNavigationConfig.isBottomNavigationVisible() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
 
         LastSeenHelper.preload();
 
@@ -3314,8 +3316,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         filterTabsView = null;
         selectedDialogs.clear();
 
-        additionNavigationBarHeight = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
-        additionFloatingButtonOffset = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
+        additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+        additionFloatingButtonOffset = hasMainTabs && NixNavigationConfig.isBottomNavigationVisible() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
 
         maximumVelocity = ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
 
@@ -3552,15 +3554,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (initialDialogsType == DIALOGS_TYPE_DEFAULT) {
             optionsItem = menu.addItem(4, R.drawable.ic_ab_other);
             optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
-            optionsItem.setOnClickListener(v -> {
-                getContactsController().loadGlobalPrivacySetting();
-                showItemOptions();
-            });
-            optionsItem.setOnLongClickListener(v -> {
-                getContactsController().loadGlobalPrivacySetting();
-                showItemOptions();
-                return true;
-            });
+            updateDrawerButton();
         }
 
         // na: Added ability to open Saved Messages on long click on search top button
@@ -7268,6 +7262,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onResume() {
         super.onResume();
+        updateDrawerButton();
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }
@@ -10469,7 +10464,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             };
 
             FrameLayout.LayoutParams lp = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8);
-            lp.bottomMargin += navigationBarHeight + additionNavigationBarHeight;
+            lp.bottomMargin += navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
             ((ContentView) fragmentView).addView(undoView[a], ++undoViewIndex, lp);
         }
     }
@@ -13951,6 +13946,51 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return true;
     }
 
+    public boolean canOpenDrawer() {
+        if (!NixNavigationConfig.isDrawerEnabled() || onlySelect || folderId != 0 || communityId != 0
+                || initialDialogsType != DIALOGS_TYPE_DEFAULT || searching
+                || (actionBar != null && actionBar.isActionModeShowed())
+                || (rightSlidingDialogContainer != null
+                && (rightSlidingDialogContainer.hasFragment() || rightFragmentTransitionInProgress))
+                || tabsAnimationInProgress || startedTracking || maybeStartTracking) {
+            return false;
+        }
+        return filterTabsView == null || (!filterTabsView.isEditing() && !filterTabsView.isAnimatingIndicator());
+    }
+
+    private void updateDrawerButton() {
+        if (optionsItem == null || initialDialogsType != DIALOGS_TYPE_DEFAULT) {
+            return;
+        }
+        if (NixNavigationConfig.isDrawerEnabled()) {
+            MenuDrawable menuDrawable = new MenuDrawable();
+            menuDrawable.setRotateToBack(false);
+            optionsItem.setIcon(menuDrawable);
+            optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrOpenMenu));
+            optionsItem.setOnClickListener(v -> {
+                if (getParentActivity() instanceof LaunchActivity) {
+                    DrawerContainer container = ((LaunchActivity) getParentActivity()).drawerLayoutContainer.getDrawerContainer();
+                    if (container != null) {
+                        container.openDrawer(true);
+                    }
+                }
+            });
+            optionsItem.setOnLongClickListener(null);
+        } else {
+            optionsItem.setIcon(R.drawable.ic_ab_other);
+            optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
+            optionsItem.setOnClickListener(v -> {
+                getContactsController().loadGlobalPrivacySetting();
+                showItemOptions();
+            });
+            optionsItem.setOnLongClickListener(v -> {
+                getContactsController().loadGlobalPrivacySetting();
+                showItemOptions();
+                return true;
+            });
+        }
+    }
+
     private void showItemOptions() {
         ItemOptions io = ItemOptions.makeOptions(this, optionsItem);
         io.setColors(getThemedColor(Theme.key_actionBarDefaultTitle), getThemedColor(Theme.key_actionBarDefaultTitle));
@@ -14007,7 +14047,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         final boolean isCurrentThemeDark;
-        final boolean hideBottomNavigationBar = NaConfig.INSTANCE.getHideBottomNavigationBar().Bool();
+        final boolean hideBottomNavigationBar = NixNavigationConfig.isBottomNavigationHidden();
             if (resourceProvider != null) {
                 isCurrentThemeDark = resourceProvider.isDark();
             } else {
@@ -14103,7 +14143,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             if (hideBottomNavigationBar && NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
                 io.add(R.drawable.msg_fave, getString(R.string.BookmarksManager), () -> presentFragment(new BookmarkManagerActivity()));
             }
-            if (false /* NIXGRAMX_POLICY_GHOST_REMOVED */ && NekoConfig.showGhostInDrawer.Bool()) {
+            if (NekoConfig.showGhostInDrawer.Bool()) {
                 final String ghostModeText = NekoConfig.isGhostModeActive()
                         ? getString(R.string.DisableGhostMode)
                         : getString(R.string.EnableGhostMode);
@@ -14209,7 +14249,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         ViewGroup.MarginLayoutParams lp;
         for (UndoView undoView : undoView) {
             if (undoView != null) {
-                final int bottomMargin = navigationBarHeight + additionNavigationBarHeight;
+                final int bottomMargin = navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
                 lp = (ViewGroup.MarginLayoutParams) undoView.getLayoutParams();
                 if (lp != null && lp.bottomMargin != bottomMargin) {
                     lp.bottomMargin = bottomMargin;
@@ -14572,7 +14612,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         iBlur3PositionActionBar.set(0, -additionalList, fragmentView.getMeasuredWidth(), lerp(actionBarHeight, actionBarHeightSearch, animatorSearchVisible.getFloatValue()) + additionalList );
 
         boolean hasBottomBlur = false;
-        if (hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool()) {
+        if (hasMainTabs && NixNavigationConfig.isBottomNavigationVisible()) {
             iBlur3PositionMainTabs.set(0, mainTabTop, fragmentView.getMeasuredWidth(), mainTabBottom);
             iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48));
 
@@ -14605,7 +14645,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         } else if (communityId != 0) {
             return navigationBarHeight + dp(12 + 48 + 12);
         } else {
-            return navigationBarHeight + additionNavigationBarHeight;
+            return navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
         }
     }
 
