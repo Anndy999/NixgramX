@@ -2724,9 +2724,12 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         buttonsRecyclerView.setGlowColor(getThemedColor(Theme.key_dialogScrollGlow));
         buttonsRecyclerView.setAdaptiveOverScroll();
 
-        iBlur3FactoryLiquidGlass.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
-        iBlur3FactoryFrostedLiquidGlass.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
-        iBlur3FactoryFade.setSourceRootView(new ViewPositionWatcher(containerView), containerView);
+        glassPositionWatcher = new ViewPositionWatcher(containerView);
+        glassFrostedPositionWatcher = new ViewPositionWatcher(containerView);
+        fadePositionWatcher = new ViewPositionWatcher(containerView);
+        iBlur3FactoryLiquidGlass.setSourceRootView(glassPositionWatcher, containerView);
+        iBlur3FactoryFrostedLiquidGlass.setSourceRootView(glassFrostedPositionWatcher, containerView);
+        iBlur3FactoryFade.setSourceRootView(fadePositionWatcher, containerView);
 
 
 
@@ -7356,6 +7359,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     /* Blur */
 
+    private ViewPositionWatcher glassPositionWatcher;
+    private ViewPositionWatcher glassFrostedPositionWatcher;
+    private ViewPositionWatcher fadePositionWatcher;
+    private boolean photoViewerTransitionAnimating;
+
     private final @Nullable DownscaleScrollableNoiseSuppressor scrollableViewNoiseSuppressor;
     private final @Nullable BlurredBackgroundSourceRenderNode iBlur3SourceGlassFrosted;
     private final @Nullable BlurredBackgroundSourceRenderNode iBlur3SourceGlass;
@@ -7378,8 +7386,37 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     private final ArrayList<RectF> iBlur3PositionsMerged = new ArrayList<>();
 
+    /**
+     * Pauses only the parent attach sheet's heavy Glass work while its PhotoViewer
+     * child is morphing above it. The normal refresh resumes when the morph ends.
+     */
+    public void setPhotoViewerTransitionAnimating(boolean animating) {
+        if (photoViewerTransitionAnimating == animating) {
+            return;
+        }
+        photoViewerTransitionAnimating = animating;
+        if (glassPositionWatcher != null) {
+            glassPositionWatcher.setPaused(animating);
+        }
+        if (glassFrostedPositionWatcher != null) {
+            glassFrostedPositionWatcher.setPaused(animating);
+        }
+        if (fadePositionWatcher != null) {
+            fadePositionWatcher.setPaused(animating);
+        }
+        if (!animating) {
+            blur3_InvalidateBlur();
+            if (containerView != null) {
+                containerView.invalidate();
+            }
+        }
+    }
+
     public void blur3_InvalidateBlur() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
+            return;
+        }
+        if (photoViewerTransitionAnimating) {
             return;
         }
 
