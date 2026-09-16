@@ -23272,9 +23272,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (stickerMakerView != null && stickerMakerView.isThanosInProgress) {
             return;
         }
-//        if (animationInProgress != 0) {
-//            return;
-//        }
+        // Open/close morph already drives clipping/alpha animators. Skip Glass
+        // RenderNode rebuilds until animationInProgress returns to 0; those
+        // callers already invoke invalidateBlur() once for the final refresh.
+        if (animationInProgress != 0) {
+            return;
+        }
 
         invalidateAllGlassAttachedViews();
 
