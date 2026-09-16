@@ -150,8 +150,11 @@ jobs:
           mkdir -p /tmp/diagnostic-tests
           javac -d /tmp/diagnostic-tests \
             TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/DiagnosticStore.java \
+            TMessagesProj/src/main/java/org/telegram/messenger/diagnostics/NgxDiagnosticCore.java \
+            Tools/stability/NgxDiagnosticCoreTest.java \
             Tools/stability/DiagnosticStoreTest.java
           java -cp /tmp/diagnostic-tests DiagnosticStoreTest
+          java -cp /tmp/diagnostic-tests NgxDiagnosticCoreTest
           while IFS= read -r f || [ -n "$f" ]; do
             [ -z "$f" ] && continue
             [ -f "$f" ] || continue
