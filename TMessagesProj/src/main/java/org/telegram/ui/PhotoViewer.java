@@ -89,6 +89,7 @@ import android.util.Property;
 import android.util.Range;
 import android.util.SparseArray;
 import android.util.TypedValue;
+import android.view.Choreographer;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -1948,6 +1949,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 //    private boolean allowMentions;
 
     private int animationInProgress;
+    private int finalBlurFrameGeneration;
     private boolean openAnimationInProgress;
     private long transitionAnimationStartTime;
     private Runnable animationEndRunnable;
@@ -18301,7 +18303,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         }
                         containerView.setLayerType(View.LAYER_TYPE_NONE, null);
                         animationInProgress = 0;
-                        invalidateBlur();
+                        invalidateBlurOnNextFrame();
                         transitionAnimationStartTime = 0;
                         leftCropState = null;
                         leftCropTransform.setViewTransform(false);
@@ -19011,7 +19013,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     animationEndRunnable = null;
                     containerView.setLayerType(View.LAYER_TYPE_NONE, null);
                     animationInProgress = 0;
-                    invalidateBlur();
+                    invalidateBlurOnNextFrame();
                     onPhotoClosed(object);
                     MediaController.getInstance().tryResumePausedAudio();
                     if (stickerEmpty && !stickerEmptySent && imagesArrLocals != null) {
@@ -19177,6 +19179,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     public void destroyPhotoViewer() {
+        finalBlurFrameGeneration++;
         if (parentActivity == null || windowView == null) {
             return;
         }
@@ -23309,6 +23312,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (containerView != null) {
             containerView.invalidate();
         }
+    }
+
+    private void invalidateBlurOnNextFrame() {
+        final int generation = ++finalBlurFrameGeneration;
+        Choreographer.getInstance().postFrameCallback(frameTimeNanos -> {
+            if (generation == finalBlurFrameGeneration && containerView != null && animationInProgress == 0) {
+                invalidateBlur();
+            }
+        });
     }
 
     private class BlurButton extends StickerCutOutBtn {
