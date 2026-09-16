@@ -57,8 +57,13 @@ public final class NgxDiagnosticWriter {
 
     public void persist(String line) {
         if (line == null || line.isEmpty()) return;
-        start();
-        if (!queue.offer(new LineJob(line, epoch.get()))) dropped.incrementAndGet();
+        if (!enqueue(line)) dropped.incrementAndGet();
+        else start();
+    }
+
+    boolean enqueue(String line) {
+        if (line == null || line.isEmpty()) return false;
+        return queue.offer(new LineJob(line, epoch.get()));
     }
 
     /**
@@ -91,6 +96,7 @@ public final class NgxDiagnosticWriter {
         synchronized (lock) {
             epoch.incrementAndGet();
             queue.removeIf(job -> job instanceof LineJob);
+            dropped.set(0);
             try {
                 if (sink != null) sink.clear();
             } catch (Throwable ignored) {

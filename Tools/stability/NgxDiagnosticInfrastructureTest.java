@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.lang.reflect.Method;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,6 +35,16 @@ public class NgxDiagnosticInfrastructureTest {
 
     static void ok(boolean b, String n) {
         if (!b) throw new AssertionError(n);
+    }
+
+    static boolean enqueue(NgxDiagnosticWriter writer, String line) {
+        try {
+            Method method = NgxDiagnosticWriter.class.getDeclaredMethod("enqueue", String.class);
+            method.setAccessible(true);
+            return (Boolean) method.invoke(writer, line);
+        } catch (Exception e) {
+            throw new AssertionError("enqueue", e);
+        }
     }
 
     static String unzip(File zip, String name) throws Exception {
@@ -200,9 +211,23 @@ public class NgxDiagnosticInfrastructureTest {
         ok(mem.contains("old"), "writer wrote old");
         idle.clear();
         ok(!mem.contains("old"), "clear drops disk");
+        ok(idle.dropped() == 0, "clear resets dropped");
         idle.persist("new");
         ok(idle.flush(2000), "writer flush new");
         ok(mem.contains("new") && !mem.contains("old"), "clear does not revive old");
+
+        NgxDiagnosticWriter pending = new NgxDiagnosticWriter(new NgxDiagnosticWriter.Sink() {
+            public void append(String line) { mem.add(line); }
+            public void clear() { mem.clear(); }
+        });
+        mem.clear();
+        ok(enqueue(pending, "pending-old"), "pending line queued");
+        ok(!pending.isStarted(), "pending does not start writer");
+        pending.clear();
+        ok(pending.dropped() == 0, "pending clear resets dropped");
+        pending.persist("pending-new");
+        ok(pending.flush(2000), "pending flush");
+        ok(mem.contains("pending-new") && !mem.contains("pending-old"), "pending LineJob lost on clear");
 
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch hold = new CountDownLatch(1);
@@ -218,9 +243,12 @@ public class NgxDiagnosticInfrastructureTest {
         stuck.persist("first");
         ok(entered.await(2, TimeUnit.SECONDS), "writer entered append");
         for (int i = 0; i < 200; i++) stuck.persist("queued-" + i);
+        ok(stuck.dropped() > 0, "overflow increments dropped");
         ok(!stuck.flush(300), "flush fails when queue cannot take flush token");
         hold.countDown();
         ok(stuck.flush(2000), "flush succeeds after writer unblocks");
+        stuck.clear();
+        ok(stuck.dropped() == 0, "clear zeros dropped after overflow");
 
         System.out.println("NGX infrastructure PASS");
     }
