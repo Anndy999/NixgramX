@@ -60,6 +60,11 @@ public class FileLog {
 
     private OutputStreamWriter tlStreamWriter = null;
     private File tlRequestsFile = null;
+    // NGX Diagnostics deliberately uses the existing FileLog queue/directory.  It is
+    // separate from the normal app log only so an opt-in diagnostic capture does not
+    // enable or contaminate Telegram's normal/protocol logging.
+    private OutputStreamWriter ngxDiagnosticsWriter = null;
+    private File ngxDiagnosticsFile = null;
 
     private final static String tag = "tmessages";
     private final static String mtproto_tag = "MTProto";
@@ -343,6 +348,34 @@ public class FileLog {
 
     public static void ensureInitied() {
         getInstance().init();
+    }
+
+    /** Writes a pre-sanitized NGX line through FileLog's existing asynchronous queue. */
+    public static void ngxDiagnostic(final String line) {
+        if (line == null || line.length() > 1024) return;
+        ensureInitied();
+        final FileLog log = getInstance();
+        if (log.logQueue == null) return;
+        log.logQueue.postRunnable(() -> {
+            try {
+                if (log.ngxDiagnosticsWriter == null) {
+                    File dir = AndroidUtilities.getLogsDir();
+                    if (dir == null) return;
+                    log.ngxDiagnosticsFile = new File(dir, "ngx_diag.log");
+                    log.ngxDiagnosticsWriter = new OutputStreamWriter(new FileOutputStream(log.ngxDiagnosticsFile, true));
+                }
+                log.ngxDiagnosticsWriter.write(line);
+                log.ngxDiagnosticsWriter.write('\n');
+                log.ngxDiagnosticsWriter.flush();
+            } catch (Throwable ignore) { }
+        });
+    }
+
+    public static File getNgxDiagnosticsFile() {
+        File file = getInstance().ngxDiagnosticsFile;
+        if (file != null) return file;
+        File dir = AndroidUtilities.getLogsDir();
+        return dir == null ? null : new File(dir, "ngx_diag.log");
     }
 
     public static String getNetworkLogPath() {

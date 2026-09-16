@@ -410,6 +410,11 @@ public class ConnectionsManager extends BaseController {
 
         // --- Ghost Mode ---
         AyuGhostUtils.InterceptResult interceptResult = AyuGhostUtils.interceptRequest(object, onCompleteOrig);
+        org.telegram.messenger.diagnostics.NgxDiagnostics.event(
+                org.telegram.messenger.diagnostics.NgxDiagnostics.Category.GHOST,
+                "REQUEST_INTERCEPT",
+                org.telegram.messenger.diagnostics.NgxDiagnostics.Value.label(org.telegram.messenger.diagnostics.NgxDiagnostics.Field.REQUEST_TYPE, object.getClass().getSimpleName()),
+                org.telegram.messenger.diagnostics.NgxDiagnostics.Value.of(org.telegram.messenger.diagnostics.NgxDiagnostics.Field.RESULT, interceptResult.blockRequest()));
         if (interceptResult.blockRequest()) {
             FileLog.d("GhostMode: Request " + object.getClass().getSimpleName() + " blocked by handler.");
             return;
