@@ -61,6 +61,8 @@ public class ChannelHeaderGeometryTest {
     def test_channel_only_opt_in_and_draw_bounds(self):
         action = ACTION_BAR.read_text(encoding='utf-8')
         chat = CHAT_ACTIVITY.read_text(encoding='utf-8')
+        self.assertIn('NIXGRAMX_CHANNEL_HEADER_GLASS_GEOMETRY_FROZEN', action)
+        self.assertIn('NIXGRAMX_CHANNEL_HEADER_GLASS_GEOMETRY_FROZEN', chat)
         self.assertIn('final int glassMenuWidth = getGlassMenuGeometryWidth(menuWidth);', action)
         self.assertIn('final int menuWidthWithPadding = glassMenuWidth +', action)
         self.assertIn('Math.max(s, glassMenuWidth)', action)

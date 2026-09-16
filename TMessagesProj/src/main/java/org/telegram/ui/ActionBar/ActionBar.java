@@ -214,9 +214,13 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     /**
+     * NIXGRAMX_CHANNEL_HEADER_GLASS_GEOMETRY_FROZEN
+     *
      * Reserves glass background geometry without changing menu layout or touch targets.
      * ChatActivity uses this for a broadcast channel whose single overflow action should
      * retain the same header silhouette as a private chat's call-plus-overflow menu.
+     * Do not change this policy or its draw-bound consumers without replacing the paired
+     * private/channel/group/forum device evidence and updating the regression test.
      */
     public void setGlassMenuMinimumItems(int minimumItems) {
         glassMenuMinimumItems = Math.max(0, minimumItems);
@@ -2337,6 +2341,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final float actionModeFactor = getActionModeFactor();
         final int menuWidthA = hasForcedMenuWidth ? forcedMenuWidth : (int) animatorMenuItemsWidth.getFactor();
         final int menuWidth = hasForcedMenuMinWidth ? Math.max((int) (forcedMenuMinWidth * (1f - searchFactor)), menuWidthA) : menuWidthA;
+        // NIXGRAMX_CHANNEL_HEADER_GLASS_GEOMETRY_FROZEN: bounds use glass-only width.
         final int glassMenuWidth = getGlassMenuGeometryWidth(menuWidth);
 
         final boolean hasBackButton = backButtonImageView != null && backButtonImageView.getVisibility() == View.VISIBLE;

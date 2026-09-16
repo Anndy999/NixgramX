@@ -1,8 +1,11 @@
-# Channel header Liquid Glass geometry — isolated Beta bugfix
+# Channel header Liquid Glass geometry — frozen Beta policy
 
-Base: beta `a21bfd1fae10a28f893445c087d6a52108dde085` (NixgramX 12.10.1, 1285).
-This change does not modify Updater V2, versioning, workflows, message bubbles,
-composer code, ActionBar touch handling, or the PR #44 radius synchronization fix.
+This policy is intentionally frozen. It does not modify Updater V2, versioning,
+workflows, message bubbles, composer code, ActionBar touch handling, or the
+uniform-radius policy that superseded PR #44's earlier per-corner experiment.
+
+Do not alter the marked production lines without paired private/channel/group/forum
+device evidence and an updated regression test.
 
 ## Root cause and execution paths
 
