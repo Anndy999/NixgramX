@@ -80,6 +80,12 @@ import tw.nekomimi.nekogram.helpers.MessageHelper;
 
 public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.Target, NotificationCenter.NotificationCenterDelegate {
 
+    @Override
+    public void invalidate() {
+        NixOfficialDiffJank.chatAvatarInvalidated();
+        super.invalidate();
+    }
+
     private static final int ANIMATOR_ID_TIME_ITEM_VISIBLE = 0;
     private final BoolAnimator animatorTimeVisible = new BoolAnimator(ANIMATOR_ID_TIME_ITEM_VISIBLE, this, CubicBezierInterpolator.EASE_OUT_QUINT, 320);
 

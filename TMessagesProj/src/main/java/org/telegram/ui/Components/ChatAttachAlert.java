@@ -2102,6 +2102,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
             @Override
             protected void dispatchDraw(Canvas canvas) {
+                NixOfficialDiffJank.markAttachFirstDraw();
                 if (Build.VERSION.SDK_INT >= 31 && scrollableViewNoiseSuppressor != null) {
                     blur3_InvalidateBlur();
                     if (iBlur3SourceGlassFrosted != null) {
@@ -4509,6 +4510,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     @Override
     public void show() {
+        if (baseFragment instanceof ChatActivity) {
+            NixOfficialDiffJank.beginAttachOpen((ChatActivity) baseFragment);
+        }
         super.show();
         buttonPressed = false;
         if (baseFragment instanceof ChatActivity) {
@@ -6389,6 +6393,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             albumEntry = MediaController.allPhotosAlbumEntry;
         }
         currentAttachLayout.onOpenAnimationEnd();
+        NixOfficialDiffJank.markAttachReady();
         AndroidUtilities.makeAccessibilityAnnouncement(getString("AccDescrAttachButton", R.string.AccDescrAttachButton));
         openTransitionFinished = true;
         if (!videosEnabled && !photosEnabled) {

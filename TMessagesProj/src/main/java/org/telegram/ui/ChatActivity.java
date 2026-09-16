@@ -50070,10 +50070,13 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void invalidateAllGlassAttachedViews() {
+        long nixOfficialDiffJankStartedAt = org.telegram.ui.Components.NixOfficialDiffJank.glassInvalidateBegin();
         contentView.invalidate();
         for (View v: glassAttachedViews) {
             v.invalidate();
         }
+        org.telegram.ui.Components.NixOfficialDiffJank.glassInvalidateEnd(nixOfficialDiffJankStartedAt);
+        org.telegram.ui.Components.NixOfficialDiffJank.headerInvalidated();
     }
 
     private void onSideControlButtonOnClick(int buttonId, View v) {

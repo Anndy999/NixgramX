@@ -8174,6 +8174,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     public void invalidateAllGlassAttachedViews() {
+        long nixOfficialDiffJankStartedAt = org.telegram.ui.Components.NixOfficialDiffJank.glassInvalidateBegin();
         if (iBlur3BlurredDrawables != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             for (BlurredBackgroundDrawableRenderNode d : iBlur3BlurredDrawables) {
                 d.invalidateDisplayList();
@@ -8184,6 +8185,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 v.invalidate();
             }
         }
+        org.telegram.ui.Components.NixOfficialDiffJank.glassInvalidateEnd(nixOfficialDiffJankStartedAt);
     }
 
     private Bulletin limitBulletin;
@@ -17976,6 +17978,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             return false;
         }
 
+        org.telegram.ui.Components.NixOfficialDiffJank.viewerOpenBegin();
         final PlaceProviderObject object = provider.getPlaceForPhoto(messageObject, fileLocation, index, true, false);
         WindowManager wm = (WindowManager) parentActivity.getSystemService(Context.WINDOW_SERVICE);
         if (attachedToWindow) {
@@ -18008,7 +18011,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             windowLayoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | WindowManager.LayoutParams.SOFT_INPUT_IS_FORWARD_NAVIGATION;
             windowView.setFocusable(false);
             containerView.setFocusable(false);
+            long nixOfficialDiffJankStartedAt = org.telegram.ui.Components.NixOfficialDiffJank.windowAddBegin();
             wm.addView(windowView, windowLayoutParams);
+            org.telegram.ui.Components.NixOfficialDiffJank.windowAddEnd(nixOfficialDiffJankStartedAt);
             onShowView();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -18110,6 +18115,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (object != null) {
             disableShowCheck = true;
             animationInProgress = 1;
+            org.telegram.ui.Components.NixOfficialDiffJank.setAnimationInProgress(animationInProgress);
+            org.telegram.ui.Components.NixOfficialDiffJank.morphBegin();
             if (messageObject != null) {
                 currentAnimation = object.allowTakeAnimation ? object.imageReceiver.getAnimation() : null;
                 if (currentAnimation != null) {
@@ -18300,7 +18307,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                             return;
                         }
                         containerView.setLayerType(View.LAYER_TYPE_NONE, null);
+                        org.telegram.ui.Components.NixOfficialDiffJank.morphEnd();
                         animationInProgress = 0;
+                        org.telegram.ui.Components.NixOfficialDiffJank.setAnimationInProgress(animationInProgress);
                         invalidateBlur();
                         transitionAnimationStartTime = 0;
                         leftCropState = null;
@@ -18335,6 +18344,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         if (provider != null) {
                             provider.onOpen();
                         }
+                        org.telegram.ui.Components.NixOfficialDiffJank.viewerOpenEnd();
                     };
 
                     if (!openedFullScreenVideo) {
@@ -19293,6 +19303,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
             } catch (Exception e) {
                 FileLog.e(e);
+            } finally {
+                org.telegram.ui.Components.NixOfficialDiffJank.end();
             }
         });
         if (placeProvider != null) {
@@ -24446,7 +24458,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             windowLayoutParams.setColorMode(enabled ? ActivityInfo.COLOR_MODE_HDR : ActivityInfo.COLOR_MODE_DEFAULT);
             if (parentActivity != null && windowView != null && windowView.getParent() != null) {
                 WindowManager wm = (WindowManager) parentActivity.getSystemService(Context.WINDOW_SERVICE);
+                long nixOfficialDiffJankStartedAt = org.telegram.ui.Components.NixOfficialDiffJank.hdrUpdateBegin();
                 wm.updateViewLayout(windowView, windowLayoutParams);
+                org.telegram.ui.Components.NixOfficialDiffJank.hdrUpdateEnd(nixOfficialDiffJankStartedAt);
             }
         } catch (Throwable e) {
             FileLog.e(e);

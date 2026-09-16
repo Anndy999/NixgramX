@@ -89,6 +89,12 @@ import xyz.nextalone.nagram.NaConfig;
 
 public class ActionBar extends FrameLayout implements FactorAnimator.Target, Theme.Colorable {
 
+    @Override
+    public void invalidate() {
+        org.telegram.ui.Components.NixOfficialDiffJank.actionBarInvalidated();
+        super.invalidate();
+    }
+
     public static class ActionBarMenuOnItemClick {
         public void onItemClick(int id) {
 
