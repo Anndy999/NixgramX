@@ -1491,7 +1491,12 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
         for (int i = 0; i < 2; i++) {
             if (titleTextView[0] != null && titleTextView[0].getVisibility() != GONE || subtitleTextView != null && subtitleTextView.getVisibility() != GONE) {
-                int availableWidth = isCentered() ? (width - dp(120)) : width - (menu != null ? menu.getMeasuredWidth() : 0) - dp(16) - textLeft - titleRightMargin;
+                int menuWidth = menu != null ? menu.getMeasuredWidth() : 0;
+                // NIXGRAMX_CHANNEL_HEADER_GLASS_GEOMETRY_FROZEN: title must reserve the
+                // same glass-only peer cell as the draw bounds.  Without this, a broadcast
+                // channel title can render below its widened overflow-menu capsule.
+                int titleMenuWidth = glassMode ? getGlassMenuGeometryWidth(menuWidth) : menuWidth;
+                int availableWidth = isCentered() ? (width - dp(120)) : width - titleMenuWidth - dp(16) - textLeft - titleRightMargin;
                 availableWidth = Math.max(availableWidth, 0);
 
                 if (((fromBottom && i == 0) || (!fromBottom && i == 1)) && overlayTitleAnimation && titleAnimationRunning) {

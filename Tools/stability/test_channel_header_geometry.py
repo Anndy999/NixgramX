@@ -66,6 +66,8 @@ public class ChannelHeaderGeometryTest {
         self.assertIn('final int glassMenuWidth = getGlassMenuGeometryWidth(menuWidth);', action)
         self.assertIn('final int menuWidthWithPadding = glassMenuWidth +', action)
         self.assertIn('Math.max(s, glassMenuWidth)', action)
+        self.assertIn('int titleMenuWidth = glassMode ? getGlassMenuGeometryWidth(menuWidth) : menuWidth;', action)
+        self.assertIn('width - titleMenuWidth - dp(16) - textLeft - titleRightMargin', action)
         self.assertIn('ChatObject.isChannelAndNotMegaGroup(currentChat)', chat)
         self.assertIn('chatMode == MODE_DEFAULT && !isTopic', chat)
         self.assertIn('actionBar.setGlassMenuMinimumItems(2);', chat)
