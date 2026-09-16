@@ -45,6 +45,7 @@ import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.os.Trace;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -7379,9 +7380,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
     private final ArrayList<RectF> iBlur3PositionsMerged = new ArrayList<>();
 
     public void blur3_InvalidateBlur() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
-            return;
-        }
+        Trace.beginSection("NGX_ATTACH_BLUR3");
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
+                return;
+            }
 
         ViewPositionWatcher.computeRectInParent(buttonsRecyclerViewWrapper, containerView, iBlur3PositionMainTabs);
 
@@ -7407,7 +7410,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
         final int mergedPositionsCount = RectFMergeBounding.mergeOverlapping(iBlur3Positions, hasFastScroll ? 3 : 2, iBlur3PositionsMerged);
         scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3PositionsMerged, mergedPositionsCount);
-        scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+            scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, containerView.getMeasuredWidth(), containerView.getMeasuredHeight());
+        } finally {
+            Trace.endSection();
+        }
     }
 
     @SuppressLint("ViewConstructor")

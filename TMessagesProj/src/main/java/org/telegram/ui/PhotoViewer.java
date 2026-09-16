@@ -64,6 +64,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.os.Trace;
 import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -8174,15 +8175,20 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     public void invalidateAllGlassAttachedViews() {
-        if (iBlur3BlurredDrawables != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            for (BlurredBackgroundDrawableRenderNode d : iBlur3BlurredDrawables) {
-                d.invalidateDisplayList();
+        Trace.beginSection("NGX_PV_INVALIDATE_ALL_GLASS");
+        try {
+            if (iBlur3BlurredDrawables != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                for (BlurredBackgroundDrawableRenderNode d : iBlur3BlurredDrawables) {
+                    d.invalidateDisplayList();
+                }
             }
-        }
-        if (glassAttachedViews != null) {
-            for (View v : glassAttachedViews) {
-                v.invalidate();
+            if (glassAttachedViews != null) {
+                for (View v : glassAttachedViews) {
+                    v.invalidate();
+                }
             }
+        } finally {
+            Trace.endSection();
         }
     }
 
@@ -18295,13 +18301,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         provider.onPreOpen();
                     }
                     animationEndRunnable = () -> {
+                        Trace.beginSection("NGX_PV_MORPH_END");
+                        try {
                         animationEndRunnable = null;
                         if (containerView == null || windowView == null) {
                             return;
                         }
-                        containerView.setLayerType(View.LAYER_TYPE_NONE, null);
+                        setLayerTypeNoneAfterMorph();
                         animationInProgress = 0;
-                        invalidateBlur();
+                        invalidateBlurAfterMorph();
                         transitionAnimationStartTime = 0;
                         leftCropState = null;
                         leftCropTransform.setViewTransform(false);
@@ -18309,7 +18317,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         rightCropTransform.setViewTransform(false);
                         setImages();
                         setCropBitmap();
-                        containerView.invalidate();
+                        invalidateContainerAfterMorph();
                         for (int i = 0; i < animatingImageViews.length; i++) {
                             animatingImageViews[i].setVisibility(View.GONE);
                         }
@@ -18334,6 +18342,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
                         if (provider != null) {
                             provider.onOpen();
+                        }
+                        } finally {
+                            Trace.endSection();
                         }
                     };
 
@@ -19008,10 +19019,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     placeProvider.onPreClose();
                 }
                 animationEndRunnable = () -> {
+                    Trace.beginSection("NGX_PV_MORPH_END");
+                    try {
                     animationEndRunnable = null;
-                    containerView.setLayerType(View.LAYER_TYPE_NONE, null);
+                    setLayerTypeNoneAfterMorph();
                     animationInProgress = 0;
-                    invalidateBlur();
+                    invalidateBlurAfterMorph();
                     onPhotoClosed(object);
                     MediaController.getInstance().tryResumePausedAudio();
                     if (stickerEmpty && !stickerEmptySent && imagesArrLocals != null) {
@@ -19021,6 +19034,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                                 entry.deleteAll();
                             }
                         }
+                    }
+                    } finally {
+                        Trace.endSection();
                     }
                 };
 
@@ -19068,11 +19084,13 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     placeProvider.onPreClose();
                 }
                 animationEndRunnable = () -> {
+                    Trace.beginSection("NGX_PV_MORPH_END");
+                    try {
                     animationEndRunnable = null;
                     if (containerView == null) {
                         return;
                     }
-                    containerView.setLayerType(View.LAYER_TYPE_NONE, null);
+                    setLayerTypeNoneAfterMorph();
                     animationInProgress = 0;
                     onPhotoClosed(object);
                     containerView.setScaleX(1.0f);
@@ -19085,6 +19103,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                                 entry.deleteAll();
                             }
                         }
+                    }
+                    } finally {
+                        Trace.endSection();
                     }
                 };
                 animatorSet.setDuration(200);
@@ -19218,6 +19239,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void onPhotoClosed(PlaceProviderObject object) {
+        Trace.beginSection("NGX_PV_PHOTO_CLOSED");
+        try {
         if (doneButtonPressed) {
             releasePlayer(true);
         }
@@ -19318,6 +19341,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (videoFrameBitmap != null) {
             videoFrameBitmap.recycle();
             videoFrameBitmap = null;
+        }
+        } finally {
+            Trace.endSection();
         }
     }
 
@@ -23308,6 +23334,33 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         }
         if (containerView != null) {
             containerView.invalidate();
+        }
+    }
+
+    private void setLayerTypeNoneAfterMorph() {
+        Trace.beginSection("NGX_PV_LAYER_NONE");
+        try {
+            containerView.setLayerType(View.LAYER_TYPE_NONE, null);
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    private void invalidateBlurAfterMorph() {
+        Trace.beginSection("NGX_PV_FINAL_BLUR");
+        try {
+            invalidateBlur();
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    private void invalidateContainerAfterMorph() {
+        Trace.beginSection("NGX_PV_CONTAINER_INVALIDATE");
+        try {
+            containerView.invalidate();
+        } finally {
+            Trace.endSection();
         }
     }
 
