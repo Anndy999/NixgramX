@@ -418,7 +418,6 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
                 parentLayout.rebuildFragments(0);
             } else if (key.equals(NaConfig.INSTANCE.getImmersiveDrawerAnimation().getKey())) {
                 NixNavigationConfig.setImmersiveDrawerEnabled(NaConfig.INSTANCE.getImmersiveDrawerAnimation().Bool());
-            }
             } else if (key.equals(NaConfig.INSTANCE.getHideDialogsSearchField().getKey())) {
                 parentLayout.rebuildFragments(0);
             }
