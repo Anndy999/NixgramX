@@ -1,2 +1,2 @@
-- Version-only Beta test build
-- No functional changes
+- Brand identity: use NixgramX consistently for the network map client identifier.
+- Beta build versionCode: 1312.
