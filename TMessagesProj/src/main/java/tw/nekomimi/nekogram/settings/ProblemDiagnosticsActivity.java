@@ -74,8 +74,17 @@ public class ProblemDiagnosticsActivity extends BaseNekoSettingsActivity impleme
 
     @Override
     public void onDiagnosticsChanged() {
+        refreshRowsSafely();
+    }
+
+    private void refreshRowsSafely() {
+        if (listAdapter == null || listView == null) return;
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshRowsSafely);
+            return;
+        }
         updateRows();
-        if (listAdapter != null) listAdapter.notifyDataSetChanged();
+        listAdapter.notifyDataSetChanged();
     }
 
     @Override

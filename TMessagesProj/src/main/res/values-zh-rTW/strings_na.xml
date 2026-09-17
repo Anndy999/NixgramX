@@ -129,4 +129,5 @@
     <string name="ActionButtonStyleAccent">強調色</string>
     <string name="ActionButtonStyleNeutral">中性</string>
     <string name="ActionButtonStyleWhite">白色</string>
+    <string name="PushServiceTypeUnifiedGateway">UnifiedPush 閘道</string>
 </resources>
