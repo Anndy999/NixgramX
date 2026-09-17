@@ -128,6 +128,10 @@ import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.NotificationsController;
 import org.telegram.messenger.R;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Category;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Field;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Value;
+import org.telegram.messenger.diagnostics.NgxDiagnostics;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
@@ -11453,6 +11457,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     boolean floatingButtonHidden;
     private boolean mainTabsHiddenByScroll;
     private Boolean lastDiagnosticMainTabsVisible;
+    private enum NavigationScrollDirection { UP, DOWN }
+    private enum MainTabsVisibilityReason { SCROLL, SEARCH, STATE }
 
     private void hideFloatingButton(boolean hide) {
         hideFloatingButton(hide, false);
@@ -11477,10 +11483,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             boolean previous = mainTabsHiddenByScroll;
             mainTabsHiddenByScroll = NixNavigationConfig.isBottomNavigationFloating() && hideByScroll;
             if (previous != mainTabsHiddenByScroll) {
-                org.telegram.messenger.diagnostics.Diagnostics.navigationEvent("FLOATING_SCROLL",
-                        "mode=" + NixNavigationConfig.getBottomNavigationMode()
-                                + " goingDown=" + hideByScroll
-                                + " mainTabsHiddenByScroll=" + mainTabsHiddenByScroll);
+                NgxDiagnostics.event(Category.NAVIGATION, "FLOATING_SCROLL",
+                        Value.bool(Field.OLD_STATE, previous),
+                        Value.bool(Field.NEW_STATE, mainTabsHiddenByScroll),
+                        Value.enumValue(Field.DIRECTION,
+                                hideByScroll ? NavigationScrollDirection.DOWN : NavigationScrollDirection.UP));
             }
         }
         updateFloatingButtonVisibility(true);
@@ -14495,11 +14502,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 && NixNavigationConfig.isBottomNavigationVisible()
                 && (blurredView == null || blurredView.getBackground() == null || blurredView.getAlpha() < 0.01f || blurredView.getVisibility() == View.GONE);
         if (lastDiagnosticMainTabsVisible == null || lastDiagnosticMainTabsVisible != mainTabsVisible) {
+            final boolean previousVisible = lastDiagnosticMainTabsVisible != null && lastDiagnosticMainTabsVisible;
             lastDiagnosticMainTabsVisible = mainTabsVisible;
-            org.telegram.messenger.diagnostics.Diagnostics.navigationEvent("MAIN_TABS_VISIBLE",
-                    "mode=" + NixNavigationConfig.getBottomNavigationMode()
-                            + " visible=" + mainTabsVisible
-                            + " reason=" + (mainTabsHiddenByScroll ? "scroll" : searching ? "search" : "state"));
+            NgxDiagnostics.event(Category.NAVIGATION, "MAIN_TABS_VISIBLE",
+                    Value.bool(Field.OLD_STATE, previousVisible),
+                    Value.bool(Field.NEW_STATE, mainTabsVisible),
+                    Value.enumValue(Field.REASON, mainTabsHiddenByScroll
+                            ? MainTabsVisibilityReason.SCROLL
+                            : searching ? MainTabsVisibilityReason.SEARCH : MainTabsVisibilityReason.STATE));
         }
         if (mainTabsActivityController != null) {
             mainTabsActivityController.setTabsVisible(mainTabsVisible);

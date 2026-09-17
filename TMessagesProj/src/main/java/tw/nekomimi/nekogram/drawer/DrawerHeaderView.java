@@ -29,6 +29,9 @@ import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.Premium.PremiumGradient;
+import org.telegram.ui.Components.RLottieDrawable;
+import org.telegram.ui.Components.RLottieImageView;
+import org.telegram.ui.DialogsActivity;
 
 import tw.nekomimi.nekogram.NekoConfig;
 
@@ -39,7 +42,8 @@ public class DrawerHeaderView extends FrameLayout {
     private final SimpleTextView nameView;
     private final SimpleTextView subtitleView;
     private final ImageView chevronView;
-    private final ImageView themeIcon;
+    private final RLottieDrawable themeDrawable;
+    private final RLottieImageView themeIcon;
     private final FrameLayout themeButton;
     private final FrameLayout proxyButton;
     private final ImageView proxyIcon;
@@ -56,14 +60,15 @@ public class DrawerHeaderView extends FrameLayout {
         addView(avatarView, LayoutHelper.createFrame(72, 72, Gravity.START | Gravity.TOP, 16, 16, 0, 0));
 
         themeButton = roundButton(context);
-        themeIcon = new ImageView(context);
-        themeIcon.setImageResource(R.drawable.msg_theme);
+        themeDrawable = new RLottieDrawable(R.raw.sun, String.valueOf(R.raw.sun), dp(24), dp(24), true, null);
+        themeDrawable.setPlayInDirectionOfCustomEndFrame(true);
+        themeIcon = new RLottieImageView(context);
+        themeIcon.setAnimation(themeDrawable);
+        themeIcon.setScaleType(ImageView.ScaleType.CENTER);
         themeIcon.setColorFilter(iconFilter());
         themeButton.addView(themeIcon, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
-        themeButton.setOnClickListener(v -> {
-            themeIcon.animate().rotationBy(180).setDuration(220).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
-            run(onTheme);
-        });
+        setThemeToggleStaticState(Theme.isCurrentThemeDark());
+        themeButton.setOnClickListener(v -> run(onTheme));
         themeButton.setOnLongClickListener(v -> { run(onThemeLongPress); return onThemeLongPress != null; });
         addView(themeButton, LayoutHelper.createFrame(36, 36, Gravity.END | Gravity.TOP, 0, 16, 16, 0));
 
@@ -111,6 +116,20 @@ public class DrawerHeaderView extends FrameLayout {
     public void setOnThemeLongPress(Runnable value) { onThemeLongPress = value; }
     public void setOnProxy(Runnable value) { onProxy = value; }
 
+    public RLottieImageView getThemeToggleView() { return themeIcon; }
+
+    public int[] getThemeTogglePosition() {
+        int[] position = new int[2];
+        themeButton.getLocationInWindow(position);
+        position[0] += themeButton.getMeasuredWidth() / 2;
+        position[1] += themeButton.getMeasuredHeight() / 2;
+        return position;
+    }
+
+    public void animateThemeToggle(boolean toDark) {
+        syncThemeToggle(toDark, true);
+    }
+
     public void setChevronExpanded(boolean value) {
         if (expanded == value) return;
         expanded = value;
@@ -121,8 +140,13 @@ public class DrawerHeaderView extends FrameLayout {
         nameView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
         chevronView.setColorFilter(iconFilter());
+        themeButton.setBackground(Theme.createRoundRectDrawable(dp(18),
+                Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), .075f)));
         themeIcon.setColorFilter(iconFilter());
         updateUserInfo();
+        if (!themeIcon.isPlaying() && !DialogsActivity.switchingTheme) {
+            syncThemeToggle(false);
+        }
     }
 
     public void updateUserInfo() {
@@ -166,8 +190,38 @@ public class DrawerHeaderView extends FrameLayout {
         proxyIcon.setImageResource(enabled && connected ? R.drawable.proxy_on_solar : R.drawable.proxy_off_solar);
     }
 
-    @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); statusDrawable.attach(); }
+    @Override protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        statusDrawable.attach();
+        if (!themeIcon.isPlaying() && !DialogsActivity.switchingTheme) {
+            syncThemeToggle(false);
+        }
+    }
     @Override protected void onDetachedFromWindow() { super.onDetachedFromWindow(); statusDrawable.detach(); }
+    private int getThemeToggleCurrentFrame(boolean dark) { return dark ? themeDrawable.getFramesCount() - 1 : 0; }
+    private int getThemeToggleEndFrame(boolean dark) { return dark ? themeDrawable.getFramesCount() : 0; }
+    private void setThemeToggleStaticState(boolean dark) {
+        themeDrawable.stop();
+        themeDrawable.setCurrentFrame(getThemeToggleCurrentFrame(dark));
+        themeDrawable.setCustomEndFrame(getThemeToggleEndFrame(dark));
+        themeIcon.invalidate();
+    }
+    private void syncThemeToggle(boolean animated) { syncThemeToggle(Theme.isCurrentThemeDark(), animated); }
+    private void syncThemeToggle(boolean dark, boolean animated) {
+        if (themeDrawable.getFramesCount() <= 0) return;
+        int currentFrame = getThemeToggleCurrentFrame(dark);
+        if (animated) {
+            themeDrawable.setCustomEndFrame(getThemeToggleEndFrame(dark));
+            themeIcon.playAnimation();
+        } else if (!isAttachedToWindow()) {
+            setThemeToggleStaticState(dark);
+        } else {
+            themeDrawable.stop();
+            themeDrawable.setCurrentFrame(currentFrame, false, true);
+            themeDrawable.setCustomEndFrame(currentFrame);
+            themeIcon.invalidate();
+        }
+    }
     private FrameLayout roundButton(Context context) { FrameLayout v = new FrameLayout(context); v.setBackground(Theme.createRoundRectDrawable(dp(18), Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), .075f))); return v; }
     private PorterDuffColorFilter iconFilter() { return new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN); }
     private static void run(Runnable value) { if (value != null) value.run(); }
