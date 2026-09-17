@@ -32,6 +32,13 @@ class Upstream12102BuildCompatTest(unittest.TestCase):
         self.assertNotIn("} else try {", emoji)
         self.assertIn("ConnectionsManager.setProxySettings(false, null);*/", launch)
 
+    def test_nix_video_player_egl_extension_keeps_android_import(self):
+        video_player = (ROOT / "TMessagesProj/src/main/java/org/telegram/ui/Components/VideoPlayer.java").read_text(encoding="utf-8")
+
+        self.assertIn("import android.opengl.EGLContext;", video_player)
+        self.assertIn("private EGLContext eglParentContext;", video_player)
+        self.assertIn("public void setEGLContext(EGLContext ctx)", video_player)
+
 
 if __name__ == "__main__":
     unittest.main()
