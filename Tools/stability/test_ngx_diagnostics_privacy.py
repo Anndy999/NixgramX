@@ -6,6 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 DIAG = ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/diagnostics"
+PROBLEM_DIAGNOSTICS = ROOT / "TMessagesProj/src/main/java/tw/nekomimi/nekogram/settings/ProblemDiagnosticsActivity.java"
 FORBIDDEN_APIS = (
     "Value.string",
     "Value.label",
@@ -35,6 +36,11 @@ class NgxDiagnosticsPrivacyTest(unittest.TestCase):
         self.assertIn("public static Value bool", core)
         self.assertIn("public static Value integer", core)
         self.assertNotIn("public static Value string", core)
+
+    def test_problem_diagnostics_uses_official_header_cell(self):
+        activity = PROBLEM_DIAGNOSTICS.read_text(encoding="utf-8")
+        self.assertIn("import org.telegram.ui.Cells.HeaderCell;", activity)
+        self.assertNotIn("import tw.nekomimi.nekogram.ui.cells.HeaderCell;", activity)
 
 
 if __name__ == "__main__":
