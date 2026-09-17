@@ -1,5 +1,36 @@
 <!-- nixgramx-upstream-sync -->
-# Telegram 12.10.2 Upstream Sync
+# Telegram 12.10.3 Incremental Upstream Sync
+
+## Baselines
+
+- NixgramX stacked base: `upstream-sync/12.10.2`, `a8bb29d3cea96dcbeebebed0e2ce13a1d399a102`
+- Official old: Telegram 12.10.2 (7086), `163356809fa4bd81e64969700753e0a15664a288`
+- Official target: Telegram 12.10.3 (7089), `9552e5541e1274b9557c9832b204dbfcaf44b3dc`
+
+## Exact upstream delta
+
+- Commits: 1
+- Changed files: 4
+- `TMessagesProj/proguard-rules.pro`: official tgnet keep rule appended without
+  replacing NixgramX rules.
+- `TMessagesProj/src/main/java/org/telegram/tgnet/TLClassStore.java`: exact
+  official factory-based constructor mapping; no Nix local delta existed.
+- `TMessagesProj/src/main/java/org/telegram/ui/Components/AudioPlayerAlert.java`:
+  official Chromecast action index 6 applied while preserving Nix audio delta.
+- `gradle.properties`: official 12.10.3/7089 metadata plus NixgramX 12.10.3;
+  package `app.nixgramx.android` and versionCode 1318 preserved.
+
+## Adaptation status
+
+- Semantic conflicts: AudioPlayerAlert menu index and Nix version metadata,
+  both resolved by minimal three-way adaptation.
+- Unresolved adaptations: 0
+- CI: pending
+- Device verification: not tested
+
+---
+
+# Telegram 12.10.2 Base Adaptation (stacked parent)
 
 ## Baselines
 
