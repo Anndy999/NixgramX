@@ -2,10 +2,10 @@
 
 ## Current Telegram base
 
-The integrated Telegram base is **12.10.1 (7038)**,
-`62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c`. This is already in the
-NixgramX beta/main history, with subsequent NixgramX fixes. The old “L3 Adapt
-in progress” narrative is historical, not the current automation state.
+The current prepared Telegram base is **12.10.3 (7089)**,
+`9552e5541e1274b9557c9832b204dbfcaf44b3dc`. It is a four-file incremental
+sync stacked on the latest `upstream-sync/12.10.2` head; it is not yet merged
+into beta/main and still requires CI and device verification.
 
 The machine-readable source of truth is [upstream-base.json](upstream-base.json).
 `base` and `synced_commits` describe integrated deltas; `pending` explicitly
@@ -89,6 +89,9 @@ Proxy/network, Notification and Multi-account before accepting the sync.
 Latest integrated sync: Telegram 12.10.1 (7038), release candidate merged as
 [PR #4](https://github.com/Anndy999/NixgramX/pull/4); subsequent fixes are separate.
 This automation change itself does not perform a new Telegram sync.
+
+Latest prepared stacked sync: Telegram 12.10.3 (7089), one official commit and
+four changed upstream files, based on the latest 12.10.2 sync branch.
 
 Current pending upstream PRs: use the live
 [open upstream PR list](https://github.com/Anndy999/NixgramX/pulls?q=is%3Apr+is%3Aopen+head%3Aupstream-sync%2F).

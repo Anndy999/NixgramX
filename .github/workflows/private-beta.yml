@@ -176,7 +176,7 @@ jobs:
       - name: Set up Android SDK Tools
         uses: android-actions/setup-android@v4
         with:
-          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0"
+          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-35 platforms;android-37.0"
 
       - name: Install Native Build Dependencies
         working-directory: ${{ github.workspace }}
