@@ -72,7 +72,7 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
     private float startProgress;
     private VelocityTracker velocityTracker;
 
-    private enum GesturePhase { START, TRACK, DOWN, FINISH, CANCEL }
+    private enum GesturePhase { START, TRACK, FINISH, CANCEL }
     private enum DiagnosticResult { PENDING, CLOSE, RESTORE, SUCCESS }
     private enum ThemeState { LIGHT, DARK }
 
@@ -325,7 +325,6 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
         VelocityTracker tracker = obtainVelocity();
         tracker.clear();
         tracker.addMovement(ev);
-        drawerGestureEvent(GesturePhase.DOWN, 0f, 0f, DiagnosticResult.PENDING);
     }
 
     private boolean shouldStartVisibleDrawerTracking(MotionEvent ev) {
