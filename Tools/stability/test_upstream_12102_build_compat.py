@@ -64,9 +64,11 @@ class Upstream12102BuildCompatTest(unittest.TestCase):
 
     def test_known_agp_931_lint_crash_is_scoped_out(self):
         root_build = (ROOT / "build.gradle").read_text(encoding="utf-8")
+        gradle_properties = (ROOT / "gradle.properties").read_text(encoding="utf-8")
 
         self.assertIn("if (project.path == ':TMessagesProj')", root_build)
         self.assertIn("disable 'ThreadConstraint'", root_build)
+        self.assertIn("systemProp.idea.max.intellisense.filesize=4096", gradle_properties)
 
 
 if __name__ == "__main__":
