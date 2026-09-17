@@ -62,6 +62,12 @@ class Upstream12102BuildCompatTest(unittest.TestCase):
             if "platforms;android-37.0" in contents:
                 self.assertIn("platforms;android-35", contents, workflow.name)
 
+    def test_known_agp_931_lint_crash_is_scoped_out(self):
+        root_build = (ROOT / "build.gradle").read_text(encoding="utf-8")
+
+        self.assertIn("if (project.path == ':TMessagesProj')", root_build)
+        self.assertIn("disable 'ThreadConstraint'", root_build)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,6 +24,11 @@ subprojects {
                 lint {
                     checkReleaseBuilds = false
                     disable 'MissingTranslation', 'ExtraTranslation', 'BlockedPrivateApi'
+                    // AGP 9.3.1 JoinEffectDetector crashes internally while analyzing
+                    // the app; keep the workaround scoped and all other checks active.
+                    if (project.path == ':TMessagesProj') {
+                        disable 'ThreadConstraint'
+                    }
                 }
 
                 compileOptions {
