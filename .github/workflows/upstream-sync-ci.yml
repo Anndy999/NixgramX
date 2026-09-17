@@ -95,12 +95,7 @@ jobs:
           ./gradlew :TMessagesProj:assembleDebug --no-daemon
           APK="$(find TMessagesProj/build/outputs/apk -name '*arm64-v8a*.apk' -print -quit)"
           test -n "$APK"
-          for asset in lottie_meta.bin string_resource_ids.bin emoji.pack localization_en.bin; do
-            unzip -Z1 "$APK" | grep -Fx "assets/$asset" >/dev/null || {
-              echo "FATAL: startup asset missing from APK: assets/$asset"
-              exit 1
-            }
-          done
+          python3 Tools/stability/verify_generated_apk_assets.py "$APK"
       - name: Adaptation review gate
         id: adaptation
         continue-on-error: true

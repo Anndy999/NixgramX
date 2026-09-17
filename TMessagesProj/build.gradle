@@ -126,6 +126,12 @@ if (nativeTarget == 'SKIP') {
 android {
     defaultConfig.applicationId = appPackage
 
+    androidResources {
+        // EmojiPack uses AssetManager.openFd(), which requires an uncompressed
+        // asset. Telegram's former app module supplied this packaging rule.
+        noCompress += "pack"
+    }
+
     packaging {
         jniLibs {
             useLegacyPackaging = true

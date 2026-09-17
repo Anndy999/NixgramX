@@ -95,14 +95,7 @@ jobs:
           shopt -s nullglob
           APKS=(TMessagesProj/build/outputs/apk/staging/*.apk)
           test "${#APKS[@]}" -gt 0
-          for apk in "${APKS[@]}"; do
-            for asset in lottie_meta.bin string_resource_ids.bin emoji.pack localization_en.bin; do
-              unzip -Z1 "$apk" | grep -Fx "assets/$asset" >/dev/null || {
-                echo "FATAL: startup asset missing from $apk: assets/$asset"
-                exit 1
-              }
-            done
-          done
+          python3 Tools/stability/verify_generated_apk_assets.py "${APKS[@]}"
       - name: Upload arm64-v8a Artifact
         uses: actions/upload-artifact@v7
         with:

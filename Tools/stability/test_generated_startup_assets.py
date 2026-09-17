@@ -18,11 +18,9 @@ class GeneratedStartupAssetsTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn(
-            "lottie_meta.bin string_resource_ids.bin emoji.pack localization_en.bin",
+            'python3 Tools/stability/verify_generated_apk_assets.py "$PRIVATE_BETA_APK"',
             workflow,
         )
-        self.assertIn('unzip -Z1 "$PRIVATE_BETA_APK"', workflow)
-        self.assertNotIn("grep -Fxq", workflow)
 
     def test_lottie_generator_has_an_explicit_output_directory(self):
         plugin = (
@@ -40,6 +38,27 @@ class GeneratedStartupAssetsTest(unittest.TestCase):
             'outputDir.set(project.layout.buildDirectory.dir("generated/lottieMeta/${variant.name}/assets"))',
             plugin,
         )
+
+    def test_all_nixgramx_string_resource_files_feed_localization_assets(self):
+        plugin = (
+            ROOT
+            / "buildSrc"
+            / "src"
+            / "main"
+            / "kotlin"
+            / "org"
+            / "telegram"
+            / "plugin"
+            / "TelegramBuildAppPlugin.kt"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(2, plugin.count('include("strings*.xml")'))
+        self.assertEqual(2, plugin.count('include("values-*/strings*.xml")'))
+
+    def test_emoji_pack_is_stored_uncompressed_for_open_fd(self):
+        build_gradle = (ROOT / "TMessagesProj" / "build.gradle").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('noCompress += "pack"', build_gradle)
 
 
 if __name__ == "__main__":
