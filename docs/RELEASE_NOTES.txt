@@ -1,9 +1,11 @@
-NixgramX Private Beta — Telegram 12.10.3 (1320)
+NixgramX Private Beta — Telegram 12.10.3 (1321)
 
 - Updated Telegram upstream to 12.10.3 (7089).
 - Included #88: restored official Telegram header layouts and diagnostics header spacing.
 - Included #90: prevented original and translated message text from overlapping without changing the translation motion.
 - Fixed the 1319 startup crash by restoring Telegram's generated Lottie and localization assets to the APK.
+- Fixed `LOC_ERR:null` labels by including every NixgramX `strings*.xml` file in generated language packs.
+- Fixed bundled emoji rendering by storing `emoji.pack` uncompressed as required by Android `openFd()`.
 - Added packaging gates that reject private, Beta, and Stable APKs missing required generated assets.
 - Preserved Side Drawer navigation, bottom navigation modes, multi-account sorting, theme switching, and NGX diagnostics.
 - CI passed for the 12.10.3 upstream sync and both included fixes.
