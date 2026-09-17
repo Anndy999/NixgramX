@@ -275,7 +275,7 @@ public final class ExtendedDefaultDataSource implements DataSource {
         if (rtmpDataSource == null) {
             try {
                 // LINT.IfChange
-                Class<?> clazz = Class.forName("com.google.android.exoplayer2.ext.rtmp.RtmpDataSource");
+                Class<?> clazz = Class.forName("androidx.media3.datasource.rtmp.RtmpDataSource");
                 rtmpDataSource = (DataSource) clazz.getConstructor().newInstance();
                 // LINT.ThenChange(../../../../../../../../proguard-rules.txt)
                 addListenersToDataSource(rtmpDataSource);

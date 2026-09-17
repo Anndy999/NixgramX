@@ -1,7 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import groovy.xml.XmlSlurper
 
 plugins {
-    id 'com.android.application' version '9.3.1' apply false
+    id 'com.android.application' apply false
     id 'com.google.gms.google-services' version '4.5.0' apply false
     id 'com.google.firebase.crashlytics' version '3.0.8' apply false
 }
@@ -51,6 +52,21 @@ subprojects {
         android {
             androidResources {
                 ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~:!optional:!licences:!*stmary*:!*eufb*'
+            }
+        }
+    }
+    if (project.projectDir.absolutePath.replace('\\', '/').contains('/TMessagesProj_Modules/media/')) {
+        plugins.withId('com.android.library') {
+            android {
+                if (namespace == null) {
+                    def manifestFile = file("${project.projectDir}/src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        def manifestPackage = new XmlSlurper().parse(manifestFile).@package.text()
+                        if (manifestPackage) {
+                            namespace manifestPackage
+                        }
+                    }
+                }
             }
         }
     }

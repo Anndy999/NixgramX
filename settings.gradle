@@ -29,12 +29,7 @@ include ':TMessagesProj'
 include ':jlatexmath'
 project(':jlatexmath').projectDir = file('TMessagesProj/lib/jlatexmath/jlatexmath')
 
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
 gradle.ext.androidxMediaModulePrefix = 'TMessagesProj_Modules:media3:media-'
+include ':TMessagesProj_Modules:media3'
+project(':TMessagesProj_Modules:media3').projectDir = file('TMessagesProj_Modules/media')
 apply from: file("TMessagesProj_Modules/media/core_settings.gradle")
