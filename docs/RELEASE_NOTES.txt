@@ -1,4 +1,15 @@
-- Switch to the active NixgramX Telegram API application.
-- Move the navigation drawer button from the right side to the left side.
-- Restore and freeze the broadcast-channel Liquid Glass geometry policy.
-- Beta build versionCode: 1315.
+NixgramX Private Beta — Telegram 12.10.3 (1319)
+
+- Updated Telegram upstream to 12.10.3 (7089).
+- Included #88: restored official Telegram header layouts and diagnostics header spacing.
+- Included #90: prevented original and translated message text from overlapping without changing the translation motion.
+- Preserved Side Drawer navigation, bottom navigation modes, multi-account sorting, theme switching, and NGX diagnostics.
+- CI passed for the 12.10.3 upstream sync and both included fixes.
+
+Test focus:
+- Header layout in private chats, groups, channels, and forums.
+- Original / translated text switching, rapid taps, scrolling, recycling, long text, captions, replies, and custom emoji.
+- Drawer gestures, account sorting, and light / dark theme switching.
+
+PRIVATE TEST ONLY — DEVICE TEST PENDING.
+No Public Beta or Stable publication in this build.
