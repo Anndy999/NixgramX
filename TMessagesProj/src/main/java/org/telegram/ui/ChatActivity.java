@@ -5106,11 +5106,6 @@ public class ChatActivity extends BaseFragment implements
             BlurredBackgroundProviderImpl.topPanelChatActivity(themeDelegate),
             ChatObject.isForum(currentChat));
 
-        // NIXGRAMX_CHANNEL_HEADER_GLASS_GEOMETRY_FROZEN: only regular broadcast channels opt in.
-        if (chatMode == MODE_DEFAULT && !isTopic && ChatObject.isChannelAndNotMegaGroup(currentChat)) {
-            actionBar.setGlassMenuMinimumItems(2);
-        }
-
         if (chatMode == MODE_PINNED) {
             actionBar.setChatAvatarContainer(avatarContainer);
             avatarContainer.setActionBar(actionBar);
