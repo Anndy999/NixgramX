@@ -341,6 +341,20 @@
     <string name="ImportAyuDB">匯入資料庫</string>
     <string name="ImportAyuDBAlert">目前的訊息資料庫將被取代。匯入後應用程式將重新啟動。</string>
     <string name="DisableSwipeToNext">停用滑動到下一個</string>
+    <string name="ForceFontWeightFallback">強制字重後備</string>
+    <string name="BottomNavigationMode">底部導覽</string>
+    <string name="BottomNavigationModeShow">顯示</string>
+    <string name="BottomNavigationModeHide">隱藏</string>
+    <string name="BottomNavigationModeFloating">懸浮</string>
+    <string name="SideDrawerHeader">側邊欄</string>
+    <string name="NavigationDrawer">啟用側邊欄</string>
+    <string name="ImmersiveDrawerAnimation">沉浸式側邊欄動畫</string>
+    <string name="CustomizeDrawerMenu">自訂選單</string>
+    <string name="DrawerMenuVisible">顯示</string>
+    <string name="DrawerMenuHidden">隱藏</string>
+    <string name="NixDiagnostics">診斷資訊</string>
+    <string name="NixLastCrash">NixgramX 上次發生崩潰</string>
+    <string name="NixCrashPrivacy">可複製本機報告，包含裝置資訊和經過去識別化的呼叫堆疊，不包含聊天內容或權杖。</string>
     <string name="NgxDiagnostics">NGX 診斷</string>
     <string name="NgxDiagnosticsLevel">診斷層級</string>
     <string name="NgxDiagnosticsLevelOff">關閉</string>
@@ -369,4 +383,7 @@
     <string name="ProblemDiagnosticsClearConfirm">確定要清除所有 NGX 診斷記錄嗎？不會刪除 Telegram 日誌。</string>
     <string name="ProblemDiagnosticsAdvanced">進階診斷設定</string>
     <string name="ProblemDiagnosticsInfo">遇到問題時開始診斷，然後返回並重現問題。完成後結束診斷並匯出檔案提供給開發者。</string>
+    <string name="PasscodeClearAll">清除所有密碼</string>
+    <string name="NgxDiagnosticsDropped">已捨棄</string>
+    <string name="NgxDiagnosticsCapturingShort">擷取中</string>
 </resources>

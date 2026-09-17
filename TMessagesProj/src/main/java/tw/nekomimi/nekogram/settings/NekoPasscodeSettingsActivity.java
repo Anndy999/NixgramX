@@ -256,7 +256,7 @@ public class NekoPasscodeSettingsActivity extends BaseNekoSettingsActivity {
                         textCell.setText(PasscodeHelper.hasPanicCode() ? getString(R.string.PasscodePanicCodeEdit) : getString(R.string.PasscodePanicCodeSet), removePanicCodeRow != -1);
                     } else if (position == clearPasscodesRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteRedText3));
-                        textCell.setText("Clear passcodes", false);
+                        textCell.setText(getString(R.string.PasscodeClearAll), false);
                     } else if (position == removePanicCodeRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteRedText3));
                         textCell.setText(getString(R.string.PasscodePanicCodeRemove), false);

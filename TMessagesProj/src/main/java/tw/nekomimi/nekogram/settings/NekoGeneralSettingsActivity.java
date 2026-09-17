@@ -536,11 +536,15 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
     }
 
     private void refreshFcmPushStatusRow() {
-        if (listAdapter == null) {
+        if (listAdapter == null || listView == null) {
+            return;
+        }
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshFcmPushStatusRow);
             return;
         }
         int index = cellGroup.rows.indexOf(fcmPushStatusRow);
-        if (index >= 0) {
+        if (index >= 0 && index < listAdapter.getItemCount()) {
             listAdapter.notifyItemChanged(index);
         }
     }

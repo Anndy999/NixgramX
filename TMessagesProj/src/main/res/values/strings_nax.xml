@@ -394,4 +394,7 @@
     <string name="ProblemDiagnosticsClearConfirm">Clear all NGX diagnostic records? Telegram logs are not removed.</string>
     <string name="ProblemDiagnosticsAdvanced">Advanced diagnostics</string>
     <string name="ProblemDiagnosticsInfo">If something goes wrong, start diagnosis, then go back and reproduce the problem. When you are done, stop diagnosis and export a file for developers.</string>
+    <string name="PasscodeClearAll">Clear all passcodes</string>
+    <string name="NgxDiagnosticsDropped">dropped</string>
+    <string name="NgxDiagnosticsCapturingShort">capturing</string>
 </resources>
