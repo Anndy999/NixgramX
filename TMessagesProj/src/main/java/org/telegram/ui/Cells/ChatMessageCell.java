@@ -16852,8 +16852,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (botDraftTypingAnimator != null && botDraftTypingAnimator.isRunning()) {
                 drawMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, 1, true, false, false);
             } else {
-                // Incoming-only fade: outgoing blocks stay null so EN/ZH never share textX/textY.
-                drawMessageText(textX, textY, canvas, transitionParams.animateOutTextBlocks, transitionParams.animateOutTextXOffset, false, (1.0f - transitionParams.animateChangeProgress), true, false, false);
+                // Translation swaps are incoming-only even if stale outgoing blocks survive a rebind.
+                if (!transitionParams.animateTranslationText) {
+                    drawMessageText(textX, textY, canvas, transitionParams.animateOutTextBlocks, transitionParams.animateOutTextXOffset, false, (1.0f - transitionParams.animateChangeProgress), true, false, false);
+                }
                 final float incomingProgress = getTranslationIncomingTextProgress();
                 drawMessageText(textX, textY + getTranslationIncomingTextOffsetY(incomingProgress), canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, incomingProgress, true, false, false);
             }
