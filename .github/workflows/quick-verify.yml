@@ -140,12 +140,12 @@ jobs:
       - uses: android-actions/setup-android@v4
         if: steps.classify.outputs.need_android == 'true' && steps.classify.outputs.need_native != 'true'
         with:
-          packages: 'build-tools;36.0.0 platforms;android-37.0 cmake;3.31.6'
+          packages: 'build-tools;36.0.0 platforms;android-35 platforms;android-37.0 cmake;3.31.6'
 
       - uses: android-actions/setup-android@v4
         if: steps.classify.outputs.need_native == 'true'
         with:
-          packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0 cmake;3.31.6'
+          packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-35 platforms;android-37.0 cmake;3.31.6'
 
       - name: Stability static checks
         id: static

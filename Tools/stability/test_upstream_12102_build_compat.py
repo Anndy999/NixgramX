@@ -39,6 +39,29 @@ class Upstream12102BuildCompatTest(unittest.TestCase):
         self.assertIn("private EGLContext eglParentContext;", video_player)
         self.assertIn("public void setEGLContext(EGLContext ctx)", video_player)
 
+    def test_nix_call_sites_use_telegram_12102_apis(self):
+        source_root = ROOT / "TMessagesProj/src/main/java/tw/nekomimi/nekogram"
+        nix_sources = "\n".join(path.read_text(encoding="utf-8") for path in source_root.rglob("*.java"))
+
+        self.assertNotIn('new RLottieDrawable(R.raw.sun, String.valueOf(R.raw.sun),', nix_sources)
+        self.assertNotIn('new RLottieDrawable(R.raw.qr_matrix, "qr_matrix",', nix_sources)
+        self.assertNotIn('? "caption_hide" : "name_hide", dp(24), dp(24)', nix_sources)
+        self.assertNotIn('checkProxy("ping.neko",', nix_sources)
+        self.assertIn('ProxySettings.builder()', nix_sources)
+        self.assertIn('checkProxy(pingSettings,', nix_sources)
+
+    def test_pinned_media3_keeps_its_supported_android_sdk(self):
+        root_build = (ROOT / "build.gradle").read_text(encoding="utf-8")
+
+        self.assertIn("def isPinnedMedia3Module =", root_build)
+        self.assertIn("if (!isPinnedMedia3Module) {\n                    compileSdk = 37", root_build)
+        self.assertIn("if (isPinnedMedia3Module && plugins.hasPlugin", root_build)
+
+        for workflow in (ROOT / ".github/workflows").glob("*.yml"):
+            contents = workflow.read_text(encoding="utf-8")
+            if "platforms;android-37.0" in contents:
+                self.assertIn("platforms;android-35", contents, workflow.name)
+
 
 if __name__ == "__main__":
     unittest.main()

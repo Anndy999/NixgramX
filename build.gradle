@@ -11,8 +11,13 @@ plugins {
 subprojects {
     afterEvaluate {
         if (plugins.hasPlugin("com.android.library") || plugins.hasPlugin("com.android.application")) {
+            def isPinnedMedia3Module = project.projectDir.absolutePath.replace('\\', '/').contains('/TMessagesProj_Modules/media/')
             android {
-                compileSdk = 37
+                // Media3 1.8.1 is pinned to API 35. Forcing it to API 37 breaks
+                // Robolectric's compile classpath (FingerprintManager is absent).
+                if (!isPinnedMedia3Module) {
+                    compileSdk = 37
+                }
                 buildToolsVersion = "36.0.0"
                 ndkVersion = "27.2.12479018"
 
@@ -36,9 +41,11 @@ subprojects {
                     }
                 }
 
-                defaultConfig {
-                    minSdk = 27
-                    targetSdk = 36
+                if (!isPinnedMedia3Module) {
+                    defaultConfig {
+                        minSdk = 27
+                        targetSdk = 36
+                    }
                 }
 
                 buildFeatures.buildConfig = true
@@ -48,7 +55,7 @@ subprojects {
             dependencies {
                 coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
             }
-            if (project.projectDir.absolutePath.replace('\\', '/').contains('/TMessagesProj_Modules/media/') && plugins.hasPlugin("com.android.library")) {
+            if (isPinnedMedia3Module && plugins.hasPlugin("com.android.library")) {
                 // The Telegram-pinned Media3 tree intentionally omits empty consumer
                 // rule files in several modules. AGP 9 rejects those missing paths.
                 android.defaultConfig.consumerProguardFiles.removeAll { !it.exists() }
