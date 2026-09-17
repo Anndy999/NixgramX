@@ -136,6 +136,22 @@ class NixLocalizationCoverageTest(unittest.TestCase):
         self.assertIn("listView.post(this::refreshFcmPushStatusRow)", general)
         self.assertIn("listView.post(this::checkTemperatureRows)", translator)
 
+    def test_dynamic_settings_strings_are_kept_when_resources_are_shrunk(self):
+        task = (
+            ROOT
+            / "buildSrc"
+            / "src"
+            / "main"
+            / "kotlin"
+            / "org"
+            / "telegram"
+            / "tasks"
+            / "TelegramStringsTask.kt"
+        ).read_text(encoding="utf-8")
+        self.assertIn("generateResourceShrinkerKeepRules", task)
+        self.assertIn('tools:keep=\\\"', task)
+        self.assertNotIn('tools:discard=\\\"', task)
+
 
 if __name__ == "__main__":
     unittest.main()

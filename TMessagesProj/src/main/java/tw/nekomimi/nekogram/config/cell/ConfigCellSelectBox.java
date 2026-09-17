@@ -1,6 +1,6 @@
 package tw.nekomimi.nekogram.config.cell;
 
-import static org.telegram.messenger.LocaleController.getString;
+import static tw.nekomimi.nekogram.config.cell.ConfigCellText.getLocalizedTitle;
 
 import android.content.Context;
 import android.view.View;
@@ -43,7 +43,7 @@ public class ConfigCellSelectBox extends AbstractConfigCell implements WithBindC
             case null, default -> this.selectList = null;
         }
         this.selectValues = selectValues;
-        title = getString(this.key);
+        title = getLocalizedTitle(this.key);
         this.onClickCustom = customOnClick;
     }
 
