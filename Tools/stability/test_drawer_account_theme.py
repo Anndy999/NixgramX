@@ -12,6 +12,7 @@ class DrawerAccountThemeTest(unittest.TestCase):
     def setUpClass(cls):
         cls.accounts = (DRAWER / "DrawerAccountPickerView.java").read_text(encoding="utf-8")
         cls.container = (DRAWER / "DrawerContainer.java").read_text(encoding="utf-8")
+        cls.dialogs = (ROOT / "TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java").read_text(encoding="utf-8")
 
     def test_account_reorder_uses_item_touch_helper_and_persists(self):
         for required in (
@@ -64,6 +65,10 @@ class DrawerAccountThemeTest(unittest.TestCase):
         self.assertIn("NgxDiagnostics.event", self.accounts)
         self.assertIn("NgxDiagnostics.event", self.container)
         self.assertNotIn("Diagnostics.navigationEvent", self.container)
+        self.assertIn('NgxDiagnostics.event(Category.NAVIGATION, "FLOATING_SCROLL"', self.dialogs)
+        self.assertIn('NgxDiagnostics.event(Category.NAVIGATION, "MAIN_TABS_VISIBLE"', self.dialogs)
+        self.assertNotIn("Diagnostics.navigationEvent", self.dialogs)
+        self.assertNotIn("GesturePhase.DOWN", self.container)
 
 
 if __name__ == "__main__":

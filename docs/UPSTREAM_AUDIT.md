@@ -1,5 +1,25 @@
 # Upstream Audit
 
+## Telegram 12.10.3 incremental sync (2026-09-17)
+
+| Item | Value |
+| --- | --- |
+| NixgramX stacked base | `a8bb29d3cea96dcbeebebed0e2ce13a1d399a102` (`upstream-sync/12.10.2`) |
+| Official old | Telegram 12.10.2 (7086), `163356809fa4bd81e64969700753e0a15664a288` |
+| Official target | Telegram 12.10.3 (7089), `9552e5541e1274b9557c9832b204dbfcaf44b3dc` |
+| Official delta | 1 commit, 4 files |
+
+- `TMessagesProj/proguard-rules.pro`: appended the official tgnet keep rule;
+  retained all NixgramX/Nagram/Neko/Ayu R8 rules.
+- `TLClassStore.java`: no Nix delta; adopted the official 20-entry
+  `TLObjectFactory` mapping and removed reflective `Class.newInstance()`.
+- `AudioPlayerAlert.java`: retained Nix audio/player changes and applied only
+  the official Chromecast action index correction (`7` to `6`).
+- `gradle.properties`: set Telegram metadata to 12.10.3/7089 and NixgramX
+  versionName to 12.10.3; retained versionCode 1318 and NixgramX identity.
+
+Unresolved adaptations: 0. Runtime/device verification: pending.
+
 ## Baseline (confirmed)
 
 | Item | Value |

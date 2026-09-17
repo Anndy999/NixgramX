@@ -60,7 +60,7 @@ public class DrawerHeaderView extends FrameLayout {
         addView(avatarView, LayoutHelper.createFrame(72, 72, Gravity.START | Gravity.TOP, 16, 16, 0, 0));
 
         themeButton = roundButton(context);
-        themeDrawable = new RLottieDrawable(R.raw.sun, String.valueOf(R.raw.sun), dp(24), dp(24), true, null);
+        themeDrawable = new RLottieDrawable(R.raw.sun, dp(24), dp(24), true, null);
         themeDrawable.setPlayInDirectionOfCustomEndFrame(true);
         themeIcon = new RLottieImageView(context);
         themeIcon.setAnimation(themeDrawable);
