@@ -25,6 +25,15 @@ public class ConfigCellText extends AbstractConfigCell implements WithKey, WithO
         this(key, null, onClick);
     }
 
+    /**
+     * Settings titles are commonly resolved from a persisted config key.  Do
+     * not let a bad/missing dynamic resource hide an otherwise usable row.
+     */
+    public static String getLocalizedTitle(String key) {
+        String title = getString(key);
+        return title == null || title.isEmpty() ? key : title;
+    }
+
     public int getType() {
         return CellGroup.ITEM_TYPE_TEXT_SETTINGS_CELL;
     }
@@ -45,7 +54,7 @@ public class ConfigCellText extends AbstractConfigCell implements WithKey, WithO
     public void onBindViewHolder(RecyclerView.ViewHolder holder) {
         TextSettingsCell cell = (TextSettingsCell) holder.itemView;
         this.cell = cell;
-        String title = getString(key);
+        String title = getLocalizedTitle(key);
         cell.setTextAndValue(title, value, cellGroup.needSetDivider(this));
         cell.setEnabled(enabled);
     }
