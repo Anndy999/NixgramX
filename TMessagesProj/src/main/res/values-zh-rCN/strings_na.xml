@@ -76,9 +76,13 @@
     <string name="FcmPushServiceTypeValue">推送类型：%1$s</string>
     <string name="FcmPushStringStatus">status：%1$s</string>
     <string name="FcmPushStringStatusRegistered">status：已注册</string>
-    <string name="FcmPushTokenOk">token：OK（len=%1$d，prefix=%2$s…）</string>
+    <string name="FcmPushTokenOk">token：正常（长度=%1$d，内容已隐藏）</string>
     <string name="FcmPushTokenMissing">token：缺失</string>
     <string name="FcmPushLastError">最近错误：%1$s</string>
+    <string name="FcmPushHybridEnabled">MTProto 兜底连接：已启用</string>
+    <string name="FcmPushHybridDisabled">MTProto 兜底连接：已在通知设置中关闭</string>
+    <string name="FcmPushLastDelivery">最近一次 FCM：传输 %1$d 毫秒 · 客户端 %2$d 毫秒 · 优先级 %3$d→%4$d</string>
+    <string name="FcmPushLastDeliveryUnknown">最近一次 FCM 耗时：尚无样本</string>
     <string name="SendMp4DocumentAsVideo">MP4 视频作为文件发送时可预览</string>
     <string name="StickersChooseShortNameForStickerPack">为您的包选择一个简短的名称。</string>
     <string name="StickersCopyStickerSet">复制整个贴纸包</string>

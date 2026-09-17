@@ -6,6 +6,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -21,11 +22,17 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.diagnostics.Diagnostics;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Category;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Field;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Value;
+import org.telegram.messenger.diagnostics.NgxDiagnostics;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.CubicBezierInterpolator;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.LaunchActivity;
@@ -39,7 +46,7 @@ import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
  * Overlay drawer. Edge swipe uses candidate → slop confirmation → takeover.
  * Drawer OFF must leave DrawerLayoutContainer equivalent to the pre-port stub.
  */
-public class DrawerContainer extends FrameLayout {
+public class DrawerContainer extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
 
     private static final float OPEN_SLOP_CM = 0.2f;
     private static final float VERTICAL_DOMINANCE = 1.0f;
@@ -64,6 +71,10 @@ public class DrawerContainer extends FrameLayout {
     private float downY;
     private float startProgress;
     private VelocityTracker velocityTracker;
+
+    private enum GesturePhase { START, TRACK, FINISH, CANCEL }
+    private enum DiagnosticResult { PENDING, CLOSE, RESTORE, SUCCESS }
+    private enum ThemeState { LIGHT, DARK }
 
     public DrawerContainer(Context context) {
         super(context);
@@ -102,14 +113,11 @@ public class DrawerContainer extends FrameLayout {
         });
         accountPickerView.setOnAccountSelected(() -> closeDrawer(true));
         headerView.setChevronExpanded(accountPickerView.isExpanded());
-        headerView.setOnTheme(() -> {
-            Theme.ThemeInfo target = Theme.isCurrentThemeDark() ? Theme.getCurrentTheme() : Theme.getCurrentNightTheme();
-            if (target != null) {
-                Theme.applyTheme(target, !Theme.isCurrentThemeDark());
-            }
-        });
+        headerView.setOnTheme(this::toggleTheme);
         headerView.setOnThemeLongPress(() -> presentFromDrawer(new ThemeActivity(ThemeActivity.THEME_TYPE_NIGHT)));
         headerView.setOnProxy(() -> presentFromDrawer(new ProxyListActivity()));
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.didSetNewTheme);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.themeAccentListUpdated);
     }
 
     public void dispose() {
@@ -117,6 +125,8 @@ public class DrawerContainer extends FrameLayout {
         progress = 0f;
         isOpen = false;
         accountPickerView.dispose();
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.didSetNewTheme);
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.themeAccentListUpdated);
         setVisibility(GONE);
     }
 
@@ -245,7 +255,7 @@ public class DrawerContainer extends FrameLayout {
             }
             if (!tracking && shouldStartVisibleDrawerTracking(ev)) {
                 tracking = true;
-                drawerGestureEvent("start", ev.getX() - downX, ev.getY() - downY, "pending");
+                drawerGestureEvent(GesturePhase.START, ev.getX() - downX, ev.getY() - downY, DiagnosticResult.PENDING);
                 return true;
             }
             return tracking;
@@ -267,13 +277,13 @@ public class DrawerContainer extends FrameLayout {
         if (action == MotionEvent.ACTION_MOVE) {
             if (!tracking && !tapClosePending && shouldStartVisibleDrawerTracking(ev)) {
                 tracking = true;
-                drawerGestureEvent("start", ev.getX() - downX, ev.getY() - downY, "pending");
+                drawerGestureEvent(GesturePhase.START, ev.getX() - downX, ev.getY() - downY, DiagnosticResult.PENDING);
             }
             if (tracking) {
                 updateVisibleDrawerTracking(ev);
                 if (!drawerTrackLogged) {
                     drawerTrackLogged = true;
-                    drawerGestureEvent("track", ev.getX() - downX, ev.getY() - downY, "pending");
+                    drawerGestureEvent(GesturePhase.TRACK, ev.getX() - downX, ev.getY() - downY, DiagnosticResult.PENDING);
                 }
             }
             return true;
@@ -292,7 +302,7 @@ public class DrawerContainer extends FrameLayout {
         if (action == MotionEvent.ACTION_CANCEL) {
             if (tracking) {
                 isOpen = true;
-                drawerGestureEvent("cancel", 0f, 0f, "restore");
+                drawerGestureEvent(GesturePhase.CANCEL, 0f, 0f, DiagnosticResult.RESTORE);
                 animateProgress(1f);
             }
             finishVisibleDrawerGesture();
@@ -315,7 +325,6 @@ public class DrawerContainer extends FrameLayout {
         VelocityTracker tracker = obtainVelocity();
         tracker.clear();
         tracker.addMovement(ev);
-        drawerGestureEvent("down", 0f, 0f, "pending");
     }
 
     private boolean shouldStartVisibleDrawerTracking(MotionEvent ev) {
@@ -342,7 +351,8 @@ public class DrawerContainer extends FrameLayout {
         boolean horizontalFling = Math.abs(vx) > Math.abs(vy);
         boolean close = progress < 0.5f || horizontalFling && openingVx < -400;
         isOpen = !close;
-        drawerGestureEvent("finish", 0f, 0f, close ? "close" : "restore");
+        drawerGestureEvent(GesturePhase.FINISH, 0f, 0f,
+                close ? DiagnosticResult.CLOSE : DiagnosticResult.RESTORE);
         animateProgress(close ? 0f : 1f);
         finishVisibleDrawerGesture();
     }
@@ -353,12 +363,12 @@ public class DrawerContainer extends FrameLayout {
         recycleVelocity();
     }
 
-    private void drawerGestureEvent(String phase, float dx, float dy, String result) {
-        Diagnostics.navigationEvent("DRAWER_CLOSE_GESTURE", "phase=" + phase
-                + " progress=" + Math.round(progress * 100)
-                + " dx=" + Math.round(dx)
-                + " dy=" + Math.round(dy)
-                + " result=" + result);
+    private void drawerGestureEvent(GesturePhase phase, float dx, float dy, DiagnosticResult result) {
+        NgxDiagnostics.event(Category.GESTURE, "DRAWER_CLOSE_GESTURE",
+                Value.enumValue(Field.TRIGGER, phase),
+                Value.integer(Field.DX, Math.round(dx)),
+                Value.integer(Field.DY, Math.round(dy)),
+                Value.enumValue(Field.RESULT, result));
     }
 
     private boolean isPointInsideDrawerPanel(float x, float y) {
@@ -476,6 +486,76 @@ public class DrawerContainer extends FrameLayout {
         }
         float signed = NixDrawerEdgeHelper.isRtl(this) ? -drawerWidth * factor : drawerWidth * factor;
         navigationLayout.getView().setTranslationX(signed);
+    }
+
+    private void toggleTheme() {
+        if (DialogsActivity.switchingTheme) {
+            return;
+        }
+        int[] position = headerView.getThemeTogglePosition();
+        SharedPreferences preferences = ApplicationLoader.applicationContext
+                .getSharedPreferences("themeconfig", Context.MODE_PRIVATE);
+
+        String dayThemeName = preferences.getString("lastDayTheme", "Blue");
+        if (Theme.getTheme(dayThemeName) == null || Theme.getTheme(dayThemeName).isDark()) {
+            dayThemeName = "Blue";
+        }
+        String nightThemeName = preferences.getString("lastDarkTheme", "Dark Blue");
+        if (Theme.getTheme(nightThemeName) == null || !Theme.getTheme(nightThemeName).isDark()) {
+            nightThemeName = "Dark Blue";
+        }
+        Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
+        if (activeTheme == null) {
+            return;
+        }
+        if (dayThemeName.equals(nightThemeName)) {
+            if (activeTheme.isDark() || dayThemeName.equals("Dark Blue") || dayThemeName.equals("Night")) {
+                dayThemeName = "Blue";
+            } else {
+                nightThemeName = "Dark Blue";
+            }
+        }
+
+        boolean toDark = dayThemeName.equals(activeTheme.getKey());
+        Theme.ThemeInfo target = Theme.getTheme(toDark ? nightThemeName : dayThemeName);
+        if (target == null) {
+            return;
+        }
+        NgxDiagnostics.event(Category.UI, "THEME_TOGGLE",
+                Value.enumValue(Field.OLD_STATE, activeTheme.isDark() ? ThemeState.DARK : ThemeState.LIGHT),
+                Value.enumValue(Field.NEW_STATE, toDark ? ThemeState.DARK : ThemeState.LIGHT));
+        DialogsActivity.switchingTheme = true;
+        headerView.animateThemeToggle(toDark);
+        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needSetDayNightTheme,
+                target, false, position, -1, toDark, headerView.getThemeToggleView(), null, null, false, null);
+
+        BaseFragment fragment = getContentFragment();
+        if (fragment != null) {
+            Theme.turnOffAutoNight(BulletinFactory.of(fragment),
+                    () -> fragment.presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_NIGHT)));
+        }
+    }
+
+    private void updateThemeColors() {
+        drawerPanel.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        headerView.updateColors();
+        accountPickerView.updateColors();
+        BaseFragment fragment = getContentFragment();
+        int account = fragment != null ? fragment.getCurrentAccount() : org.telegram.messenger.UserConfig.selectedAccount;
+        menuView.rebuild(fragment, account, () -> closeDrawer(true));
+        setProgress(progress);
+        invalidate();
+    }
+
+    @Override
+    public void didReceivedNotification(int id, int account, Object... args) {
+        if (id == NotificationCenter.didSetNewTheme || id == NotificationCenter.themeAccentListUpdated) {
+            updateThemeColors();
+            if (id == NotificationCenter.didSetNewTheme) {
+                NgxDiagnostics.event(Category.UI, "DRAWER_THEME_REFRESH",
+                        Value.enumValue(Field.RESULT, DiagnosticResult.SUCCESS));
+            }
+        }
     }
 
     private void refreshContents() {

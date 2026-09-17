@@ -296,11 +296,14 @@ public class ConnectionsManager extends BaseController {
     }
 
     public boolean isPushConnectionEnabled() {
-        SharedPreferences preferences = MessagesController.getGlobalNotificationsSettings();
+        // Push connection is toggled per account in NotificationsSettingsActivity.
+        // Reading account 0 here made secondary accounts lose their hybrid FCM fallback
+        // after process restart until ApplicationLoader repaired the native state.
+        SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
         if (preferences.contains("pushConnection")) {
             return preferences.getBoolean("pushConnection", true);
         } else {
-            return MessagesController.getMainSettings(UserConfig.selectedAccount).getBoolean("backgroundConnection", false);
+            return MessagesController.getMainSettings(currentAccount).getBoolean("backgroundConnection", false);
         }
     }
 
