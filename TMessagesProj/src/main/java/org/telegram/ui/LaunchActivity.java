@@ -6202,7 +6202,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         editor.putBoolean("proxy_enabled", false);
                         editor.putBoolean("proxy_enabled_calls", false);
                         editor.commit();
-                        ConnectionsManager.setProxySettings(false, null);
+                        ConnectionsManager.setProxySettings(false, null);*/
                         SharedConfig.setProxyEnable(false);
                         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
                         proxyErrorDialog = null;

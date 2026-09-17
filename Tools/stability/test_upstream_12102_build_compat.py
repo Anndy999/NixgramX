@@ -20,7 +20,17 @@ class Upstream12102BuildCompatTest(unittest.TestCase):
 
     def test_missing_media3_consumer_rules_are_filtered_for_agp9(self):
         root_build = (ROOT / "build.gradle").read_text(encoding="utf-8")
-        self.assertIn("defaultConfig.consumerProguardFiles.removeAll { !it.exists() }", root_build)
+        filter_line = "android.defaultConfig.consumerProguardFiles.removeAll { !it.exists() }"
+        self.assertIn(filter_line, root_build)
+        self.assertGreater(root_build.index(filter_line), root_build.index("afterEvaluate"))
+
+    def test_conflict_adaptations_keep_valid_control_flow(self):
+        emoji = (ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/Emoji.java").read_text(encoding="utf-8")
+        launch = (ROOT / "TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java").read_text(encoding="utf-8")
+
+        self.assertIn("} else {\n                    try {\n                        final EmojiPack emojiPack", emoji)
+        self.assertNotIn("} else try {", emoji)
+        self.assertIn("ConnectionsManager.setProxySettings(false, null);*/", launch)
 
 
 if __name__ == "__main__":

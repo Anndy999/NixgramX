@@ -48,6 +48,11 @@ subprojects {
             dependencies {
                 coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
             }
+            if (project.projectDir.absolutePath.replace('\\', '/').contains('/TMessagesProj_Modules/media/') && plugins.hasPlugin("com.android.library")) {
+                // The Telegram-pinned Media3 tree intentionally omits empty consumer
+                // rule files in several modules. AGP 9 rejects those missing paths.
+                android.defaultConfig.consumerProguardFiles.removeAll { !it.exists() }
+            }
         }
     }
     // Telegram 12.10.1: strip unused JLatexMath optional fonts from APK packaging
@@ -61,9 +66,6 @@ subprojects {
     if (project.projectDir.absolutePath.replace('\\', '/').contains('/TMessagesProj_Modules/media/')) {
         plugins.withId('com.android.library') {
             android {
-                // The Telegram-pinned Media3 tree intentionally omits empty consumer
-                // rule files in several modules. AGP 9 rejects those missing paths.
-                defaultConfig.consumerProguardFiles.removeAll { !it.exists() }
                 if (namespace == null) {
                     def manifestFile = file("${project.projectDir}/src/main/AndroidManifest.xml")
                     if (manifestFile.exists()) {
