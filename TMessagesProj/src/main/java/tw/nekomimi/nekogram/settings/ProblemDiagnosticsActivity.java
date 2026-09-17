@@ -19,13 +19,12 @@ import org.telegram.messenger.Utilities;
 import org.telegram.messenger.diagnostics.NgxDiagnostics;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.BulletinFactory;
 
 import java.io.File;
-
-import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class ProblemDiagnosticsActivity extends BaseNekoSettingsActivity implements NgxDiagnostics.Listener {
 
