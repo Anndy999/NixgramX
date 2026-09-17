@@ -3,6 +3,7 @@ import groovy.xml.XmlSlurper
 
 plugins {
     id 'com.android.application' apply false
+    id 'com.android.built-in-kotlin' version '9.3.1' apply false
     id 'com.google.gms.google-services' version '4.5.0' apply false
     id 'com.google.firebase.crashlytics' version '3.0.8' apply false
 }
@@ -27,9 +28,11 @@ subprojects {
                     coreLibraryDesugaringEnabled = true
                 }
 
-                kotlin {
-                    compilerOptions {
-                        jvmTarget = JvmTarget.JVM_21
+                if (extensions.findByName("kotlin") != null) {
+                    kotlin {
+                        compilerOptions {
+                            jvmTarget = JvmTarget.JVM_21
+                        }
                     }
                 }
 
