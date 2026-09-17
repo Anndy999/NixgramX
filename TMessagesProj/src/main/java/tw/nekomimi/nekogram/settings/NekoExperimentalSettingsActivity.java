@@ -575,10 +575,22 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
     }
 
     public void refreshAyuDataSize() {
-        if (listAdapter != null) {
-            ((ConfigCellTextCheckIcon) clearMessageDatabaseRow).setValue(AyuData.totalSize > 0 ? AndroidUtilities.formatFileSize(AyuData.totalSize) : "...");
-            listAdapter.notifyItemChanged(cellGroup.rows.indexOf(clearMessageDatabaseRow));
+        if (listAdapter == null || listView == null) {
+            return;
         }
+
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshAyuDataSize);
+            return;
+        }
+
+        int position = cellGroup.rows.indexOf(clearMessageDatabaseRow);
+        if (position < 0 || position >= listAdapter.getItemCount()) {
+            return;
+        }
+
+        ((ConfigCellTextCheckIcon) clearMessageDatabaseRow).setValue(AyuData.totalSize > 0 ? AndroidUtilities.formatFileSize(AyuData.totalSize) : "...");
+        listAdapter.notifyItemChanged(position);
     }
 
     private void exportAyuDB() {
