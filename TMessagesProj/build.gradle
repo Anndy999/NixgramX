@@ -5,7 +5,10 @@ plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
+    // NixgramX consolidates Telegram's library and app modules here, so it
+    // needs both generators: localization Java plus app-only packaged assets.
     id 'org.telegram.build-plugin'
+    id 'org.telegram.build-app-plugin'
     id 'com.android.built-in-kotlin'
 }
 

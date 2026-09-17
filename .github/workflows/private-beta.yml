@@ -235,6 +235,19 @@ jobs:
           echo "PRIVATE_BETA_APK=${APK_PATH}"
           echo "path=${APK_PATH}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify generated startup assets
+        env:
+          PRIVATE_BETA_APK: ${{ steps.apk.outputs.path }}
+        run: |
+          set -euo pipefail
+          for asset in lottie_meta.bin string_resource_ids.bin emoji.pack localization_en.bin; do
+            if ! unzip -Z1 "$PRIVATE_BETA_APK" | grep -Fx "assets/$asset" >/dev/null; then
+              echo "FATAL: startup asset missing from APK: assets/$asset"
+              exit 1
+            fi
+          done
+          echo "Verified required generated assets in arm64 APK."
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
