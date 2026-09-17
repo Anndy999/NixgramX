@@ -9,6 +9,9 @@ import org.telegram.messenger.FileLog;
 public final class FcmTiming {
     private final long receiver = SystemClock.elapsedRealtime();
     private final long receiverEpoch = System.currentTimeMillis();
+    private final long sentEpoch;
+    private final int originalPriority;
+    private final int deliveredPriority;
     private long process;
     private long initStart;
     private long initEnd;
@@ -16,10 +19,14 @@ public final class FcmTiming {
     private long stage;
     private boolean finished;
 
-    private FcmTiming() {}
+    private FcmTiming(long sentEpoch, int originalPriority, int deliveredPriority) {
+        this.sentEpoch = sentEpoch;
+        this.originalPriority = originalPriority;
+        this.deliveredPriority = deliveredPriority;
+    }
 
-    public static FcmTiming start() {
-        return BuildVars.LOGS_ENABLED ? new FcmTiming() : null;
+    public static FcmTiming start(long sentEpoch, int originalPriority, int deliveredPriority) {
+        return new FcmTiming(sentEpoch, originalPriority, deliveredPriority);
     }
 
     public void processEntered() { process = SystemClock.elapsedRealtime(); }
@@ -33,15 +40,24 @@ public final class FcmTiming {
         if (finished) return;
         finished = true;
         long end = SystemClock.elapsedRealtime();
-        FileLog.d("FCM_TIMING receiver_epoch_ms=" + receiverEpoch
-                + " receiver_to_process_ms=" + (process - receiver)
-                + " ui_queue_wait_ms=" + (initStart - process)
-                + " post_init_ms=" + (initEnd - initStart)
-                + " post_init_to_stage_enqueue_ms=" + (queued - initEnd)
-                + " stage_queue_wait_ms=" + (stage - queued)
-                + " push_parse_process_ms=" + (end - stage)
-                + " total_client_processing_ms=" + (end - receiver)
-                + " endpoint=" + (handoff ? "T5" : "stage_exit")
-                + " notification_handoff_count=" + (handoff ? 1 : 0));
+        long transportDelay = sentEpoch > 0 && sentEpoch <= receiverEpoch + 60_000L
+                ? Math.max(0L, receiverEpoch - sentEpoch) : -1L;
+        long clientProcessing = Math.max(0L, end - receiver);
+        Diagnostics.fcmDelivery(transportDelay, clientProcessing, originalPriority, deliveredPriority);
+        if (BuildVars.LOGS_ENABLED) {
+            FileLog.d("FCM_TIMING receiver_epoch_ms=" + receiverEpoch
+                    + " transport_delay_ms=" + transportDelay
+                    + " original_priority=" + originalPriority
+                    + " delivered_priority=" + deliveredPriority
+                    + " receiver_to_process_ms=" + (process - receiver)
+                    + " ui_queue_wait_ms=" + (initStart - process)
+                    + " post_init_ms=" + (initEnd - initStart)
+                    + " post_init_to_stage_enqueue_ms=" + (queued - initEnd)
+                    + " stage_queue_wait_ms=" + (stage - queued)
+                    + " push_parse_process_ms=" + (end - stage)
+                    + " total_client_processing_ms=" + clientProcessing
+                    + " endpoint=" + (handoff ? "T5" : "stage_exit")
+                    + " notification_handoff_count=" + (handoff ? 1 : 0));
+        }
     }
 }

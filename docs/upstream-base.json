@@ -1,9 +1,19 @@
 {
   "base": {
-    "version": "12.10.1",
-    "build": "7038",
-    "commit": "62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c"
+    "version": "12.10.2",
+    "build": "7086",
+    "commit": "163356809fa4bd81e64969700753e0a15664a288"
   },
-  "synced_commits": ["62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c"],
-  "pending": null
+  "synced_commits": [
+    "62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c",
+    "163356809fa4bd81e64969700753e0a15664a288"
+  ],
+  "pending": null,
+  "prepared_target": {
+    "version": "12.10.2",
+    "build": "7086",
+    "commit": "163356809fa4bd81e64969700753e0a15664a288"
+  },
+  "prepared_base": "beta",
+  "refreshed_nix_base": "4654c4c006280e58440fe3ea4bfbb915c347ab95"
 }

@@ -29,6 +29,8 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UnifiedPushService;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.diagnostics.Diagnostics;
+import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.INavigationLayout;
@@ -497,6 +499,17 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
                 break;
         }
         sb.append('\n').append(LocaleController.formatString(R.string.FcmPushServiceTypeValue, pushTypeLabel));
+        boolean hybridConnection = ConnectionsManager.getInstance(UserConfig.selectedAccount).isPushConnectionEnabled();
+        sb.append('\n').append(getString(hybridConnection
+                ? R.string.FcmPushHybridEnabled : R.string.FcmPushHybridDisabled));
+
+        long[] delivery = Diagnostics.lastFcmDelivery();
+        if (delivery[0] >= 0 && delivery[1] >= 0) {
+            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushLastDelivery,
+                    delivery[0], delivery[1], delivery[2], delivery[3]));
+        } else {
+            sb.append('\n').append(getString(R.string.FcmPushLastDeliveryUnknown));
+        }
 
         boolean hasToken = !TextUtils.isEmpty(SharedConfig.pushString);
         if (hasToken) {
@@ -509,8 +522,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
         if (hasToken) {
             String token = SharedConfig.pushString;
             int len = token.length();
-            String prefix = len >= 8 ? token.substring(0, 8) : token;
-            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushTokenOk, len, prefix));
+            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushTokenOk, len));
         } else {
             sb.append('\n').append(getString(R.string.FcmPushTokenMissing));
         }

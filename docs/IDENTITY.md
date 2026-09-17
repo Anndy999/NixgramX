@@ -34,10 +34,14 @@ NixgramX mirrors that:
 | Account / contacts MIME | `res/xml/auth.xml`, `sync_contacts.xml`, `contacts.xml`, `auth_menu.xml`, `AndroidManifest.xml` | Done → `app.nixgramx.android` |
 | FCM | `TMessagesProj/google-services.json` | Placeholder clients for full + base |
 | Maps API | `AndroidManifest.xml` `com.google.android.maps.v2.API_KEY` | Placeholder `YOUR_GOOGLE_MAPS_API_KEY` |
-| Telegram API | `local.properties` via `TELEGRAM_APP_ID` / `TELEGRAM_APP_HASH` (see `local.properties.example`) | Must be filled locally / CI secret |
+| Telegram API | `local.properties` via `TELEGRAM_APP_ID` / `TELEGRAM_APP_HASH` (see `local.properties.example`) | Registered title and short name are both `NixgramX`; credentials must be filled locally / CI secret |
 | Signing | `TMessagesProj/release.keystore` + `KEYSTORE_*` in `local.properties` | Must replace with NixgramX keystore |
 | Remote-config / updater channel | `BaseRemoteHelper.CHANNEL_METADATA_ID` / `CHANNEL_METADATA_NAME` | Neutralized to `0` / `nixgramx_remote_metadata` |
 | About / source links | `NekoAboutActivity.java`, `Tools/scripts/upload.py` | Pointed at `Anndy999/NixgramX` |
+
+The Telegram API application title and short name are server-side metadata managed on
+`my.telegram.org`; the Android client only consumes the API ID and API hash. Do not add
+the API hash or service-account credentials to this repository.
 
 ## Why NagramX cannot be covered
 
