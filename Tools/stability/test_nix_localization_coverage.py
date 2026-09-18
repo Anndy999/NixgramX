@@ -137,26 +137,31 @@ class NixLocalizationCoverageTest(unittest.TestCase):
         self.assertIn("listView.post(this::checkTemperatureRows)", translator)
 
     def test_dynamic_settings_strings_are_kept_when_resources_are_shrunk(self):
-        task = (
+        locale_controller = (
             ROOT
-            / "buildSrc"
+            / "TMessagesProj"
             / "src"
             / "main"
-            / "kotlin"
+            / "java"
             / "org"
             / "telegram"
-            / "tasks"
-            / "TelegramStringsTask.kt"
+            / "messenger"
+            / "LocaleController.java"
         ).read_text(encoding="utf-8")
-        self.assertIn("generateResourceShrinkerKeepRules", task)
-        self.assertIn('tools:keep=\\\"', task)
-        self.assertNotIn('tools:discard=\\\"', task)
+        key_only_start = locale_controller.index("public static String getString(String key)")
+        resource_lookup = locale_controller.index("int resourceId = getStringResId(key);", key_only_start)
+        asset_lookup = locale_controller.index("getLocalizationAssetString(key)", key_only_start)
+        self.assertLess(asset_lookup, resource_lookup)
+        self.assertIn("localizationInternal.getByResName(key)", locale_controller)
 
     def test_staging_apk_verifier_covers_dynamic_settings_resource_families(self):
         verifier = (
             ROOT / "Tools" / "stability" / "verify_generated_apk_assets.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("validate_dynamic_settings_resources", verifier)
+        self.assertIn("validate_dynamic_settings_localization_assets", verifier)
+        self.assertIn("validate_dynamic_settings_localization_assets(localization_hashes)", verifier)
+        self.assertNotIn("validate_static_localization_fallback", verifier)
+        self.assertNotIn("aapt2", verifier)
         samples = (
             "GhostMode",
             "FolderNameAsTitle",
@@ -165,8 +170,9 @@ class NixLocalizationCoverageTest(unittest.TestCase):
         )
         for key in samples:
             self.assertIn(key, verifier)
-        default_strings = read_strings(RES / "values")
-        self.assertEqual([], sorted(set(samples) - default_strings.keys()))
+        for directory in ("values", "values-zh-rCN", "values-zh-rTW"):
+            strings = read_strings(RES / directory)
+            self.assertEqual([], sorted(set(samples) - strings.keys()), directory)
 
     def test_missing_dynamic_title_is_logged_without_exposing_its_config_key(self):
         cell = (
