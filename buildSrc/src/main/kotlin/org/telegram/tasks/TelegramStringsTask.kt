@@ -265,7 +265,10 @@ abstract class TelegramStringsTask : DefaultTask() {
             .filterNot { GENERATED_EXCLUSIONS.contains(it) }
             .joinToString(", ") { "@string/$it" }
 
-        rawDir.resolve("${resourcePackageName.get()}.keep.xml")
+        // `keep.xml` is the AGP-recognized raw-resource keep-file name and
+        // remains a valid file-based Android resource name. Package-qualified
+        // names contain dots and are rejected by this generated resource set.
+        rawDir.resolve("keep.xml")
             .bufferedWriter(StandardCharsets.UTF_8)
             .use { xml ->
                 xml.appendLine("""<?xml version="1.0" encoding="utf-8"?>""")

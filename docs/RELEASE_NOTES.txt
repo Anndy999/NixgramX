@@ -1,4 +1,4 @@
-NixgramX Private Beta — Telegram 12.10.3 (1326)
+NixgramX Private Beta — Telegram 12.10.3 (1327)
 
 - Updated Telegram upstream to 12.10.3 (7089).
 - Included #88: restored official Telegram header layouts and diagnostics header spacing.
