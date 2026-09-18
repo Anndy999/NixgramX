@@ -10029,7 +10029,15 @@ public class MessagesStorage extends BaseController {
                 runnable.run();
             };
         } else {*/
-        int finalMessagesCount = scheduled ? res.messages.size() : messagesCount;
+        // A jump read (LOAD_AROUND_MESSAGE / LOAD_AROUND_DATE) that delivers nothing must not report
+        // the rows it read and then discarded: the caller takes that as "the cache satisfied the jump"
+        // and skips its cache -> server escalation
+        // (MessagesController.processLoadedMessages, `reload = resCount == 0 && ...`), so the jump
+        // silently stays at a different position. Kept a single assignment: the lambda below captures
+        // this variable, so it must stay effectively final.
+        int finalMessagesCount = !scheduled && res.messages.isEmpty() && (load_type == LOAD_AROUND_MESSAGE || load_type == LOAD_AROUND_DATE)
+                ? 0
+                : (scheduled ? res.messages.size() : messagesCount);
         return () -> getMessagesController().processLoadedMessages(res, finalMessagesCount, dialogId, mergeDialogId, countQueryFinal, maxIdOverrideFinal, offset_date, true, classGuid, minUnreadIdFinal, lastMessageIdFinal, countUnreadFinal, maxUnreadDateFinal, load_type, isEndFinal, mode, threadMessageId, loadIndex, queryFromServerFinal, mentionsUnreadFinal, processMessages, isTopic, loaderLogger);
         //}
     }
