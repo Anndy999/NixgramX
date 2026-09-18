@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 import struct
 import sys
 import xml.etree.ElementTree as ET
@@ -11,6 +13,16 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+# Each name is used as a runtime key, not a static R.string reference.  Keep
+# one representative from every ConfigCell family that resolves its title
+# dynamically; a staging APK must retain these resources after shrinking.
+DYNAMIC_SETTINGS_STRING_SAMPLES = {
+    "ConfigCellText": "GhostMode",
+    "ConfigCellTextCheck": "FolderNameAsTitle",
+    "ConfigCellSelectBox": "ShowIdAndDc",
+    "ConfigCellTextInput": "CustomTitle",
+}
 
 
 def java_hash(value: str) -> int:
@@ -110,6 +122,47 @@ def validate_emoji_pack(data: bytes) -> None:
         raise ValueError("truncated emoji mask metadata")
 
 
+def find_aapt2() -> Path:
+    candidates = []
+    android_home = os.environ.get("ANDROID_HOME")
+    if android_home:
+        build_tools = Path(android_home) / "build-tools"
+        candidates.extend(
+            path / executable
+            for path in sorted(build_tools.glob("*"), reverse=True)
+            for executable in ("aapt2", "aapt2.exe")
+        )
+    candidates.extend(
+        Path(path) for path in os.environ.get("PATH", "").split(os.pathsep)
+    )
+    for candidate in candidates:
+        if candidate.name not in {"aapt2", "aapt2.exe"}:
+            candidate = candidate / ("aapt2.exe" if os.name == "nt" else "aapt2")
+        if candidate.is_file():
+            return candidate
+    raise ValueError("aapt2 is required to verify final shrunk APK resources")
+
+
+def validate_dynamic_settings_resources(apk_path: Path) -> None:
+    result = subprocess.run(
+        [str(find_aapt2()), "dump", "resources", str(apk_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        raise ValueError(f"aapt2 could not inspect final APK resources: {result.stderr.strip()}")
+    missing = [
+        name
+        for name in DYNAMIC_SETTINGS_STRING_SAMPLES.values()
+        if f"string/{name}:" not in result.stdout
+    ]
+    if missing:
+        raise ValueError(
+            "final APK removed dynamic settings strings: " + ", ".join(missing)
+        )
+
+
 def validate(apk_path: Path) -> None:
     required = {
         "assets/lottie_meta.bin",
@@ -154,6 +207,8 @@ def validate(apk_path: Path) -> None:
         if len(lottie) % 8:
             raise ValueError("lottie_meta.bin length is not a sequence of 64-bit entries")
         validate_emoji_pack(apk.read("assets/emoji.pack"))
+
+    validate_dynamic_settings_resources(apk_path)
 
     print(
         f"PASS generated APK assets: {apk_path.name}; "

@@ -152,6 +152,22 @@ class NixLocalizationCoverageTest(unittest.TestCase):
         self.assertIn('tools:keep=\\\"', task)
         self.assertNotIn('tools:discard=\\\"', task)
 
+    def test_staging_apk_verifier_covers_dynamic_settings_resource_families(self):
+        verifier = (
+            ROOT / "Tools" / "stability" / "verify_generated_apk_assets.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("validate_dynamic_settings_resources", verifier)
+        samples = (
+            "GhostMode",
+            "FolderNameAsTitle",
+            "ShowIdAndDc",
+            "CustomTitle",
+        )
+        for key in samples:
+            self.assertIn(key, verifier)
+        default_strings = read_strings(RES / "values")
+        self.assertEqual([], sorted(set(samples) - default_strings.keys()))
+
 
 if __name__ == "__main__":
     unittest.main()
