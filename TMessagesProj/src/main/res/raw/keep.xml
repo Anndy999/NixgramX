@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  LocaleController resolves some titles from persisted string keys.  Those
-  lookups are intentionally runtime-only, so R8 cannot discover the matching
-  R.string entries through static bytecode analysis.  This canonical app
-  resource source-set keep file is consumed by AGP's resource shrinker.
--->
-<resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@string/*" />

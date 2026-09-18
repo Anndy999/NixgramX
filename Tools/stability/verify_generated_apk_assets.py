@@ -122,6 +122,21 @@ def validate_emoji_pack(data: bytes) -> None:
         raise ValueError("truncated emoji mask metadata")
 
 
+def validate_dynamic_settings_localization_assets(localization_hashes: set[int]) -> None:
+    # Key-only settings titles intentionally resolve through localization_*.bin,
+    # not through dynamically discovered R.string entries. The asset must keep
+    # every representative runtime key after APK optimization.
+    missing = [
+        name
+        for name in DYNAMIC_SETTINGS_STRING_SAMPLES.values()
+        if java_hash(name) not in localization_hashes
+    ]
+    if missing:
+        raise ValueError(
+            "localization assets removed dynamic settings strings: " + ", ".join(missing)
+        )
+
+
 def find_aapt2() -> Path:
     candidates = []
     android_home = os.environ.get("ANDROID_HOME")
@@ -140,10 +155,10 @@ def find_aapt2() -> Path:
             candidate = candidate / ("aapt2.exe" if os.name == "nt" else "aapt2")
         if candidate.is_file():
             return candidate
-    raise ValueError("aapt2 is required to verify final shrunk APK resources")
+    raise ValueError("aapt2 is required to verify final APK resources")
 
 
-def validate_dynamic_settings_resources(apk_path: Path) -> None:
+def validate_static_localization_fallback(apk_path: Path) -> None:
     result = subprocess.run(
         [str(find_aapt2()), "dump", "resources", str(apk_path)],
         check=False,
@@ -152,15 +167,8 @@ def validate_dynamic_settings_resources(apk_path: Path) -> None:
     )
     if result.returncode:
         raise ValueError(f"aapt2 could not inspect final APK resources: {result.stderr.strip()}")
-    missing = [
-        name
-        for name in DYNAMIC_SETTINGS_STRING_SAMPLES.values()
-        if f"string/{name}:" not in result.stdout
-    ]
-    if missing:
-        raise ValueError(
-            "final APK removed dynamic settings strings: " + ", ".join(missing)
-        )
+    if "string/NekoSettings:" not in result.stdout:
+        raise ValueError("final APK removed the static N-Settings localization fallback")
 
 
 def validate(apk_path: Path) -> None:
@@ -187,6 +195,7 @@ def validate(apk_path: Path) -> None:
         localization_hashes = parse_localization_hashes(
             apk.read("assets/localization_en.bin")
         )
+        validate_dynamic_settings_localization_assets(localization_hashes)
         binding_hashes = parse_binding_hashes(
             apk.read("assets/string_resource_ids.bin")
         )
@@ -208,7 +217,7 @@ def validate(apk_path: Path) -> None:
             raise ValueError("lottie_meta.bin length is not a sequence of 64-bit entries")
         validate_emoji_pack(apk.read("assets/emoji.pack"))
 
-    validate_dynamic_settings_resources(apk_path)
+    validate_static_localization_fallback(apk_path)
 
     print(
         f"PASS generated APK assets: {apk_path.name}; "
