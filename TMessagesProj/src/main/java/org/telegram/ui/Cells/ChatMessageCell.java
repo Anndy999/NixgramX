@@ -1849,6 +1849,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private int lastRepliesCount;
     private float selectedBackgroundProgress;
     private boolean lastTranslated;
+    /** 本次测量气泡几何时所依据的文本布局；用于检测布局被 cell 之外就地替换的情况。 */
+    private ArrayList<MessageObject.TextLayoutBlock> measuredTextLayoutBlocks;
+    /** 防止重复投递「布局已过期 → 重测」任务。 */
+    private boolean staleTextLayoutRelayoutPosted;
 
     public float viewTop;
     public int backgroundHeight;
@@ -19010,6 +19014,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         setAvatar(messageObject);
 
         measureTime(messageObject);
+        measuredTextLayoutBlocks = messageObject.textLayoutBlocks;
 
         namesOffset = 0;
 
@@ -20404,6 +20409,25 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public void drawInternal(Canvas canvas) {
         if (currentMessageObject == null) {
             return;
+        }
+        // 气泡几何（backgroundWidth / textX / textY / 时间戳位置）必须与实际绘制的
+        // 文本布局一致。译文换入、显示原文等路径会在 cell 之外就地替换
+        // textLayoutBlocks（重新 generateLayout），此时 cell 不会重新测量，
+        // 于是文字越过气泡边界。这里检测并强制重测，使几何自愈。
+        if (measuredTextLayoutBlocks != null
+                && currentMessageObject.textLayoutBlocks != measuredTextLayoutBlocks
+                && transitionParams.animateChangeProgress == 1f
+                && !staleTextLayoutRelayoutPosted) {
+            staleTextLayoutRelayoutPosted = true;
+            final MessageObject staleMessageObject = currentMessageObject;
+            post(() -> {
+                staleTextLayoutRelayoutPosted = false;
+                if (currentMessageObject != staleMessageObject || !attachedToWindow) {
+                    return;
+                }
+                measuredTextLayoutBlocks = currentMessageObject.textLayoutBlocks;
+                forceResetMessageObject();
+            });
         }
         if (shouldTranslucentDeleted() && ayuDeleted) {
             canvas.saveLayerAlpha(null, (int) (255 * 0.75f), Canvas.ALL_SAVE_FLAG);
