@@ -19,12 +19,13 @@ import org.telegram.messenger.Utilities;
 import org.telegram.messenger.diagnostics.NgxDiagnostics;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.BulletinFactory;
 
 import java.io.File;
+
+import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class ProblemDiagnosticsActivity extends BaseNekoSettingsActivity implements NgxDiagnostics.Listener {
 
@@ -75,23 +76,6 @@ public class ProblemDiagnosticsActivity extends BaseNekoSettingsActivity impleme
     @Override
     public void onDiagnosticsChanged() {
         refreshRowsSafely();
-    }
-
-    private void refreshRowsSafely() {
-        if (listAdapter == null || listView == null) return;
-        if (listView.isComputingLayout()) {
-            listView.post(this::refreshRowsSafely);
-            return;
-        }
-        updateRows();
-        listAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        updateRows();
-        if (listAdapter != null) listAdapter.notifyDataSetChanged();
     }
 
     @Override

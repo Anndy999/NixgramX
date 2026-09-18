@@ -85,13 +85,13 @@ class NixLocalizationCoverageTest(unittest.TestCase):
         advanced = (settings_dir / "NgxDiagnosticsSettingsActivity.java").read_text(
             encoding="utf-8"
         )
-        simple = (settings_dir / "ProblemDiagnosticsActivity.java").read_text(
+        base = (settings_dir / "BaseNekoSettingsActivity.java").read_text(
             encoding="utf-8"
         )
         self.assertIn("listView.isComputingLayout()", advanced)
         self.assertIn("listView.post(this::refreshAdapterSafely)", advanced)
-        self.assertIn("listView.isComputingLayout()", simple)
-        self.assertIn("listView.post(this::refreshRowsSafely)", simple)
+        self.assertIn("listView.isComputingLayout()", base)
+        self.assertIn("listView.post(this::refreshRowsSafely)", base)
 
     def test_async_emoji_refreshes_defer_during_layout(self):
         settings_dir = (
