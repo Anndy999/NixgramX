@@ -148,12 +148,10 @@ class NixLocalizationCoverageTest(unittest.TestCase):
             / "tasks"
             / "TelegramStringsTask.kt"
         ).read_text(encoding="utf-8")
-        self.assertIn("generateResourceShrinkerKeepRules", task)
-        self.assertIn('tools:keep=\\\"', task)
-        self.assertIn('stringsDir.resolve("raw")', task)
-        self.assertIn('rawDir.resolve("keep.xml")', task)
-        self.assertNotIn('resourcePackageName.get()}.keep.xml', task)
-        self.assertNotIn('tools:discard=\\\"', task)
+        keep = (RES / "raw" / "keep.xml").read_text(encoding="utf-8")
+        self.assertIn('tools:keep="@string/*"', keep)
+        self.assertNotIn("generateResourceShrinkerKeepRules", task)
+        self.assertNotIn('stringsDir.resolve("raw")', task)
 
     def test_staging_apk_verifier_covers_dynamic_settings_resource_families(self):
         verifier = (
