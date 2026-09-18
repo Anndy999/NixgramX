@@ -30,7 +30,12 @@ class Upstream12103IncrementalTest(unittest.TestCase):
         self.assertIn("APP_VERSION_CODE=7089", props)
         self.assertIn("APP_VERSION_NAME=12.10.3", props)
         self.assertIn("NIXGRAMX_VERSION_NAME=12.10.3", props)
-        self.assertIn("NIXGRAMX_VERSION_CODE=1318", props)
+        # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
+        # on every release. Assert the invariant, not a frozen value: the key
+        # must be declared exactly once and hold an integer.
+        codes = [line for line in props.splitlines() if line.startswith("NIXGRAMX_VERSION_CODE=")]
+        self.assertEqual(1, len(codes), "NIXGRAMX_VERSION_CODE must be declared exactly once")
+        self.assertRegex(codes[0], r"^NIXGRAMX_VERSION_CODE=\d+$")
         self.assertIn("APP_PACKAGE=app.nixgramx.android", props)
 
     def test_upstream_state_is_complete(self):
