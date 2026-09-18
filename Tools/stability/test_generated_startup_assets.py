@@ -1,8 +1,17 @@
+import importlib.util
 from pathlib import Path
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
+VERIFIER = ROOT / "Tools" / "stability" / "verify_generated_apk_assets.py"
+
+
+def load_verifier():
+    spec = importlib.util.spec_from_file_location("verify_generated_apk_assets", VERIFIER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class GeneratedStartupAssetsTest(unittest.TestCase):
@@ -115,6 +124,17 @@ class GeneratedStartupAssetsTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn('noCompress += "pack"', build_gradle)
+
+    def test_runtime_only_settings_titles_are_verified_in_localization_assets(self):
+        verifier = load_verifier()
+        hashes = {
+            verifier.java_hash(name)
+            for name in verifier.DYNAMIC_SETTINGS_STRING_SAMPLES.values()
+        }
+        verifier.validate_dynamic_settings_localization_assets(hashes)
+
+        with self.assertRaisesRegex(ValueError, "GhostMode"):
+            verifier.validate_dynamic_settings_localization_assets(set())
 
 
 if __name__ == "__main__":

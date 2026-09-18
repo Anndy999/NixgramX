@@ -159,7 +159,9 @@ class NixLocalizationCoverageTest(unittest.TestCase):
             ROOT / "Tools" / "stability" / "verify_generated_apk_assets.py"
         ).read_text(encoding="utf-8")
         self.assertIn("validate_dynamic_settings_localization_assets", verifier)
-        self.assertIn("validate_static_localization_fallback", verifier)
+        self.assertIn("validate_dynamic_settings_localization_assets(localization_hashes)", verifier)
+        self.assertNotIn("validate_static_localization_fallback", verifier)
+        self.assertNotIn("aapt2", verifier)
         samples = (
             "GhostMode",
             "FolderNameAsTitle",

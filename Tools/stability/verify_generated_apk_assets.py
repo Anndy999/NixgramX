@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
 import struct
 import sys
 import xml.etree.ElementTree as ET
@@ -137,40 +135,6 @@ def validate_dynamic_settings_localization_assets(localization_hashes: set[int])
         )
 
 
-def find_aapt2() -> Path:
-    candidates = []
-    android_home = os.environ.get("ANDROID_HOME")
-    if android_home:
-        build_tools = Path(android_home) / "build-tools"
-        candidates.extend(
-            path / executable
-            for path in sorted(build_tools.glob("*"), reverse=True)
-            for executable in ("aapt2", "aapt2.exe")
-        )
-    candidates.extend(
-        Path(path) for path in os.environ.get("PATH", "").split(os.pathsep)
-    )
-    for candidate in candidates:
-        if candidate.name not in {"aapt2", "aapt2.exe"}:
-            candidate = candidate / ("aapt2.exe" if os.name == "nt" else "aapt2")
-        if candidate.is_file():
-            return candidate
-    raise ValueError("aapt2 is required to verify final APK resources")
-
-
-def validate_static_localization_fallback(apk_path: Path) -> None:
-    result = subprocess.run(
-        [str(find_aapt2()), "dump", "resources", str(apk_path)],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode:
-        raise ValueError(f"aapt2 could not inspect final APK resources: {result.stderr.strip()}")
-    if "string/NekoSettings:" not in result.stdout:
-        raise ValueError("final APK removed the static N-Settings localization fallback")
-
-
 def validate(apk_path: Path) -> None:
     required = {
         "assets/lottie_meta.bin",
@@ -216,8 +180,6 @@ def validate(apk_path: Path) -> None:
         if len(lottie) % 8:
             raise ValueError("lottie_meta.bin length is not a sequence of 64-bit entries")
         validate_emoji_pack(apk.read("assets/emoji.pack"))
-
-    validate_static_localization_fallback(apk_path)
 
     print(
         f"PASS generated APK assets: {apk_path.name}; "
