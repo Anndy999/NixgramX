@@ -128,6 +128,10 @@ import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.NotificationsController;
 import org.telegram.messenger.R;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Category;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Field;
+import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Value;
+import org.telegram.messenger.diagnostics.NgxDiagnostics;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
@@ -289,6 +293,8 @@ import me.vkryl.android.util.ClickHelper;
 import tw.nekomimi.nekogram.BackButtonMenuRecent;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MainTabsHelper;
+import tw.nekomimi.nekogram.drawer.DrawerContainer;
+import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
 import tw.nekomimi.nekogram.helpers.PasscodeHelper;
 import tw.nekomimi.nekogram.helpers.TypefaceHelper;
 import tw.nekomimi.nekogram.helpers.remote.EmojiHelper;
@@ -3044,8 +3050,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         BirthdayController.getInstance(currentAccount).check();
-        additionNavigationBarHeight = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
-        additionFloatingButtonOffset = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
+        additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+        additionFloatingButtonOffset = hasMainTabs && NixNavigationConfig.isBottomNavigationVisible() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
 
         LastSeenHelper.preload();
 
@@ -3314,8 +3320,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         filterTabsView = null;
         selectedDialogs.clear();
 
-        additionNavigationBarHeight = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
-        additionFloatingButtonOffset = hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
+        additionNavigationBarHeight = hasMainTabs && NixNavigationConfig.occupiesBottomDock() ? dp(MainTabsHelper.getMainTabsHeightWithMargins()) : 0;
+        additionFloatingButtonOffset = hasMainTabs && NixNavigationConfig.isBottomNavigationVisible() ? dp(MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin()) : 0;
 
         maximumVelocity = ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
 
@@ -3552,15 +3558,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (initialDialogsType == DIALOGS_TYPE_DEFAULT) {
             optionsItem = menu.addItem(4, R.drawable.ic_ab_other);
             optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
-            optionsItem.setOnClickListener(v -> {
-                getContactsController().loadGlobalPrivacySetting();
-                showItemOptions();
-            });
-            optionsItem.setOnLongClickListener(v -> {
-                getContactsController().loadGlobalPrivacySetting();
-                showItemOptions();
-                return true;
-            });
+            updateDrawerButton();
         }
 
         // na: Added ability to open Saved Messages on long click on search top button
@@ -4043,6 +4041,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     return;
                 }
                 if (id == -1) {
+                    if (NixNavigationConfig.isDrawerEnabled() && canOpenDrawer() && openNavigationDrawer()) {
+                        return;
+                    }
                     if (rightSlidingDialogContainer != null && rightSlidingDialogContainer.hasFragment()) {
                         if (actionBar.isActionModeShowed()) {
                             if (searchViewPager != null && searchViewPager.getVisibility() == View.VISIBLE && searchViewPager.actionModeShowing()) {
@@ -4740,7 +4741,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                     goingDown = firstVisiblePosition > prevPosition;
                                 }
                                 if (changed && scrollUpdated && (goingDown || scrollingManually)) {
-                                    hideFloatingButton(goingDown);
+                                    hideFloatingButton(goingDown, true);
                                 }
                                 prevPosition = firstVisiblePosition;
                                 prevTop = firstViewTop;
@@ -7268,6 +7269,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onResume() {
         super.onResume();
+        updateDrawerButton();
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }
@@ -7442,6 +7444,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     return navigationBarHeight + dp(12 + 48);
                 }
                 return calculateListViewPaddingBottom();
+            }
+
+            @Override
+            public boolean bottomOffsetAnimated() {
+                return !NixNavigationConfig.isBottomNavigationFloating();
             }
         });
         if (searchIsShowed) {
@@ -9116,7 +9123,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void updateFloatingButtonVisibility(boolean animated) {
-        final boolean isVisible = !(onlySelect && initialDialogsType != 10 || folderId != 0 || communityId != 0 || inPreviewMode || (searching && !onlySelect) || floatingButtonHidden);
+        // This is the single visibility gate for both compose and stories FABs.  Keep the
+        // preference here as well as in hideFloatingButton(): search, preview and story
+        // updates all reach this method and must not resurrect a disabled button.
+        final boolean floatingButtonDisabled = NaConfig.INSTANCE.getDisableDialogsFloatingButton().Bool();
+        if (floatingButtonDisabled) {
+            floatingForceVisible = false;
+            floatingButtonHidden = true;
+        }
+        final boolean isVisible = !(floatingButtonDisabled || onlySelect && initialDialogsType != 10 || folderId != 0 || communityId != 0 || inPreviewMode || (searching && !onlySelect) || floatingButtonHidden);
 
         if (floatingButton3 != null) {
             floatingButton3.setButtonVisible(isVisible, animated);
@@ -10469,7 +10484,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             };
 
             FrameLayout.LayoutParams lp = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8);
-            lp.bottomMargin += navigationBarHeight + additionNavigationBarHeight;
+            lp.bottomMargin += navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
             ((ContentView) fragmentView).addView(undoView[a], ++undoViewIndex, lp);
         }
     }
@@ -11440,8 +11455,17 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     boolean floatingButtonHidden;
+    private boolean mainTabsHiddenByScroll;
+    private Boolean lastDiagnosticMainTabsVisible;
+    private enum NavigationScrollDirection { UP, DOWN }
+    private enum MainTabsVisibilityReason { SCROLL, SEARCH, STATE }
 
     private void hideFloatingButton(boolean hide) {
+        hideFloatingButton(hide, false);
+    }
+
+    private void hideFloatingButton(boolean hide, boolean byScroll) {
+        final boolean hideByScroll = hide;
         if (NaConfig.INSTANCE.getDisableDialogsFloatingButton().Bool()) {
             floatingForceVisible = false;
             hide = true;
@@ -11455,7 +11479,19 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         floatingButtonHidden = hide;
+        if (byScroll) {
+            boolean previous = mainTabsHiddenByScroll;
+            mainTabsHiddenByScroll = NixNavigationConfig.isBottomNavigationFloating() && hideByScroll;
+            if (previous != mainTabsHiddenByScroll) {
+                NgxDiagnostics.event(Category.NAVIGATION, "FLOATING_SCROLL",
+                        Value.bool(Field.OLD_STATE, previous),
+                        Value.bool(Field.NEW_STATE, mainTabsHiddenByScroll),
+                        Value.enumValue(Field.DIRECTION,
+                                hideByScroll ? NavigationScrollDirection.DOWN : NavigationScrollDirection.UP));
+            }
+        }
         updateFloatingButtonVisibility(true);
+        checkUi_mainTabsVisible();
 
         if (hide) {
             if (storyHint != null) {
@@ -13951,6 +13987,58 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return true;
     }
 
+    public boolean canOpenDrawer() {
+        if (!NixNavigationConfig.isDrawerEnabled() || onlySelect || folderId != 0 || communityId != 0
+                || initialDialogsType != DIALOGS_TYPE_DEFAULT || searching
+                || (actionBar != null && actionBar.isActionModeShowed())
+                || (rightSlidingDialogContainer != null
+                && (rightSlidingDialogContainer.hasFragment() || rightFragmentTransitionInProgress))
+                || tabsAnimationInProgress || startedTracking || maybeStartTracking) {
+            return false;
+        }
+        return filterTabsView == null || (!filterTabsView.isEditing() && !filterTabsView.isAnimatingIndicator());
+    }
+
+    private void updateDrawerButton() {
+        if (optionsItem == null || initialDialogsType != DIALOGS_TYPE_DEFAULT) {
+            return;
+        }
+        if (NixNavigationConfig.isDrawerEnabled()) {
+            MenuDrawable menuDrawable = new MenuDrawable();
+            menuDrawable.setRotateToBack(false);
+            actionBar.setBackButtonImage(R.drawable.ic_ab_other);
+            actionBar.getBackButton().setImageDrawable(menuDrawable);
+            actionBar.getBackButton().setContentDescription(LocaleController.getString(R.string.AccDescrOpenMenu));
+            optionsItem.setVisibility(View.GONE);
+        } else {
+            actionBar.setBackButtonImage(0);
+            optionsItem.setIcon(R.drawable.ic_ab_other);
+            optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
+            optionsItem.setVisibility(View.VISIBLE);
+            optionsItem.setOnClickListener(v -> {
+                getContactsController().loadGlobalPrivacySetting();
+                showItemOptions();
+            });
+            optionsItem.setOnLongClickListener(v -> {
+                getContactsController().loadGlobalPrivacySetting();
+                showItemOptions();
+                return true;
+            });
+        }
+    }
+
+    private boolean openNavigationDrawer() {
+        if (!(getParentActivity() instanceof LaunchActivity)) {
+            return false;
+        }
+        DrawerContainer container = ((LaunchActivity) getParentActivity()).drawerLayoutContainer.getDrawerContainer();
+        if (container == null) {
+            return false;
+        }
+        container.openDrawer(true);
+        return true;
+    }
+
     private void showItemOptions() {
         ItemOptions io = ItemOptions.makeOptions(this, optionsItem);
         io.setColors(getThemedColor(Theme.key_actionBarDefaultTitle), getThemedColor(Theme.key_actionBarDefaultTitle));
@@ -14007,7 +14095,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         final boolean isCurrentThemeDark;
-        final boolean hideBottomNavigationBar = NaConfig.INSTANCE.getHideBottomNavigationBar().Bool();
+        final boolean hideBottomNavigationBar = NixNavigationConfig.isBottomNavigationHidden();
             if (resourceProvider != null) {
                 isCurrentThemeDark = resourceProvider.isDark();
             } else {
@@ -14209,7 +14297,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         ViewGroup.MarginLayoutParams lp;
         for (UndoView undoView : undoView) {
             if (undoView != null) {
-                final int bottomMargin = navigationBarHeight + additionNavigationBarHeight;
+                final int bottomMargin = navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
                 lp = (ViewGroup.MarginLayoutParams) undoView.getLayoutParams();
                 if (lp != null && lp.bottomMargin != bottomMargin) {
                     lp.bottomMargin = bottomMargin;
@@ -14409,7 +14497,20 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void checkUi_mainTabsVisible() {
-        final boolean mainTabsVisible = !searching && (blurredView == null || blurredView.getBackground() == null || blurredView.getAlpha() < 0.01f || blurredView.getVisibility() == View.GONE);
+        final boolean mainTabsVisible = !searching
+                && !mainTabsHiddenByScroll
+                && NixNavigationConfig.isBottomNavigationVisible()
+                && (blurredView == null || blurredView.getBackground() == null || blurredView.getAlpha() < 0.01f || blurredView.getVisibility() == View.GONE);
+        if (lastDiagnosticMainTabsVisible == null || lastDiagnosticMainTabsVisible != mainTabsVisible) {
+            final boolean previousVisible = lastDiagnosticMainTabsVisible != null && lastDiagnosticMainTabsVisible;
+            lastDiagnosticMainTabsVisible = mainTabsVisible;
+            NgxDiagnostics.event(Category.NAVIGATION, "MAIN_TABS_VISIBLE",
+                    Value.bool(Field.OLD_STATE, previousVisible),
+                    Value.bool(Field.NEW_STATE, mainTabsVisible),
+                    Value.enumValue(Field.REASON, mainTabsHiddenByScroll
+                            ? MainTabsVisibilityReason.SCROLL
+                            : searching ? MainTabsVisibilityReason.SEARCH : MainTabsVisibilityReason.STATE));
+        }
         if (mainTabsActivityController != null) {
             mainTabsActivityController.setTabsVisible(mainTabsVisible);
         }
@@ -14471,6 +14572,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void checkUi_itemOptionsVisibility() {
+        if (NixNavigationConfig.isDrawerEnabled()) {
+            FragmentFloatingButton.setAnimatedVisibility(optionsItem, 0f);
+            return;
+        }
         final float factor1 = 1f - animatorSearchVisible.getFloatValue();
         final float factor2 = 1f - getRightSlidingProgress();
         final float factor3 = 1f - animatorDoneButtonVisible.getFloatValue();
@@ -14572,7 +14677,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         iBlur3PositionActionBar.set(0, -additionalList, fragmentView.getMeasuredWidth(), lerp(actionBarHeight, actionBarHeightSearch, animatorSearchVisible.getFloatValue()) + additionalList );
 
         boolean hasBottomBlur = false;
-        if (hasMainTabs && !NaConfig.INSTANCE.getHideBottomNavigationBar().Bool()) {
+        if (hasMainTabs && NixNavigationConfig.isBottomNavigationVisible()) {
             iBlur3PositionMainTabs.set(0, mainTabTop, fragmentView.getMeasuredWidth(), mainTabBottom);
             iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48));
 
@@ -14605,7 +14710,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         } else if (communityId != 0) {
             return navigationBarHeight + dp(12 + 48 + 12);
         } else {
-            return navigationBarHeight + additionNavigationBarHeight;
+            return navigationBarHeight + additionNavigationBarHeight + dp(NixNavigationConfig.getFloatingListPaddingDp());
         }
     }
 

@@ -362,6 +362,11 @@ public class ApplicationLoader extends Application {
             applicationContext = getApplicationContext();
         }
 
+        try {
+            org.telegram.messenger.diagnostics.NgxDiagnostics.init(applicationContext);
+        } catch (Throwable ignored) {
+        }
+
         NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);
 
         try {
@@ -389,7 +394,7 @@ public class ApplicationLoader extends Application {
 
         applicationHandler = new Handler(applicationContext.getMainLooper());
 
-        org.osmdroid.config.Configuration.getInstance().setUserAgentValue("Telegram-FOSS ( NekoX ) " + BuildConfig.VERSION_NAME);
+        org.osmdroid.config.Configuration.getInstance().setUserAgentValue("NixgramX " + BuildConfig.VERSION_NAME);
         org.osmdroid.config.Configuration.getInstance().setOsmdroidBasePath(new File(ApplicationLoader.applicationContext.getCacheDir(), "osmdroid"));
 
         LauncherIconController.tryFixLauncherIconIfNeeded();
@@ -855,7 +860,8 @@ public class ApplicationLoader extends Application {
             }
             return;
         }
-        UpdateHelper.getInstance().checkNewVersionAvailable((res, error) -> AndroidUtilities.runOnUIThread(() -> {
+        // UpdateHelper delivers on the UI queue under its generation guard.
+        UpdateHelper.getInstance().checkNewVersionAvailable((res, error) -> {
             if (res instanceof TLRPC.TL_help_appUpdate) {
                 SharedConfig.setNewAppVersionAvailable((TLRPC.TL_help_appUpdate) res);
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
@@ -863,7 +869,7 @@ public class ApplicationLoader extends Application {
             if (whenDone != null) {
                 whenDone.run();
             }
-        }), false, force);
+        }, false, force);
     }
     public BetaUpdate getUpdate() {
         return null;

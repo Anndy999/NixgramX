@@ -176,7 +176,7 @@ jobs:
       - name: Set up Android SDK Tools
         uses: android-actions/setup-android@v4
         with:
-          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-37.0"
+          packages: "build-tools;36.0.0 ndk;27.2.12479018 platforms;android-35 platforms;android-37.0"
 
       - name: Install Native Build Dependencies
         working-directory: ${{ github.workspace }}
@@ -234,6 +234,13 @@ jobs:
           APK_PATH="$(pwd)/${APKS[0]}"
           echo "PRIVATE_BETA_APK=${APK_PATH}"
           echo "path=${APK_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify generated startup assets
+        env:
+          PRIVATE_BETA_APK: ${{ steps.apk.outputs.path }}
+        run: |
+          set -euo pipefail
+          python3 Tools/stability/verify_generated_apk_assets.py "$PRIVATE_BETA_APK"
 
       - name: Set up Python
         uses: actions/setup-python@v7

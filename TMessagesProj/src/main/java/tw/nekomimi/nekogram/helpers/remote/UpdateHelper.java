@@ -4,6 +4,7 @@ import android.os.Build;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.NotificationCenter;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import xyz.nextalone.nagram.NaConfig;
 
@@ -28,6 +30,9 @@ public class UpdateHelper extends BaseRemoteHelper {
     public static final int UPDATE_OFF = 0;
     public static final int UPDATE_CHANNEL_RELEASE = 1;
     public static final int UPDATE_CHANNEL_BETA = 2;
+    private static final Object CHECK_LOCK = new Object();
+    private static long latestCheckGeneration;
+    private long checkGeneration;
     private boolean updateAlways = false;
     private int checkAccount;
     private int checkChannel;
@@ -89,28 +94,23 @@ public class UpdateHelper extends BaseRemoteHelper {
 
     @Override
     protected boolean retrySearch(int attempt, boolean error, Runnable retry) {
-        if (error || attempt >= 3) {
-            return false;
-        }
-        // Telegram may not have indexed newly published metadata yet. The runnable
-        // retains this check's account/tag and resolves a fresh access hash each time.
-        // Bound added waiting to 3.5 seconds; RPC latency is outside this delay budget.
-        Utilities.globalQueue.postRunnable(retry, attempt == 1 ? 1000 : 2500);
-        return true;
+        // Foreground and silent checks each resolve/search once. Never hold the
+        // foreground delegate behind BaseRemoteHelper's empty/error retry hooks.
+        return false;
     }
 
     @Override
-    protected boolean shouldRetryAfterLoad(ArrayList<JSONObject> responses) {
-        // Inspect every candidate without consuming updateAlways or completing the check.
-        for (var response : responses) {
-            try {
-                if (isNewerThanInstalled(response)) {
-                    return false;
-                }
-            } catch (JSONException ignored) {
-            }
+    protected int getPointerMessageId(String tag) {
+        return "updateBeta".equals(tag) ? BuildConfig.UPDATE_BETA_POINTER_ID : BuildConfig.UPDATE_RELEASE_POINTER_ID;
+    }
+
+    @Override
+    protected void load(int account, String tag, Delegate delegate) {
+        if (getPointerMessageId(tag) <= 0) {
+            onError("UPDATE_POINTER_NOT_CONFIGURED", delegate);
+            return;
         }
-        return true;
+        super.load(account, tag, delegate);
     }
 
     private boolean isNewerThanInstalled(JSONObject response) throws JSONException {
@@ -163,17 +163,21 @@ public class UpdateHelper extends BaseRemoteHelper {
         return files.getOrDefault("universal", files.get("arm64-v8a"));
     }
 
-    private Map<String, Integer> jsonToMap(JSONObject obj) {
+    private Map<String, Integer> jsonToMap(JSONObject obj) throws JSONException {
         Map<String, Integer> map = new HashMap<>();
         List<String> abis = new ArrayList<>();
         abis.add("arm64-v8a");
         abis.add("universal");
-        try {
-            for (var abi : abis) {
-                map.put(abi, obj.getInt(abi));
+        for (var abi : abis) {
+            if (obj.has(abi)) {
+                int id = obj.getInt(abi);
+                if (id <= 0) {
+                    throw new JSONException("Invalid APK message ID");
+                }
+                map.put(abi, id);
             }
-        } catch (JSONException ignored) {
         }
+        if (map.isEmpty()) throw new JSONException("Missing supported APK");
         return map;
     }
 
@@ -260,6 +264,23 @@ public class UpdateHelper extends BaseRemoteHelper {
             onError("UPDATE_METADATA_EMPTY", delegate);
             return;
         }
+        // Validate before version comparison: malformed current/older metadata is
+        // an error, never a successful no-update that clears an existing pending APK.
+        try {
+            for (var metadata : responses) {
+                if (metadata.getInt("version_code") <= 0 || metadata.getString("version").trim().isEmpty()) {
+                    throw new JSONException("Missing version");
+                }
+                metadata.getBoolean("can_not_skip");
+                metadata.getInt("sticker");
+                metadata.getInt("message");
+                jsonToMap(metadata.getJSONObject("document"));
+                metadata.getString("url");
+            }
+        } catch (JSONException e) {
+            onError("UPDATE_METADATA_INVALID", delegate);
+            return;
+        }
         var update = getShouldUpdateVersion(responses);
         if (update == null) {
             manualCheckPending = false;
@@ -311,6 +332,16 @@ public class UpdateHelper extends BaseRemoteHelper {
      * @param manualUserCheck user-initiated check (e.g. long-press); must not be swallowed when AutoUpdateChannel==OFF
      */
     public void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck) {
+        checkNewVersionAvailable(delegate, updateAlways, manualUserCheck, true, true);
+    }
+
+    /** FileRefController owns stage-queue maps; do not move its callback to UI. */
+    public void checkNewVersionAvailableForFileReference(Delegate delegate) {
+        // Independent transport refresh: must not join or bump the UI/pending generation.
+        checkNewVersionAvailable(delegate, false, false, false, false);
+    }
+
+    private void checkNewVersionAvailable(Delegate delegate, boolean updateAlways, boolean manualUserCheck, boolean onUiThread, boolean guardGeneration) {
         final int account = UserConfig.selectedAccount;
         final int channel = NaConfig.INSTANCE.getAutoUpdateChannel().Int();
         if (!isChannelConfigured()) {
@@ -332,7 +363,39 @@ public class UpdateHelper extends BaseRemoteHelper {
         check.checkChannel = channel;
         check.updateAlways = updateAlways;
         check.manualCheckPending = updateAlways || manualUserCheck;
-        check.load(account, getTag(channel), delegate);
+        if (guardGeneration) {
+            synchronized (CHECK_LOCK) {
+                check.checkGeneration = ++latestCheckGeneration;
+            }
+        }
+        var completed = new AtomicBoolean();
+        check.load(account, getTag(channel), (res, error) -> {
+            if (!completed.compareAndSet(false, true)) {
+                return;
+            }
+            // Guard on the consumer queue, not before enqueueing a stale write.
+            Runnable completion = () -> {
+                if (delegate == null) {
+                    return;
+                }
+                if (!guardGeneration) {
+                    delegate.onTLResponse(res, error);
+                    return;
+                }
+                synchronized (CHECK_LOCK) {
+                    if (check.checkGeneration != latestCheckGeneration) {
+                        delegate.onTLResponse(null, "UPDATE_CHECK_SUPERSEDED");
+                    } else {
+                        delegate.onTLResponse(res, error);
+                    }
+                }
+            };
+            if (onUiThread) {
+                AndroidUtilities.runOnUIThread(completion);
+            } else {
+                Utilities.stageQueue.postRunnable(completion);
+            }
+        });
     }
 
     private static final class InstanceHolder {

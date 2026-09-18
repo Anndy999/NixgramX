@@ -1440,6 +1440,31 @@ object NaConfig {
             ConfigItem.configTypeBool,
             false
         )
+    /** 0 Show, 1 Hide, 2 Floating. Never auto-migrate old installs to Floating. */
+    val bottomNavigationMode =
+        addConfig(
+            "BottomNavigationMode",
+            ConfigItem.configTypeInt,
+            0
+        )
+    val navigationDrawer =
+        addConfig(
+            "NavigationDrawer",
+            ConfigItem.configTypeBool,
+            false
+        )
+    val immersiveDrawerAnimation =
+        addConfig(
+            "ImmersiveDrawerAnimation",
+            ConfigItem.configTypeBool,
+            false
+        )
+    val mainMenuLayout =
+        addConfig(
+            "MainMenuLayout",
+            ConfigItem.configTypeString,
+            ""
+        )
     val hideDialogsSearchField =
         addConfig(
             "HideDialogsSearchField",
@@ -1551,6 +1576,32 @@ object NaConfig {
         val normalizedLlmApiUrl = UrlNormalizer.normalizeBaseUrl(currentLlmApiUrl)
         if (normalizedLlmApiUrl != currentLlmApiUrl) {
             llmApiUrl.setConfigString(normalizedLlmApiUrl)
+        }
+
+        migrateBottomNavigationMode()
+    }
+
+    /**
+     * Old HideBottomNavigationBar false→Show, true→Hide.
+     * Floating is never produced by migration.
+     */
+    private fun migrateBottomNavigationMode() {
+        val prefs = getPreferences()
+        if (!prefs.contains(bottomNavigationMode.key)) {
+            val hide = hideBottomNavigationBar.Bool()
+            bottomNavigationMode.setConfigInt(if (hide) 1 else 0)
+        }
+        var mode = bottomNavigationMode.Int()
+        if (mode < 0 || mode > 2) {
+            mode = 0
+            bottomNavigationMode.setConfigInt(0)
+        }
+        val derivedHide = mode == 1
+        if (hideBottomNavigationBar.Bool() != derivedHide) {
+            hideBottomNavigationBar.setConfigBool(derivedHide)
+        }
+        if (!navigationDrawer.Bool() && immersiveDrawerAnimation.Bool()) {
+            immersiveDrawerAnimation.setConfigBool(false)
         }
     }
 

@@ -125,6 +125,7 @@ import android.window.OnBackInvokedDispatcher;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.annotation.RequiresApi;
 import androidx.collection.LongSparseArray;
 import androidx.core.content.ContextCompat;
@@ -138,18 +139,18 @@ import androidx.dynamicanimation.animation.DynamicAnimation;
 import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
+import androidx.media3.common.util.UnstableApi;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import org.telegram.ui.recyclerview.LinearSmoothScrollerEnd;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.Format;
-import com.google.android.exoplayer2.analytics.AnalyticsListener;
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
-import com.google.android.exoplayer2.video.VideoFrameMetadataListener;
-import com.google.android.exoplayer2.video.VideoSize;
+import androidx.media3.common.C;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.common.Format;
+import androidx.media3.exoplayer.analytics.AnalyticsListener;
+import androidx.media3.exoplayer.video.VideoFrameMetadataListener;
+import androidx.media3.common.VideoSize;
 import com.google.android.gms.cast.framework.CastContext;
 import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.face.Face;
@@ -364,6 +365,7 @@ import me.vkryl.core.reference.ReferenceList;
 
 @SuppressLint("WrongConstant")
 @SuppressWarnings("unchecked")
+@OptIn(markerClass = UnstableApi.class)
 public class PhotoViewer implements NotificationCenter.NotificationCenterDelegate, GestureDetector2.OnGestureListener, GestureDetector2.OnDoubleTapListener, IPipSourceDelegate, FactorAnimator.Target {
     private static final boolean centerTitle = NaConfig.INSTANCE.getCenterActionBarTitle().Bool() && NaConfig.INSTANCE.getCenterActionBarTitleType().Int() != 2;
     private static final int ANIMATOR_ID_POLL_ATTACH_BUTTONS_VISIBLE = 0;
@@ -908,6 +910,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private WindowManager.LayoutParams windowLayoutParams;
     private boolean windowColorModeHdr;
     private Boolean windowDisplayHdrCapable;
+    private boolean pendingWindowHdrColorModeUpdate;
     private FrameLayoutDrawer containerView;
     private PhotoViewerWebView photoViewerWebView;
     public FrameLayout windowView;
@@ -23272,9 +23275,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (stickerMakerView != null && stickerMakerView.isThanosInProgress) {
             return;
         }
-//        if (animationInProgress != 0) {
-//            return;
-//        }
+        if (animationInProgress != 0) {
+            return;
+        }
+
+        applyPendingWindowHdrColorMode();
 
         invalidateAllGlassAttachedViews();
 
@@ -24438,6 +24443,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (Build.VERSION.SDK_INT < 34 || windowLayoutParams == null) {
             return;
         }
+        if (animationInProgress != 0) {
+            pendingWindowHdrColorModeUpdate = true;
+            return;
+        }
         if (windowColorModeHdr == enabled) {
             return;
         }
@@ -24451,6 +24460,14 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         } catch (Throwable e) {
             FileLog.e(e);
         }
+    }
+
+    private void applyPendingWindowHdrColorMode() {
+        if (!pendingWindowHdrColorModeUpdate) {
+            return;
+        }
+        pendingWindowHdrColorModeUpdate = false;
+        updateWindowHdrColorMode();
     }
 
     private void updateWindowHdrColorMode() {

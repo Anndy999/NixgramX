@@ -26,11 +26,15 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLog;
 
+import tw.nekomimi.nekogram.drawer.DrawerContainer;
+import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
+
 public class DrawerLayoutContainer extends FrameLayout {
 
     private INavigationLayout parentActionBarLayout;
     private ActionBarLayout actionBarLayout;
     private boolean inLayout;
+    private DrawerContainer drawerContainer;
 
     public DrawerLayoutContainer(Context context) {
         super(context);
@@ -47,17 +51,62 @@ public class DrawerLayoutContainer extends FrameLayout {
         this.actionBarLayout = actionBarLayout;
     }
 
+    public INavigationLayout getParentActionBarLayout() {
+        return parentActionBarLayout;
+    }
+
+    public DrawerContainer getDrawerContainer() {
+        return drawerContainer;
+    }
+
+    public void setDrawerContainer(DrawerContainer container) {
+        if (drawerContainer == container) {
+            return;
+        }
+        if (drawerContainer != null) {
+            drawerContainer.dispose();
+            removeView(drawerContainer);
+        }
+        drawerContainer = container;
+        if (container != null) {
+            addView(container, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        }
+    }
+
     public boolean isDrawCurrentPreviewFragmentAbove() {
         return false;
     }
 
+    @Override
     public boolean onTouchEvent(MotionEvent ev) {
+        if (drawerContainer != null && NixNavigationConfig.isDrawerEnabled()) {
+            return drawerContainer.handleEdgeSwipeTouch(ev);
+        }
         return false;
     }
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        return parentActionBarLayout.checkTransitionAnimation();
+        if (drawerContainer != null && NixNavigationConfig.isDrawerEnabled()) {
+            if (drawerContainer.getVisibility() == VISIBLE && drawerContainer.isDrawerOpen()) {
+                return false;
+            }
+            if (drawerContainer.handleEdgeSwipeIntercept(ev)) {
+                return true;
+            }
+        }
+        return parentActionBarLayout != null && parentActionBarLayout.checkTransitionAnimation();
+    }
+
+    @Override
+    public void requestDisallowInterceptTouchEvent(boolean disallowIntercept) {
+        if (disallowIntercept
+                && drawerContainer != null
+                && NixNavigationConfig.isDrawerEnabled()
+                && drawerContainer.hasEdgeCandidate()) {
+            return;
+        }
+        super.requestDisallowInterceptTouchEvent(disallowIntercept);
     }
 
     @Override

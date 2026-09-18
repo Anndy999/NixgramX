@@ -10,6 +10,13 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 
 ## Log
 
+Premium status popup alignment: ported the one-line offset fix from
+`risin42/NagramX@54925824e872dd3c21ae3e6059bf11c11a8398a1` on 2026-09-07.
+NixgramX initializes the titles container and translates it by 0 when centered or
+4dp otherwise; the popup now uses that actual translation. Official Telegram
+`62b56a07ca` retains the fixed 4dp offset in the same popup structure, so it does
+not already supply this fix. Device NOT TESTED.
+
 | Date | Upstream SHA | Summary | NixgramX commit |
 | --- | --- | --- | --- |
 | 2026-09-04 | `4335a2e` | Bootstrap baseline | `e6d49a82` |
@@ -26,6 +33,8 @@ Policy: subsequent forks may donate **bugfixes only** by default — no new feat
 | exteraless/exteraless | 95b4e525e4437d59fc5be40fdd0673ab071fafc9 | Local service remains active with external Push | Stop stale local service and both alarm identities; prevent service restart with available external provider; preserve NixgramX FCM hybrid connection and restrict FCM helper to FCM modes | `c295279dbf` | Compile/host guards; device NOT TESTED |
 | exteraless/exteraless | 738786ec1eb0f863273396662909630b59f769a1 | Last Java crash unavailable next launch | Independently implemented bounded no-backup local store, sanitized frames (no exception messages/thread names), preserve existing Crashlytics filter chain | `695e1db2ce`, `b14fa0d188` | Host JVM PASS; crash/relaunch device NOT TESTED |
 | Anndy999/NixgramX | d7bc4dcb90 | Cross-account clear of deleted/edit history | Add userId to clear/query/bulk-edit-delete DAO parameters and pass account identity from ChatActivity | `ab5627ea78` | Host SQLite regression PASS; Room/device NOT TESTED |
+
+DATA-03 (Stability Phase 2 audit, local fix): bulk deleted-message cleanup now collects media paths before deleting database rows, matching `deleteCurrent()` ordering. Existing file cleanup semantics are preserved; shared-media ownership/refcount and DATA-02 schema investigation are unchanged. Host JVM regression executes the production method with DAO doubles and temporary files; original ordering fails, fixed ordering passes. Android/Room and device behavior NOT TESTED.
 
 The Exteraless source commits were read using GitHub API, not transplanted as whole files.
 Neither selected change depends on plugins. Current official base does not implement

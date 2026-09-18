@@ -346,8 +346,7 @@ public class AyuMessagesController {
             return;
         }
 
-        deletedMessageDao.deleteMessages(userId, dialogId, messageIds);
-        editedMessageDao.deleteByDialogIdAndMessageIds(userId, dialogId, messageIds);
+        List<String> mediaPaths = new ArrayList<>();
 
         for (int messageId : messageIds) {
             var msg = getMessage(userId, dialogId, messageId);
@@ -356,14 +355,21 @@ public class AyuMessagesController {
             }
 
             if (!TextUtils.isEmpty(msg.message.mediaPath)) {
-                var p = new File(msg.message.mediaPath);
-                try {
-                    if (p.exists() && !p.delete()) {
-                        p.deleteOnExit();
-                    }
-                } catch (Exception e) {
-                    FileLog.e(e);
+                mediaPaths.add(msg.message.mediaPath);
+            }
+        }
+
+        deletedMessageDao.deleteMessages(userId, dialogId, messageIds);
+        editedMessageDao.deleteByDialogIdAndMessageIds(userId, dialogId, messageIds);
+
+        for (String mediaPath : mediaPaths) {
+            var p = new File(mediaPath);
+            try {
+                if (p.exists() && !p.delete()) {
+                    p.deleteOnExit();
                 }
+            } catch (Exception e) {
+                FileLog.e(e);
             }
         }
     }

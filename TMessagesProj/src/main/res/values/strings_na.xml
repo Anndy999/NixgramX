@@ -81,9 +81,13 @@
     <string name="FcmPushServiceTypeValue">Push type: %1$s</string>
     <string name="FcmPushStringStatus">status: %1$s</string>
     <string name="FcmPushStringStatusRegistered">status: registered</string>
-    <string name="FcmPushTokenOk">token: OK (len=%1$d, prefix=%2$s…)</string>
+    <string name="FcmPushTokenOk">token: OK (len=%1$d, value hidden)</string>
     <string name="FcmPushTokenMissing">token: missing</string>
     <string name="FcmPushLastError">last error: %1$s</string>
+    <string name="FcmPushHybridEnabled">MTProto fallback: enabled</string>
+    <string name="FcmPushHybridDisabled">MTProto fallback: disabled by notification settings</string>
+    <string name="FcmPushLastDelivery">Last FCM: transport %1$d ms · client %2$d ms · priority %3$d→%4$d</string>
+    <string name="FcmPushLastDeliveryUnknown">Last FCM timing: no sample yet</string>
     <string name="SendMp4DocumentAsVideo">Send MP4 Document as Video</string>
     <string name="StickersChooseShortNameForStickerPack">Choose a short name for your pack.</string>
     <string name="StickersCopyStickerSet">Copy Sticker Set</string>

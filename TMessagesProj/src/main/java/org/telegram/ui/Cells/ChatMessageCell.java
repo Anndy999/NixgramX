@@ -39,7 +39,6 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.CornerPathEffect;
 import android.graphics.LinearGradient;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
@@ -74,7 +73,6 @@ import android.text.style.DynamicDrawableSpan;
 import android.text.style.LeadingMarginSpan;
 import android.text.style.StrikethroughSpan;
 import android.text.style.URLSpan;
-import android.util.Log;
 import android.util.Pair;
 import android.util.Property;
 import android.util.SparseArray;
@@ -15502,7 +15500,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 final float s = (1f - scale) * .7f;
                 canvas.scale(s, s, radialProgress.progressRect.centerX(), AndroidUtilities.lerp(radialProgress.progressRect.top, radialProgress.progressRect.bottom, .5f));
                 if (onceFire == null) {
-                    onceFire = new RLottieDrawable(R.raw.fire_once, "fire_once", dp(32), dp(32), true, null);
+                    onceFire = new RLottieDrawable(R.raw.fire_once, dp(32), dp(32), true, null);
                     onceFire.setMasterParent(this);
                     onceFire.setAllowDecodeSingleFrame(true);
                     onceFire.setAutoRepeat(1);
@@ -16854,9 +16852,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (botDraftTypingAnimator != null && botDraftTypingAnimator.isRunning()) {
                 drawMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, 1, true, false, false);
             } else {
-                // Incoming-only fade: outgoing blocks stay null so EN/ZH never share textX/textY.
-                drawMessageText(textX, textY, canvas, transitionParams.animateOutTextBlocks, transitionParams.animateOutTextXOffset, false, (1.0f - transitionParams.animateChangeProgress), true, false, false);
-                drawMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, transitionParams.animateChangeProgress, true, false, false);
+                // Translation swaps are incoming-only even if stale outgoing blocks survive a rebind.
+                if (!transitionParams.animateTranslationText) {
+                    drawMessageText(textX, textY, canvas, transitionParams.animateOutTextBlocks, transitionParams.animateOutTextXOffset, false, (1.0f - transitionParams.animateChangeProgress), true, false, false);
+                }
+                final float incomingProgress = getTranslationIncomingTextProgress();
+                drawMessageText(textX, textY + getTranslationIncomingTextOffsetY(incomingProgress), canvas, currentMessageObject.textLayoutBlocks, currentMessageObject.textXOffset, true, incomingProgress, true, false, false);
             }
             canvas.restore();
         } else if (transitionParams.animateLinkAbove && currentBackgroundDrawable != null) {
@@ -23487,7 +23488,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             animatedEmojiStack.clearPositions();
         }
         if (transitionParams.animateReplaceCaptionLayout && transitionParams.animateChangeProgress != 1f) {
-            drawCaptionLayout(canvas, captionLayout, true, selectionOnly, alpha * transitionParams.animateChangeProgress);
+            final float incomingProgress = getTranslationIncomingTextProgress();
+            final float incomingOffsetY = getTranslationIncomingTextOffsetY(incomingProgress);
+            if (incomingOffsetY != 0f) {
+                canvas.save();
+                canvas.translate(0f, incomingOffsetY);
+            }
+            drawCaptionLayout(canvas, captionLayout, true, selectionOnly, alpha * incomingProgress);
+            if (incomingOffsetY != 0f) {
+                canvas.restore();
+            }
         } else {
             drawCaptionLayout(canvas, captionLayout, true, selectionOnly, alpha);
         }
@@ -28438,6 +28448,18 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return transitionParams;
     }
 
+    // Follow the official RecyclerView MOVE clock. Only the incoming translation
+    // glyphs receive a small draw offset; moving the cell would compound MOVE's Y.
+    private static final float TRANSLATION_TEXT_OFFSET_DP = 2f;
+
+    private float getTranslationIncomingTextProgress() {
+        return transitionParams.animateChangeProgress;
+    }
+
+    private float getTranslationIncomingTextOffsetY(float incomingProgress) {
+        return transitionParams.animateTranslationText ? dp(TRANSLATION_TEXT_OFFSET_DP) * (1f - incomingProgress) : 0f;
+    }
+
     /**
      * Fallback when ChatListItemAnimator is not attached: incoming-only
      * text/caption fade (animateOut* stays null). Official first-translate
@@ -28611,6 +28633,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         public boolean animateDrawingSideMenuEnabled;
 
         public boolean animateMessageText;
+        /** Translation swaps reveal incoming glyphs after geometry starts; outgoing glyphs stay absent. */
+        public boolean animateTranslationText;
         private ArrayList<MessageObject.TextLayoutBlock> animateOutTextBlocks;
         public ArrayList<MessageObject.TextLayoutBlock> lastDrawingTextBlocks;
         private int lastDrawingTextWidth;
@@ -28934,6 +28958,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
 
             animateMessageText = false;
+            animateTranslationText = currentMessageObject.isTranslated() != lastDrawnTranslated;
             if (currentMessageObject.textLayoutBlocks != lastDrawingTextBlocks) {
                 boolean sameText = true;
                 if (currentMessageObject.textWidth != lastDrawingTextWidth) {
@@ -29430,6 +29455,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             oldProgress = 0f;
             newProgress = 1f;
             animateMessageText = false;
+            animateTranslationText = false;
             animateRichLayout = false;
             animateDrawingSideMenuEnabled = false;
             animateDrawNameLayout = false;

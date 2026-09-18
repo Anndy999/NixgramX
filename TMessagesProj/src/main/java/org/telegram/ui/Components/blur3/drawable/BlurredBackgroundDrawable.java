@@ -109,13 +109,8 @@ public abstract class BlurredBackgroundDrawable extends Drawable {
     }
 
     public BlurredBackgroundDrawable setRadius(float topLeft, float topRight, float bottomRight, float bottomLeft) {
-        boundProps.radii[0] = boundProps.radii[1] = topLeft;
-        boundProps.radii[2] = boundProps.radii[3] = topRight;
-        boundProps.radii[4] = boundProps.radii[5] = bottomRight;
-        boundProps.radii[6] = boundProps.radii[7] = bottomLeft;
-        boundProps.build();
-
-        onBoundPropsChanged();
+        // Keep the shader mask and clipping outline on the same corner geometry.
+        setRadius(topLeft, topRight, bottomRight, bottomLeft, false);
         return this;
     }
 

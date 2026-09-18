@@ -63,6 +63,20 @@ public final class Diagnostics {
         } catch (Throwable failure) { ioFailed = true; }
     }
 
+    /** Local gesture capture for Debug/Beta investigation. Values are fixed labels and rounded geometry only. */
+    public static void navigationEvent(String name, String fields) {
+        if (!BuildConfig.DEBUG && "stable".equals(BuildConfig.NIXGRAMX_CHANNEL)) {
+            return;
+        }
+        final long time = System.currentTimeMillis();
+        try {
+            IO.execute(() -> {
+                try { store().append(time + " STATE " + name + " " + fields + "\n"); }
+                catch (Throwable failure) { ioFailed = true; }
+            });
+        } catch (Throwable failure) { ioFailed = true; }
+    }
+
     public static void received(int provider) {
         final long time = System.currentTimeMillis();
         SharedConfig.pushLastReceivedTime = time;
@@ -76,6 +90,36 @@ public final class Diagnostics {
         } catch (Throwable failure) { ioFailed = true; }
         // Timestamp is enough for normal delivery; no per-message disk log in Stable.
         if (BuildConfig.DEBUG || !"stable".equals(BuildConfig.NIXGRAMX_CHANNEL)) event(Event.PUSH_RECEIVED, provider);
+    }
+
+    /** Persist only coarse numeric delivery timing; never store payload, token or account data. */
+    public static void fcmDelivery(long transportDelayMs, long clientProcessingMs,
+                                   int originalPriority, int deliveredPriority) {
+        try {
+            ApplicationLoader.applicationContext.getSharedPreferences("nixgramx_diagnostics", Context.MODE_PRIVATE)
+                    .edit()
+                    .putLong("fcmTransportDelayMs", transportDelayMs)
+                    .putLong("fcmClientProcessingMs", clientProcessingMs)
+                    .putInt("fcmOriginalPriority", originalPriority)
+                    .putInt("fcmDeliveredPriority", deliveredPriority)
+                    .apply();
+        } catch (Throwable failure) { ioFailed = true; }
+    }
+
+    public static long[] lastFcmDelivery() {
+        try {
+            android.content.SharedPreferences preferences = ApplicationLoader.applicationContext
+                    .getSharedPreferences("nixgramx_diagnostics", Context.MODE_PRIVATE);
+            return new long[] {
+                    preferences.getLong("fcmTransportDelayMs", -1L),
+                    preferences.getLong("fcmClientProcessingMs", -1L),
+                    preferences.getInt("fcmOriginalPriority", 0),
+                    preferences.getInt("fcmDeliveredPriority", 0)
+            };
+        } catch (Throwable failure) {
+            ioFailed = true;
+            return new long[] {-1L, -1L, 0L, 0L};
+        }
     }
 
     public static void pushConnection(int account, boolean enabled) {
@@ -109,6 +153,9 @@ public final class Diagnostics {
         if (received == 0) received = ApplicationLoader.applicationContext.getSharedPreferences("nixgramx_diagnostics", 0)
                 .getLong("pushLastReceivedTime", 0);
         out.append("\nLast received Push (device UTC epoch ms; not delivery proof): ").append(received == 0 ? "NOT TESTED" : received);
+        long[] fcm = lastFcmDelivery();
+        out.append("\nLast FCM transport/client ms: ").append(fcm[0]).append('/').append(fcm[1]);
+        out.append("; priority original/delivered: ").append(fcm[2]).append('/').append(fcm[3]);
         out.append("\nLast Push error code (0=none observed,1=parse,2=token,3=registration): ").append(lastPushError);
         out.append("\nKeep Alive service observed: ").append(keepAliveRunning);
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {

@@ -29,6 +29,8 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UnifiedPushService;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.diagnostics.Diagnostics;
+import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.INavigationLayout;
@@ -50,10 +52,13 @@ import tw.nekomimi.nekogram.config.cell.ConfigCellDivider;
 import tw.nekomimi.nekogram.config.cell.ConfigCellCustom;
 import tw.nekomimi.nekogram.config.cell.ConfigCellHeader;
 import tw.nekomimi.nekogram.config.cell.ConfigCellSelectBox;
+import tw.nekomimi.nekogram.config.cell.ConfigCellText;
 import tw.nekomimi.nekogram.config.cell.ConfigCellTextCheck;
+import tw.nekomimi.nekogram.drawer.DrawerMenuEditorActivity;
 import tw.nekomimi.nekogram.config.cell.ConfigCellTextDetail;
 import tw.nekomimi.nekogram.config.cell.ConfigCellTextInput;
 import tw.nekomimi.nekogram.config.cell.ConfigCellTextInput2;
+import tw.nekomimi.nekogram.helpers.NixNavigationConfig;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
 import xyz.nextalone.nagram.NaConfig;
 
@@ -243,8 +248,19 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
     private final AbstractConfigCell headerMainTabs = cellGroup.appendCell(new ConfigCellHeader(getString(R.string.MainTabsSettingsHeader)));
     private final AbstractConfigCell hideTitlesRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getMainTabsHideTitles()));
     private final AbstractConfigCell hideContactsRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getMainTabsHideContacts()));
-    private final AbstractConfigCell hideBottomNavigationBarRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getHideBottomNavigationBar()));
+    private final AbstractConfigCell bottomNavigationModeRow = cellGroup.appendCell(new ConfigCellSelectBox(null, NaConfig.INSTANCE.getBottomNavigationMode(), new String[]{
+            getString(R.string.BottomNavigationModeShow),
+            getString(R.string.BottomNavigationModeHide),
+            getString(R.string.BottomNavigationModeFloating)
+    }, null));
     private final AbstractConfigCell dividerMainTabs = cellGroup.appendCell(new ConfigCellDivider());
+
+    // Side Drawer
+    private final AbstractConfigCell headerSideDrawer = cellGroup.appendCell(new ConfigCellHeader(getString(R.string.SideDrawerHeader)));
+    private final AbstractConfigCell enableDrawerRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getNavigationDrawer()));
+    private final AbstractConfigCell immersiveDrawerRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getImmersiveDrawerAnimation()));
+    private final AbstractConfigCell customizeDrawerMenuRow = cellGroup.appendCell(new ConfigCellText("CustomizeDrawerMenu", () -> presentFragment(new DrawerMenuEditorActivity())));
+    private final AbstractConfigCell dividerSideDrawer = cellGroup.appendCell(new ConfigCellDivider());
 
     // Privacy
     private final AbstractConfigCell headerPrivacy = cellGroup.appendCell(new ConfigCellHeader(getString(R.string.PrivacyTitle)));
@@ -290,6 +306,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
         checkPushServiceTypeRows();
         checkOpenArchiveOnPullRows();
         checkMainTabsRows();
+        checkDrawerRows();
         addRowsToMap(cellGroup);
     }
 
@@ -375,7 +392,9 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
             } else if (key.equals(NekoConfig.typeface.getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NaConfig.INSTANCE.getDisableDialogsFloatingButton().getKey())) {
-                tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
+                // DialogsActivity reads the setting from its unified visibility gate;
+                // rebuilding makes it take effect as soon as the user returns.
+                parentLayout.rebuildFragments(0);
             } else if (key.equals(NaConfig.INSTANCE.getHidePremiumSection().getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NaConfig.INSTANCE.getHideHelpSection().getKey())) {
@@ -390,9 +409,19 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
                 parentLayout.rebuildFragments(0);
             } else if (key.equals(NaConfig.INSTANCE.getMainTabsHideContacts().getKey())) {
                 parentLayout.rebuildFragments(0);
-            } else if (key.equals(NaConfig.INSTANCE.getHideBottomNavigationBar().getKey())) {
+            } else if (key.equals(NaConfig.INSTANCE.getBottomNavigationMode().getKey())) {
+                NixNavigationConfig.setBottomNavigationMode(NaConfig.INSTANCE.getBottomNavigationMode().Int());
                 checkMainTabsRows();
                 parentLayout.rebuildFragments(0);
+            } else if (key.equals(NaConfig.INSTANCE.getNavigationDrawer().getKey())) {
+                NixNavigationConfig.setDrawerEnabled(NaConfig.INSTANCE.getNavigationDrawer().Bool());
+                if (getParentActivity() instanceof org.telegram.ui.LaunchActivity) {
+                    ((org.telegram.ui.LaunchActivity) getParentActivity()).syncDrawerContainerEnabled();
+                }
+                checkDrawerRows();
+                parentLayout.rebuildFragments(0);
+            } else if (key.equals(NaConfig.INSTANCE.getImmersiveDrawerAnimation().getKey())) {
+                NixNavigationConfig.setImmersiveDrawerEnabled(NaConfig.INSTANCE.getImmersiveDrawerAnimation().Bool());
             } else if (key.equals(NaConfig.INSTANCE.getHideDialogsSearchField().getKey())) {
                 parentLayout.rebuildFragments(0);
             }
@@ -470,6 +499,17 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
                 break;
         }
         sb.append('\n').append(LocaleController.formatString(R.string.FcmPushServiceTypeValue, pushTypeLabel));
+        boolean hybridConnection = ConnectionsManager.getInstance(UserConfig.selectedAccount).isPushConnectionEnabled();
+        sb.append('\n').append(getString(hybridConnection
+                ? R.string.FcmPushHybridEnabled : R.string.FcmPushHybridDisabled));
+
+        long[] delivery = Diagnostics.lastFcmDelivery();
+        if (delivery[0] >= 0 && delivery[1] >= 0) {
+            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushLastDelivery,
+                    delivery[0], delivery[1], delivery[2], delivery[3]));
+        } else {
+            sb.append('\n').append(getString(R.string.FcmPushLastDeliveryUnknown));
+        }
 
         boolean hasToken = !TextUtils.isEmpty(SharedConfig.pushString);
         if (hasToken) {
@@ -482,8 +522,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
         if (hasToken) {
             String token = SharedConfig.pushString;
             int len = token.length();
-            String prefix = len >= 8 ? token.substring(0, 8) : token;
-            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushTokenOk, len, prefix));
+            sb.append('\n').append(LocaleController.formatString(R.string.FcmPushTokenOk, len));
         } else {
             sb.append('\n').append(getString(R.string.FcmPushTokenMissing));
         }
@@ -497,11 +536,15 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
     }
 
     private void refreshFcmPushStatusRow() {
-        if (listAdapter == null) {
+        if (listAdapter == null || listView == null) {
+            return;
+        }
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshFcmPushStatusRow);
             return;
         }
         int index = cellGroup.rows.indexOf(fcmPushStatusRow);
-        if (index >= 0) {
+        if (index >= 0 && index < listAdapter.getItemCount()) {
             listAdapter.notifyItemChanged(index);
         }
     }
@@ -717,7 +760,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
     }
 
     private void checkMainTabsRows() {
-        boolean hideBottomNavigationBar = NaConfig.INSTANCE.getHideBottomNavigationBar().Bool();
+        boolean hideBottomNavigationBar = NixNavigationConfig.isBottomNavigationHidden();
         if (listAdapter == null) {
             if (hideBottomNavigationBar) {
                 cellGroup.rows.remove(hideTitlesRow);
@@ -728,7 +771,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
         boolean changed = false;
         if (!hideBottomNavigationBar) {
             if (!cellGroup.rows.contains(hideContactsRow)) {
-                int index = cellGroup.rows.indexOf(hideBottomNavigationBarRow);
+                int index = cellGroup.rows.indexOf(bottomNavigationModeRow);
                 cellGroup.rows.add(index, hideContactsRow);
                 listAdapter.notifyItemInserted(index);
                 changed = true;
@@ -749,6 +792,48 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
             rowIndex = cellGroup.rows.indexOf(hideTitlesRow);
             if (rowIndex != -1) {
                 cellGroup.rows.remove(hideTitlesRow);
+                listAdapter.notifyItemRemoved(rowIndex);
+                changed = true;
+            }
+        }
+        if (changed) {
+            addRowsToMap(cellGroup);
+        }
+    }
+
+    private void checkDrawerRows() {
+        boolean drawerOn = NixNavigationConfig.isDrawerEnabled();
+        if (listAdapter == null) {
+            if (!drawerOn) {
+                cellGroup.rows.remove(immersiveDrawerRow);
+                cellGroup.rows.remove(customizeDrawerMenuRow);
+            }
+            return;
+        }
+        boolean changed = false;
+        if (drawerOn) {
+            if (!cellGroup.rows.contains(immersiveDrawerRow)) {
+                int index = cellGroup.rows.indexOf(enableDrawerRow) + 1;
+                cellGroup.rows.add(index, immersiveDrawerRow);
+                listAdapter.notifyItemInserted(index);
+                changed = true;
+            }
+            if (!cellGroup.rows.contains(customizeDrawerMenuRow)) {
+                int index = cellGroup.rows.indexOf(immersiveDrawerRow) + 1;
+                cellGroup.rows.add(index, customizeDrawerMenuRow);
+                listAdapter.notifyItemInserted(index);
+                changed = true;
+            }
+        } else {
+            int rowIndex = cellGroup.rows.indexOf(customizeDrawerMenuRow);
+            if (rowIndex != -1) {
+                cellGroup.rows.remove(customizeDrawerMenuRow);
+                listAdapter.notifyItemRemoved(rowIndex);
+                changed = true;
+            }
+            rowIndex = cellGroup.rows.indexOf(immersiveDrawerRow);
+            if (rowIndex != -1) {
+                cellGroup.rows.remove(immersiveDrawerRow);
                 listAdapter.notifyItemRemoved(rowIndex);
                 changed = true;
             }

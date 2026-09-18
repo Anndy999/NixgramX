@@ -1,7 +1,9 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import groovy.xml.XmlSlurper
 
 plugins {
-    id 'com.android.application' version '9.3.1' apply false
+    id 'com.android.application' apply false
+    id 'com.android.built-in-kotlin' version '9.3.1' apply false
     id 'com.google.gms.google-services' version '4.5.0' apply false
     id 'com.google.firebase.crashlytics' version '3.0.8' apply false
 }
@@ -9,14 +11,24 @@ plugins {
 subprojects {
     afterEvaluate {
         if (plugins.hasPlugin("com.android.library") || plugins.hasPlugin("com.android.application")) {
+            def isPinnedMedia3Module = project.projectDir.absolutePath.replace('\\', '/').contains('/TMessagesProj_Modules/media/')
             android {
-                compileSdk = 37
+                // Media3 1.8.1 is pinned to API 35. Forcing it to API 37 breaks
+                // Robolectric's compile classpath (FingerprintManager is absent).
+                if (!isPinnedMedia3Module) {
+                    compileSdk = 37
+                }
                 buildToolsVersion = "36.0.0"
                 ndkVersion = "27.2.12479018"
 
                 lint {
                     checkReleaseBuilds = false
                     disable 'MissingTranslation', 'ExtraTranslation', 'BlockedPrivateApi'
+                    // AGP 9.3.1 JoinEffectDetector crashes internally while analyzing
+                    // the app; keep the workaround scoped and all other checks active.
+                    if (project.path == ':TMessagesProj') {
+                        disable 'ThreadConstraint'
+                    }
                 }
 
                 compileOptions {
@@ -26,15 +38,19 @@ subprojects {
                     coreLibraryDesugaringEnabled = true
                 }
 
-                kotlin {
-                    compilerOptions {
-                        jvmTarget = JvmTarget.JVM_21
+                if (extensions.findByName("kotlin") != null) {
+                    kotlin {
+                        compilerOptions {
+                            jvmTarget = JvmTarget.JVM_21
+                        }
                     }
                 }
 
-                defaultConfig {
-                    minSdk = 27
-                    targetSdk = 36
+                if (!isPinnedMedia3Module) {
+                    defaultConfig {
+                        minSdk = 27
+                        targetSdk = 36
+                    }
                 }
 
                 buildFeatures.buildConfig = true
@@ -44,6 +60,11 @@ subprojects {
             dependencies {
                 coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
             }
+            if (isPinnedMedia3Module && plugins.hasPlugin("com.android.library")) {
+                // The Telegram-pinned Media3 tree intentionally omits empty consumer
+                // rule files in several modules. AGP 9 rejects those missing paths.
+                android.defaultConfig.consumerProguardFiles.removeAll { !it.exists() }
+            }
         }
     }
     // Telegram 12.10.1: strip unused JLatexMath optional fonts from APK packaging
@@ -51,6 +72,21 @@ subprojects {
         android {
             androidResources {
                 ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~:!optional:!licences:!*stmary*:!*eufb*'
+            }
+        }
+    }
+    if (project.projectDir.absolutePath.replace('\\', '/').contains('/TMessagesProj_Modules/media/')) {
+        plugins.withId('com.android.library') {
+            android {
+                if (namespace == null) {
+                    def manifestFile = file("${project.projectDir}/src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        def manifestPackage = new XmlSlurper().parse(manifestFile).@package.text()
+                        if (manifestPackage) {
+                            namespace manifestPackage
+                        }
+                    }
+                }
             }
         }
     }
