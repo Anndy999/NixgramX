@@ -1272,6 +1272,12 @@ object NaConfig {
             ConfigItem.configTypeInt,
             0 // 0: default; 1: Modern; 2: MD3
         )
+    val amoledDark =
+        addConfig(
+            "AmoledDark",
+            ConfigItem.configTypeBool,
+            false
+        )
     val iosButtonPlacement =
         addConfig(
             "IosButtonPlacement",

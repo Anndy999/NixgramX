@@ -75,7 +75,16 @@ public class NgxDiagnosticsSettingsActivity extends BaseNekoSettingsActivity imp
 
     @Override
     public void onDiagnosticsChanged() {
-        if (listAdapter != null) listAdapter.notifyDataSetChanged();
+        refreshAdapterSafely();
+    }
+
+    private void refreshAdapterSafely() {
+        if (listAdapter == null || listView == null) return;
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshAdapterSafely);
+            return;
+        }
+        listAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -201,8 +210,9 @@ public class NgxDiagnosticsSettingsActivity extends BaseNekoSettingsActivity imp
                     if (position == statusRow) {
                         cell.setText(getString(R.string.NgxDiagnosticsStatus)
                                 + " " + NgxDiagnostics.storedEstimate()
-                                + " / dropped " + NgxDiagnostics.dropped()
-                                + (NgxDiagnostics.isCapturing() ? " / capture" : ""));
+                                + " / " + getString(R.string.NgxDiagnosticsDropped)
+                                + " " + NgxDiagnostics.dropped()
+                                + (NgxDiagnostics.isCapturing() ? " / " + getString(R.string.NgxDiagnosticsCapturingShort) : ""));
                     } else {
                         cell.setText(getString(R.string.NgxDiagnosticsInfo));
                     }

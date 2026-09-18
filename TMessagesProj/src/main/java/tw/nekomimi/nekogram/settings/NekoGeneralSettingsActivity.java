@@ -208,6 +208,7 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
             getString(R.string.StyleModern),
             getString(R.string.StyleMaterialDesign3)
     }, null));
+    private final AbstractConfigCell amoledDarkRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getAmoledDark(), "仅对 Monet 深色主题生效", "AMOLED 纯黑背景"));
     private final AbstractConfigCell actionBarDecorationRow = cellGroup.appendCell(new ConfigCellSelectBox(null, NekoConfig.actionBarDecoration, new String[]{
             getString(R.string.DependsOnDate),
             getString(R.string.Snowflakes),
@@ -384,6 +385,12 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
                     parentLayout.rebuildFragments(INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
                     listView.getLayoutManager().onRestoreInstanceState(recyclerViewState);
                 }
+            } else if (key.equals(NaConfig.INSTANCE.getAmoledDark().getKey())) {
+                if (org.telegram.ui.ActionBar.Theme.getActiveTheme() != null) {
+                    boolean isNight = org.telegram.ui.ActionBar.Theme.isCurrentThemeNight();
+                    org.telegram.ui.ActionBar.Theme.applyTheme(org.telegram.ui.ActionBar.Theme.getActiveTheme(), isNight);
+                    getNotificationCenter().postNotificationName(NotificationCenter.needSetDayNightTheme, org.telegram.ui.ActionBar.Theme.getActiveTheme(), isNight, null, -1);
+                }
             } else if (key.equals(NekoConfig.usePersianCalendar.getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
             } else if (key.equals(NekoConfig.dnsType.getKey())) {
@@ -536,11 +543,15 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
     }
 
     private void refreshFcmPushStatusRow() {
-        if (listAdapter == null) {
+        if (listAdapter == null || listView == null) {
+            return;
+        }
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshFcmPushStatusRow);
             return;
         }
         int index = cellGroup.rows.indexOf(fcmPushStatusRow);
-        if (index >= 0) {
+        if (index >= 0 && index < listAdapter.getItemCount()) {
             listAdapter.notifyItemChanged(index);
         }
     }

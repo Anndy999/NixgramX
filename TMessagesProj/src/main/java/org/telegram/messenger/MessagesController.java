@@ -11853,7 +11853,11 @@ public class MessagesController extends BaseController implements NotificationCe
                     getConnectionsManager().bindRequestToGuid(reqId, classGuid);
                     return;
                 }
-                if (loadDialog && isTopic && load_type == 2 && last_message_id == 0) {
+                // load_type 3 (LOAD_AROUND_MESSAGE, what message links use) is covered as well: this
+                // is the topic counterpart of the generic last_message_id resolver in the non-topic
+                // getHistory branch below, and topics never reach that one (they use
+                // messages.getReplies). Without it a topic jump goes out with last_message_id 0.
+                if (loadDialog && isTopic && (load_type == 2 || load_type == LOAD_AROUND_MESSAGE) && last_message_id == 0) {
                     TLRPC.TL_forumTopic topic = topicsController.findTopic(-dialogId, threadMessageId);
                     if (topic != null) {
                         loadMessagesInternal(dialogId, mergeDialogId, loadInfo, count, max_id, offset_date, false, minDate, classGuid, load_type, topic.top_message, mode, threadMessageId, loadIndex, first_unread, topic.unread_count, last_date, queryFromServer, topic.unread_mentions_count, false, processMessages, isTopic, loaderLogger, 0L);

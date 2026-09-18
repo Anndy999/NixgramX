@@ -292,6 +292,10 @@ public class ChatActivityEnterView extends FrameLayout implements
     private static final int COMPACT_TEXT_INSET_DP = 4;
     private static final int RIGHT_CLUSTER_GAP_DP = 4;
     private static final int IOS_BUBBLE_RADIUS_DP = 22;
+    // Telegram iOS keeps a 40 pt action visual inside its larger action-control frame.
+    // Keep Android's 44 dp touch target, but match that visual geometry in iOS appearance.
+    private static final int IOS_ACTION_BUBBLE_SIZE_DP = 40;
+    private static final int IOS_ACTION_BUBBLE_RADIUS_DP = IOS_ACTION_BUBBLE_SIZE_DP / 2;
     private static final int SENDER_SELECT_WIDTH_DP = 36;
     private static final int BOT_BUTTON_WIDTH_DP = 36;
     private static final int BOT_COMMANDS_MIN_WIDTH_DP = 40;
@@ -3063,7 +3067,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                             isSendBubbleDismissed = false;
                         }
                         if (sendBubbleDrawable != null && child.getVisibility() == VISIBLE && !isSendBubbleDismissed) {
-                            sendBubbleDrawable.setBounds(child.getRight() - dp(DEFAULT_HEIGHT), child.getBottom() - dp(DEFAULT_HEIGHT), child.getRight(), child.getBottom());
+                            setIosActionBubbleBounds(sendBubbleDrawable, child);
                             sendBubbleDrawable.setAlpha((int) (255 * sendButtonAlpha));
                             DrawableUtils.drawWithScale(canvas, sendBubbleDrawable, child.getScaleX());
                         }
@@ -3369,7 +3373,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                     canvas.save();
                     canvas.scale(s, s, getMeasuredWidth() - dpf2(IOS_BUBBLE_RADIUS_DP), getMeasuredHeight() - dpf2(IOS_BUBBLE_RADIUS_DP));
                     if (isIosInputAppearance() && voiceBubbleDrawable != null) {
-                        voiceBubbleDrawable.setBounds(getMeasuredWidth() - dp(DEFAULT_HEIGHT), getMeasuredHeight() - dp(DEFAULT_HEIGHT), getMeasuredWidth(), getMeasuredHeight());
+                        setIosActionBubbleBounds(voiceBubbleDrawable, getMeasuredWidth(), getMeasuredHeight());
                         voiceBubbleDrawable.setAlpha((int) (255 * s * audioVideoSendButton.getAlpha()));
                         DrawableUtils.drawWithScale(canvas, voiceBubbleDrawable, audioVideoSendButton.getScaleX());
                     } else {
@@ -5040,17 +5044,17 @@ public class ChatActivityEnterView extends FrameLayout implements
         topViewBubbleDrawable = factory.create(this, colorProvider);
         topViewBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
         sendBubbleDrawable = factory.create(sendButtonContainer, resolveSendBubbleColorProvider());
-        sendBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
+        sendBubbleDrawable.setRadius(dp(IOS_ACTION_BUBBLE_RADIUS_DP));
         voiceBubbleDrawable = factory.create(sendButtonContainer, resolveSendBubbleColorProvider());
-        voiceBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
+        voiceBubbleDrawable.setRadius(dp(IOS_ACTION_BUBBLE_RADIUS_DP));
         doneBubbleDrawable = factory.create(textFieldContainer, resolveSendBubbleColorProvider());
         doneBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
         emojiBubbleDrawable = factory.create(messageEditTextContainer, colorProvider);
         emojiBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
         expandStickersBubbleDrawable = factory.create(sendButtonContainer, colorProvider);
-        expandStickersBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
+        expandStickersBubbleDrawable.setRadius(dp(IOS_ACTION_BUBBLE_RADIUS_DP));
         cancelBotBubbleDrawable = factory.create(sendButtonContainer, colorProvider);
-        cancelBotBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
+        cancelBotBubbleDrawable.setRadius(dp(IOS_ACTION_BUBBLE_RADIUS_DP));
         aiBubbleDrawable = factory.create(textFieldContainer, colorProvider);
         aiBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
         richBubbleDrawable = factory.create(textFieldContainer, colorProvider);
@@ -5139,9 +5143,27 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (bubble == null || view.getVisibility() != VISIBLE || view.getAlpha() <= 0) {
             return;
         }
-        bubble.setBounds(view.getRight() - dp(DEFAULT_HEIGHT), view.getBottom() - dp(DEFAULT_HEIGHT), view.getRight(), view.getBottom());
+        setIosActionBubbleBounds(bubble, view);
         bubble.setAlpha((int) (255 * view.getAlpha()));
         bubble.draw(canvas);
+    }
+
+    private void setIosActionBubbleBounds(BlurredBackgroundDrawable bubble, View view) {
+        final int targetSize = dp(DEFAULT_HEIGHT);
+        final int visualSize = dp(IOS_ACTION_BUBBLE_SIZE_DP);
+        final int inset = (targetSize - visualSize) / 2;
+        final int actionTop = view.getTop() + Math.max(0, (view.getHeight() - targetSize) / 2);
+        final int actionLeft = view.getRight() - targetSize;
+        bubble.setBounds(actionLeft + inset, actionTop + inset, actionLeft + inset + visualSize, actionTop + inset + visualSize);
+    }
+
+    private void setIosActionBubbleBounds(BlurredBackgroundDrawable bubble, int width, int height) {
+        final int targetSize = dp(DEFAULT_HEIGHT);
+        final int visualSize = dp(IOS_ACTION_BUBBLE_SIZE_DP);
+        final int inset = (targetSize - visualSize) / 2;
+        final int actionTop = Math.max(0, (height - targetSize) / 2);
+        final int actionLeft = width - targetSize;
+        bubble.setBounds(actionLeft + inset, actionTop + inset, actionLeft + inset + visualSize, actionTop + inset + visualSize);
     }
 
     public float getVisualHeight() {

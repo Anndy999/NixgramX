@@ -257,13 +257,17 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
                 BulletinFactory.of(this).createErrorBulletin(error);
             }
         } else {
-            updateListAnimated();
+            updateListAnimatedSafely();
         }
     }
 
     @Override
     public void progressChanged(EmojiHelper.EmojiPackInfo pack, boolean finished, float progress, long bytesLoaded) {
         if (listView == null || listAdapter == null) {
+            return;
+        }
+        if (finished && listView.isComputingLayout()) {
+            listView.post(() -> progressChanged(pack, true, progress, bytesLoaded));
             return;
         }
         EmojiSetCell cell = null;
@@ -379,24 +383,19 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
             progressDialog.showDelayed(300);
         }
         Utilities.globalQueue.postRunnable(() -> {
-            int count = 0;
             for (File file : files) {
                 try {
-                    if (EmojiHelper.getInstance().installEmoji(file) != null) {
-                        count++;
-                    }
+                    EmojiHelper.getInstance().installEmoji(file);
                 } catch (Exception e) {
                     FileLog.e("Emoji Font install failed", e);
                 }
             }
-            int finalCount = count;
             AndroidUtilities.runOnUIThread(() -> {
                 if (progressDialog != null) {
                     progressDialog.dismiss();
                     progressDialog = null;
                 }
-                listAdapter.notifyItemRangeInserted(customEmojiEndRow, finalCount);
-                updateRows();
+                updateListAnimatedSafely();
             });
         });
     }
@@ -656,6 +655,18 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
             listAdapter.notifyDataSetChanged();
         }
         AndroidUtilities.updateVisibleRows(listView);
+    }
+
+    private void updateListAnimatedSafely() {
+        if (listAdapter == null || listView == null) {
+            updateRows();
+            return;
+        }
+        if (listView.isComputingLayout()) {
+            listView.post(this::updateListAnimatedSafely);
+            return;
+        }
+        updateListAnimated();
     }
 
     private class DiffCallback extends DiffUtil.Callback {

@@ -75,15 +75,7 @@ public class ProblemDiagnosticsActivity extends BaseNekoSettingsActivity impleme
 
     @Override
     public void onDiagnosticsChanged() {
-        updateRows();
-        if (listAdapter != null) listAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        updateRows();
-        if (listAdapter != null) listAdapter.notifyDataSetChanged();
+        refreshRowsSafely();
     }
 
     @Override

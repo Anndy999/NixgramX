@@ -754,15 +754,25 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
 
     @Override
     public void emojiPacksLoaded(String error) {
-        if (listAdapter != null) {
-            listAdapter.notifyItemChanged(cellGroup.rows.indexOf(emojiSetsRow));
-        }
+        refreshEmojiSetsSafely();
     }
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.emojiLoaded && listAdapter != null) {
-            listAdapter.notifyItemChanged(cellGroup.rows.indexOf(emojiSetsRow));
+        if (id == NotificationCenter.emojiLoaded) {
+            refreshEmojiSetsSafely();
+        }
+    }
+
+    private void refreshEmojiSetsSafely() {
+        if (listAdapter == null || listView == null) return;
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshEmojiSetsSafely);
+            return;
+        }
+        int position = cellGroup.rows.indexOf(emojiSetsRow);
+        if (position >= 0 && position < listAdapter.getItemCount()) {
+            listAdapter.notifyItemChanged(position);
         }
     }
 

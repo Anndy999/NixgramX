@@ -679,6 +679,10 @@ public class NekoTranslatorSettingsActivity extends BaseNekoXSettingsActivity {
     }
 
     private void checkTemperatureRows() {
+        if (listAdapter != null && listView != null && listView.isComputingLayout()) {
+            listView.post(this::checkTemperatureRows);
+            return;
+        }
         int preset = NaConfig.INSTANCE.getLlmProviderPreset().Int();
         String modelName = LlmConfig.getEffectiveModelName(preset);
         boolean showTemperature = preset != PresetRegistry.GOOGLE_AGENT_PLATFORM && ModelUtil.supportsTemperature(modelName);

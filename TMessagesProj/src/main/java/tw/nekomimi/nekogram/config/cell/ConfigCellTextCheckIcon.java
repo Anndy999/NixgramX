@@ -1,6 +1,6 @@
 package tw.nekomimi.nekogram.config.cell;
 
-import static org.telegram.messenger.LocaleController.getString;
+import static tw.nekomimi.nekogram.config.cell.ConfigCellText.getLocalizedTitle;
 
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -47,7 +47,7 @@ public class ConfigCellTextCheckIcon extends AbstractConfigCell implements WithB
             key1 = bindConfig.getKey();
         }
         this.key = key1;
-        this.title = customTitle == null ? getString(this.key) : customTitle;
+        this.title = customTitle == null ? getLocalizedTitle(this.key) : customTitle;
         this.value = value;
         this.resId = resId;
         this.divider = divider;

@@ -235,6 +235,13 @@ jobs:
           echo "PRIVATE_BETA_APK=${APK_PATH}"
           echo "path=${APK_PATH}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify generated startup assets
+        env:
+          PRIVATE_BETA_APK: ${{ steps.apk.outputs.path }}
+        run: |
+          set -euo pipefail
+          python3 Tools/stability/verify_generated_apk_assets.py "$PRIVATE_BETA_APK"
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:

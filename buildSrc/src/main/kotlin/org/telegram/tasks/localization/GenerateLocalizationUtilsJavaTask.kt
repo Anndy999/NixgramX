@@ -85,6 +85,28 @@ abstract class GenerateLocalizationUtilsJavaTask : DefaultTask() {
                 java.appendLine()
                 java.appendLine("        final String language = locale.getLanguage();")
                 java.appendLine()
+
+                if (languageTags.contains("zh-CN") || languageTags.contains("zh-TW")) {
+                    java.appendLine("        if (\"zh\".equals(language)) {")
+                    java.appendLine("            final String script = locale.getScript();")
+                    java.appendLine("            final String country = locale.getCountry();")
+
+                    if (languageTags.contains("zh-TW")) {
+                        java.appendLine("            if (\"Hant\".equalsIgnoreCase(script) || \"TW\".equalsIgnoreCase(country) || \"HK\".equalsIgnoreCase(country) || \"MO\".equalsIgnoreCase(country)) {")
+                        java.appendLine("                return \"${getLocalizationAssetName("zh-TW")}\";")
+                        java.appendLine("            }")
+                    }
+
+                    if (languageTags.contains("zh-CN")) {
+                        java.appendLine("            return \"${getLocalizationAssetName("zh-CN")}\";")
+                    } else {
+                        java.appendLine("            return \"${getLocalizationAssetName("zh-TW")}\";")
+                    }
+
+                    java.appendLine("        }")
+                    java.appendLine()
+                }
+
                 java.appendLine("        switch (language) {")
 
                 for (tag in languageTags) {
