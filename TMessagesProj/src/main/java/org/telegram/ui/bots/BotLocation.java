@@ -5,6 +5,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -357,6 +358,7 @@ public class BotLocation {
         return obj;
     }
 
+    @SuppressLint("MissingPermission")
     public void requestObject(Utilities.Callback<JSONObject> whenDone) {
         if (whenDone == null) return;
 
