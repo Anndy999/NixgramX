@@ -209,7 +209,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     private int themeAccentListRow;
     private int themeInfoRow;
     private int chatBlurRow;
-    private int amoledThemeRow;
     @Keep
     private int pauseOnRecordRow;
     @Keep
@@ -573,7 +572,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         chatListRow = -1;
         chatListInfoRow = -1;
         chatBlurRow = -1;
-        amoledThemeRow = -1;
         pauseOnRecordRow = -1;
         pauseOnMediaRow = -1;
         stickersRow = -1;
@@ -664,7 +662,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             textSizeHeaderRow = rowCount++;
             textSizeRow = rowCount++;
             backgroundRow = rowCount++;
-            amoledThemeRow = rowCount++;
             changeUserColor = rowCount++;
             newThemeInfoRow = rowCount++;
             themeHeaderRow = rowCount++;
@@ -1145,12 +1142,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(SharedConfig.raiseToSpeak);
                 }
-            } else if (position == amoledThemeRow) {
-                SharedConfig.toggleAmoledTheme();
-                if (view instanceof TextCheckCell) {
-                    ((TextCheckCell) view).setChecked(SharedConfig.isAmoledTheme);
-                }
-                Theme.applyTheme(Theme.getActiveTheme(), Theme.isCurrentThemeNight());
             } else if (position == nextMediaTapRow) {
                 SharedConfig.toggleNextMediaTap();
                 if (view instanceof TextCheckCell) {
@@ -2640,8 +2631,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                         textCheckCell.setTextAndValueAndCheck(getString(R.string.ShowSensitiveContent), getString(R.string.ShowSensitiveContentInfo), getMessagesController().showSensitiveContent(), true, true);
                     } else if (position == chatBlurRow) {
                         textCheckCell.setTextAndCheck(getString("BlurInChat", R.string.BlurInChat), SharedConfig.chatBlurEnabled(), true);
-                    } else if (position == amoledThemeRow) {
-                        textCheckCell.setTextAndCheck("AMOLED 纯黑", SharedConfig.isAmoledTheme, true);
                     }
                     break;
                 }
@@ -2775,7 +2764,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 return TYPE_BRIGHTNESS;
             } else if (position == scheduleLocationRow || position == sendByEnterRow ||
                     position == raiseToSpeakRow || position == raiseToListenRow || position == pauseOnRecordRow ||
-                    position == directShareRow || position == chatBlurRow || position == pauseOnMediaRow || position == nextMediaTapRow || position == sensitiveContentRow || position == amoledThemeRow) {
+                    position == directShareRow || position == chatBlurRow || position == pauseOnMediaRow || position == nextMediaTapRow || position == sensitiveContentRow) {
                 return TYPE_TEXT_CHECK;
             } else if (position == textSizeRow) {
                 return TYPE_TEXT_SIZE;

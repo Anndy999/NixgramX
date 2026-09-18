@@ -181,13 +181,6 @@ public class SharedConfig {
                 .putBoolean("photoViewerBlur", photoViewerBlur)
                 .apply();
     }
-    public static void toggleAmoledTheme() {
-        isAmoledTheme = !isAmoledTheme;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean("isAmoledTheme", isAmoledTheme)
-                .apply();
-    }
 
     private static String goodHevcEncoder;
     private static HashSet<String> hevcEncoderWhitelist = new HashSet<>();
@@ -294,7 +287,6 @@ public class SharedConfig {
     public static boolean useNewBlur;
     public static boolean useSurfaceInStories;
     public static boolean photoViewerBlur = true;
-    public static boolean isAmoledTheme;
     public static boolean payByInvoice;
     public static int stealthModeSendMessageConfirm = 2;
     private static int lastLocalId = -210000;
@@ -721,7 +713,6 @@ public class SharedConfig {
             useSurfaceInStories = preferences.getBoolean("useSurfaceInStories", Build.VERSION.SDK_INT >= 30);
             payByInvoice = preferences.getBoolean("payByInvoice", false);
             photoViewerBlur = preferences.getBoolean("photoViewerBlur", true);
-            isAmoledTheme = preferences.getBoolean("isAmoledTheme", false);
             multipleReactionsPromoShowed = preferences.getBoolean("multipleReactionsPromoShowed", false);
             callEncryptionHintDisplayedCount = preferences.getInt("callEncryptionHintDisplayedCount", 0);
             debugVideoQualities = preferences.getBoolean("debugVideoQualities", false);
