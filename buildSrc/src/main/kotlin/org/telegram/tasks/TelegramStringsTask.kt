@@ -253,19 +253,19 @@ abstract class TelegramStringsTask : DefaultTask() {
         stringsDir: File,
         strings: Set<String>
     ) {
-        // Resource shrinker rules are only read from a values resource file.
-        // A file in res/raw is packaged as data and its tools namespace is
-        // never interpreted, which leaves dynamic LocaleController lookups
-        // eligible for removal.
-        val valuesDir = stringsDir.resolve("values")
-        valuesDir.mkdirs()
+        // AGP reads resource-shrinker rules from a dedicated .keep.xml file
+        // under res/raw. The filename suffix is significant: an ordinary
+        // raw XML resource is packaged as data and its tools namespace is
+        // not interpreted by the shrinker.
+        val rawDir = stringsDir.resolve("raw")
+        rawDir.mkdirs()
 
         val keep = strings
             .asSequence()
             .filterNot { GENERATED_EXCLUSIONS.contains(it) }
             .joinToString(", ") { "@string/$it" }
 
-        valuesDir.resolve("strings_keep.xml")
+        rawDir.resolve("${resourcePackageName.get()}.keep.xml")
             .bufferedWriter(StandardCharsets.UTF_8)
             .use { xml ->
                 xml.appendLine("""<?xml version="1.0" encoding="utf-8"?>""")
