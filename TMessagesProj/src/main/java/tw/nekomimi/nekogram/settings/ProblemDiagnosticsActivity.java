@@ -78,23 +78,6 @@ public class ProblemDiagnosticsActivity extends BaseNekoSettingsActivity impleme
         refreshRowsSafely();
     }
 
-    private void refreshRowsSafely() {
-        if (listAdapter == null || listView == null) return;
-        if (listView.isComputingLayout()) {
-            listView.post(this::refreshRowsSafely);
-            return;
-        }
-        updateRows();
-        listAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        updateRows();
-        if (listAdapter != null) listAdapter.notifyDataSetChanged();
-    }
-
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == actionRow) {

@@ -199,9 +199,17 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
-        if (listAdapter != null) {
-            listAdapter.notifyDataSetChanged();
+        refreshRowsSafely();
+    }
+
+    protected void refreshRowsSafely() {
+        if (listAdapter == null || listView == null) return;
+        if (listView.isComputingLayout()) {
+            listView.post(this::refreshRowsSafely);
+            return;
         }
+        updateRows();
+        listAdapter.notifyDataSetChanged();
     }
 
     protected boolean hasWhiteActionBar() {
