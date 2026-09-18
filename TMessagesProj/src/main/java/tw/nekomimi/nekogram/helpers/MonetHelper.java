@@ -135,14 +135,6 @@ public class MonetHelper {
                 }
             }
 
-            // Cherrygram-style AMOLED: under a Monet night theme, bump the dark background from
-            // neutral1_900 (near-black) to neutral1_1000 (pure black) when the user enables it.
-            if ("n1_900".equals(baseColor)
-                    && NaConfig.INSTANCE.getAmoledDark().Bool()
-                    && Theme.getActiveTheme() != null
-                    && Theme.getActiveTheme().isMonetNight()) {
-                baseColor = "n1_1000";
-            }
             int resolvedColor = resolveColor(baseColor);
             if (darkenPercentValue != null) {
                 resolvedColor = darkenByPercent(resolvedColor, Integer.parseInt(darkenPercentValue));
