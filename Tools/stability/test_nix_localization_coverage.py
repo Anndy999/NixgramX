@@ -150,6 +150,9 @@ class NixLocalizationCoverageTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("generateResourceShrinkerKeepRules", task)
         self.assertIn('tools:keep=\\\"', task)
+        self.assertIn('stringsDir.resolve("values")', task)
+        self.assertIn('valuesDir.resolve("strings_keep.xml")', task)
+        self.assertNotIn('stringsDir.resolve("raw")', task)
         self.assertNotIn('tools:discard=\\\"', task)
 
     def test_staging_apk_verifier_covers_dynamic_settings_resource_families(self):
