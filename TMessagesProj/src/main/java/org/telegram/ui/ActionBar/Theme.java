@@ -9112,9 +9112,6 @@ public class Theme {
                 || key_chat_stickerReplyLine == key || key_chat_stickerReplyNameText == key || key_chat_stickerReplyMessageText == key)) {
             return 0xffffffff;
         }
-        if (SharedConfig.isAmoledTheme && isCurrentThemeDark() && (key_windowBackgroundWhite == key || key_windowBackgroundGray == key || key_actionBarDefault == key || key_chat_messagePanelBackground == key)) {
-            return 0xFF000000;
-        }
         if (currentTheme == defaultTheme) {
             boolean useDefault;
             if (isMyMessagesBubbles(key)) {
