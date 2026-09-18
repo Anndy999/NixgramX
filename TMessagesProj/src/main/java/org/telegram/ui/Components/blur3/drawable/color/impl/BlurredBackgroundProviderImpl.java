@@ -20,19 +20,38 @@ import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundProvider
 
 public class BlurredBackgroundProviderImpl {
     /**
+     * Perceived-brightness threshold above which a color is treated as "too bright" to
+     * serve as a dark-theme glass target. Matches AndroidUtilities.isDarkColor's cutoff
+     * (which uses "<"), but we keep the strict ">" here so behavior at the exact boundary
+     * is unchanged.
+     */
+    private static final float BRIGHT_GLASS_TARGET_THRESHOLD = 0.721f;
+
+    /**
+     * Fallback glass target used only when the theme's glass target, dialogBackground and
+     * windowBackgroundWhite are all too bright for a dark UI. Copied from the bundled
+     * night.attheme glass_target so dark custom themes never paint a solid white chrome.
+     */
+    private static final int NIGHT_GLASS_TARGET_FALLBACK = 0xFF232324;
+
+    private static boolean isTooBrightForDarkGlass(int color) {
+        return AndroidUtilities.computePerceivedBrightness(color) > BRIGHT_GLASS_TARGET_THRESHOLD;
+    }
+
+    /**
      * Glass fill target for main tabs / top panel. Dark themes that omit glass_target*
      * (or still carry the light default 0xFFFFFFFF) would otherwise paint solid white chrome.
      * Clamp bright targets to dialogBackground when the UI is dark.
      */
     public static int resolveGlassTargetColor(Theme.ResourcesProvider resourcesProvider, boolean isDark, int glassTargetKey) {
         int colorTarget = Theme.getColor(glassTargetKey, resourcesProvider);
-        if (isDark && AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
+        if (isDark && isTooBrightForDarkGlass(colorTarget)) {
             colorTarget = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
-            if (AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
+            if (isTooBrightForDarkGlass(colorTarget)) {
                 colorTarget = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
             }
-            if (AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
-                colorTarget = 0xFF232324; // night.attheme glass_target
+            if (isTooBrightForDarkGlass(colorTarget)) {
+                colorTarget = NIGHT_GLASS_TARGET_FALLBACK;
             }
         }
         return colorTarget;
@@ -198,7 +217,7 @@ public class BlurredBackgroundProviderImpl {
                     int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                     // If a dark theme still carries a bright topPanel bg (or glass_target
                     // bleed), clamp so ActionBar capsules don't paint a light fringe fill.
-                    if (isDark && AndroidUtilities.computePerceivedBrightness(colorBg) > 0.721f) {
+                    if (isDark && isTooBrightForDarkGlass(colorBg)) {
                         colorBg = resolveGlassTargetColor(r, true, Theme.key_glass_targetMainTopPanel);
                     }
                     return Theme.multAlpha(colorBg, alpha);
