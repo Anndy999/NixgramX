@@ -1,8 +1,11 @@
-NixgramX Private Beta — Telegram 12.10.3 (1327)
+NixgramX Private Beta — Telegram 12.10.3 (1331)
 
 - Updated Telegram upstream to 12.10.3 (7089).
 - Included #88: restored official Telegram header layouts and diagnostics header spacing.
 - Included #90: prevented original and translated message text from overlapping without changing the translation motion.
+- Included #93: resolve runtime N Settings titles from the generated localization assets instead of resource shrinker keep rules.
+- Included #94: aligned the iOS input action bubbles to Telegram iOS geometry, keeping the existing 44 dp touch target.
+- Included #95: fixed the blank Problem Diagnostics list (HeaderCell type contract) and the first-launch crash when resuming that page.
 - Fixed the 1319 startup crash by restoring Telegram's generated Lottie and localization assets to the APK.
 - Fixed `LOC_ERR:null` labels by including every NixgramX `strings*.xml` file in generated language packs.
 - Fixed bundled emoji rendering by storing `emoji.pack` uncompressed as required by Android `openFd()`.
@@ -10,13 +13,15 @@ NixgramX Private Beta — Telegram 12.10.3 (1327)
 - Added a packaged-APK gate for representative dynamic NixgramX setting strings before private distribution.
 - Added packaging gates that reject private, Beta, and Stable APKs missing required generated assets.
 - Preserved Side Drawer navigation, bottom navigation modes, multi-account sorting, theme switching, and NGX diagnostics.
-- CI passed for the 12.10.3 upstream sync and both included fixes.
+- CI passed for the 12.10.3 upstream sync, the settings/localization repairs, and the diagnostics fixes.
 
 Test focus:
+- Problem Diagnostics renders every row (no blank list) and never crashes on cold start or resume.
 - Header layout in private chats, groups, channels, and forums.
 - Original / translated text switching, rapid taps, scrolling, recycling, long text, captions, replies, and custom emoji.
 - Drawer gestures, account sorting, and light / dark theme switching.
 - N Settings root and every subpage, including Chinese labels and async size refresh.
+- iOS input appearance: right-hand action bubble alignment and touch target.
 
 PRIVATE TEST ONLY — DEVICE TEST PENDING.
 No Public Beta or Stable publication in this build.
