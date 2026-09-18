@@ -168,6 +168,24 @@ class NixLocalizationCoverageTest(unittest.TestCase):
         default_strings = read_strings(RES / "values")
         self.assertEqual([], sorted(set(samples) - default_strings.keys()))
 
+    def test_missing_dynamic_title_is_logged_without_exposing_its_config_key(self):
+        cell = (
+            ROOT
+            / "TMessagesProj"
+            / "src"
+            / "main"
+            / "java"
+            / "tw"
+            / "nekomimi"
+            / "nekogram"
+            / "config"
+            / "cell"
+            / "ConfigCellText.java"
+        ).read_text(encoding="utf-8")
+        self.assertIn("LOCALIZATION_KEY_MISSING", cell)
+        self.assertIn("getString(R.string.NekoSettings)", cell)
+        self.assertNotIn("? key : title", cell)
+
 
 if __name__ == "__main__":
     unittest.main()
