@@ -10169,14 +10169,8 @@ public class EmojiView extends FrameLayout implements
     }
 
     private int getGlassIconColor(float alpha) {
-        // The pill these glyphs sit on is painted by BlurredBackgroundProviderImpl.emojiViewButton
-        // out of key_glass_targetMainTopPanel, so that is the surface the contrast guard has to
-        // compare against. Without it the key_glass_defaultIcon fallback wins and the whole
-        // bottom bar turns white-on-white in the light theme.
         return ColorUtils.setAlphaComponent(
-                BlurredBackgroundProviderImpl.clampGlassIconColor(
-                        Theme.getColor(Theme.key_glass_defaultIcon, resourcesProvider),
-                        Theme.getColor(Theme.key_glass_targetMainTopPanel, resourcesProvider)),
+                Theme.getColor(Theme.key_glass_defaultIcon, resourcesProvider),
                 (int) (255 * alpha));
     }
 
