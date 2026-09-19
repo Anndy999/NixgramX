@@ -50,17 +50,28 @@ public class BlurredBackgroundProviderImpl {
      * Clamp bright targets to dialogBackground when the UI is dark.
      */
     public static int resolveGlassTargetColor(Theme.ResourcesProvider resourcesProvider, boolean isDark, int glassTargetKey) {
-        int colorTarget = Theme.getColor(glassTargetKey, resourcesProvider);
-        if (isDark && isTooBrightForDarkGlass(colorTarget)) {
-            colorTarget = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
-            if (isTooBrightForDarkGlass(colorTarget)) {
-                colorTarget = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
-            }
-            if (isTooBrightForDarkGlass(colorTarget)) {
-                colorTarget = NIGHT_GLASS_TARGET_FALLBACK;
-            }
+        return clampGlassTargetColor(Theme.getColor(glassTargetKey, resourcesProvider), resourcesProvider, isDark);
+    }
+
+    /**
+     * The clamp itself, for callers that already hold the raw target colour instead of the theme
+     * key — GlassClampedResourceProvider uses this to guard widgets that read
+     * Theme.key_glass_targetMain* directly and would otherwise bypass the policy above.
+     * Idempotent: an already-dark target is returned unchanged, so a value may safely pass
+     * through here more than once.
+     */
+    public static int clampGlassTargetColor(int colorTarget, Theme.ResourcesProvider resourcesProvider, boolean isDark) {
+        if (!isDark || !isTooBrightForDarkGlass(colorTarget)) {
+            return colorTarget;
         }
-        return colorTarget;
+        int clamped = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
+        if (isTooBrightForDarkGlass(clamped)) {
+            clamped = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+        }
+        if (isTooBrightForDarkGlass(clamped)) {
+            clamped = NIGHT_GLASS_TARGET_FALLBACK;
+        }
+        return clamped;
     }
 
     public static BlurredBackgroundProvider mainTabs(Theme.ResourcesProvider resourcesProvider) {
