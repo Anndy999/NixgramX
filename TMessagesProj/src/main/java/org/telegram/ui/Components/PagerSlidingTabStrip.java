@@ -346,6 +346,27 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
                 (int) (255 * alpha));
     }
 
+    /**
+     * Re-apply the glass glyph colour to every tab. TextTab / icon tabs bake
+     * {@link #getGlassIconColor(float)} into setTextColor / the ripple at construction and
+     * only re-read it from {@code setSelected()}; a theme switch does not change the
+     * selected index, so without this the previous palette sits on the new surface.
+     */
+    public void updateColors() {
+        if (tabsContainer == null) {
+            return;
+        }
+        for (int i = 0; i < tabsContainer.getChildCount(); i++) {
+            View child = tabsContainer.getChildAt(i);
+            boolean selected = i == currentPosition;
+            child.setSelected(selected);
+            if (child instanceof TextTab) {
+                ((TextTab) child).setTextColor(getGlassIconColor(selected ? 0.8f : 0.6f));
+            }
+        }
+        invalidate();
+    }
+
     public void onSizeChanged(int paramInt1, int paramInt2, int paramInt3, int paramInt4) {
         if (!shouldExpand) {
             post(PagerSlidingTabStrip.this::notifyDataSetChanged);
