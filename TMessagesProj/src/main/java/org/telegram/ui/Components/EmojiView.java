@@ -5819,6 +5819,22 @@ public class EmojiView extends FrameLayout implements
     }
 
     public void updateColors() {
+        if (BuildVars.LOGS_ENABLED) {
+            // The glass colours are baked into drawables, so when the tabs come out invisible the first
+            // question is always which palette won for the glyph colour. One line per re-colour, and only
+            // while debug logs are on.
+            FileLog.d("EmojiView glass"
+                    + " icon=" + Integer.toHexString(Theme.getColor(Theme.key_glass_defaultIcon, resourcesProvider))
+                    + " targetTopPanel=" + Integer.toHexString(Theme.getColor(Theme.key_glass_targetMainTopPanel, resourcesProvider))
+                    + " panelBg=" + Integer.toHexString(Theme.getColor(Theme.key_chat_emojiPanelBackground, resourcesProvider))
+                    + " panelIcon=" + Integer.toHexString(Theme.getColor(Theme.key_chat_emojiPanelIcon, resourcesProvider))
+                    + " bottomPanelIcon=" + Integer.toHexString(Theme.getColor(Theme.key_chat_emojiBottomPanelIcon, resourcesProvider))
+                    + " msgPanelIcons=" + Integer.toHexString(Theme.getColor(Theme.key_chat_messagePanelIcons, resourcesProvider))
+                    + " searchIcon=" + Integer.toHexString(Theme.getColor(Theme.key_chat_emojiSearchIcon, resourcesProvider))
+                    + " providerDark=" + (resourcesProvider != null && resourcesProvider.isDark())
+                    + " themeDark=" + Theme.isCurrentThemeDark()
+                    + " glassDesign=" + glassDesign);
+        }
         if (!shouldDrawBackground) {
             setBackground(null);
             bottomTabContainerBackground.setBackground(null);
@@ -6102,6 +6118,7 @@ public class EmojiView extends FrameLayout implements
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.didSetNewTheme);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.newEmojiSuggestionsAvailable);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.groupPackUpdated);
         if (stickersGridAdapter != null) {
@@ -6166,6 +6183,7 @@ public class EmojiView extends FrameLayout implements
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.didSetNewTheme);
         if (colorPickerView != null && colorPickerView.isShowing()) {
             colorPickerView.dismiss();
         }
@@ -6388,6 +6406,16 @@ public class EmojiView extends FrameLayout implements
     @SuppressWarnings("unchecked")
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
+        if (id == NotificationCenter.didSetNewTheme) {
+            // The glass design pushes its colours into Drawables and background drawables instead of
+            // reading them while drawing, and this panel is a component rather than a fragment, so it
+            // has no theme descriptions and nothing re-applies them when the palette changes. The panel
+            // is built while the night theme is still active on startup (and on every automatic
+            // day/night switch), so without this refresh it keeps the night glyph colour and the search
+            // row and bottom tab bar come out white-on-white in the light theme.
+            updateColors();
+            return;
+        }
         if (id == NotificationCenter.stickersDidLoad) {
             if ((Integer) args[0] == MediaDataController.TYPE_IMAGE) {
                 if (stickersGridAdapter != null) {
