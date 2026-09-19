@@ -178,6 +178,7 @@ import xyz.nextalone.nagram.NaConfig;
 public class EmojiView extends FrameLayout implements
         FactorAnimator.Target,
         NotificationCenter.NotificationCenterDelegate,
+        Theme.Colorable,
         InAppKeyboardInsetView {
 
     private static final int SEARCH_SELECTED_PACK_HEADER_ANIMATION_SIZE = 15;
@@ -5818,6 +5819,7 @@ public class EmojiView extends FrameLayout implements
         super.requestLayout();
     }
 
+    @Override
     public void updateColors() {
         if (!shouldDrawBackground) {
             setBackground(null);
@@ -5925,6 +5927,9 @@ public class EmojiView extends FrameLayout implements
         }
         if (emojiTabs != null) {
             emojiTabs.updateColors();
+        }
+        if (typeTabs != null) {
+            typeTabs.updateColors();
         }
         for (int a = 0; a < stickerIcons.length; a++) {
             Theme.setEmojiDrawableColor(stickerIcons[a], glassDesign ? getGlassIconColor(0.4f) : getThemedColor(Theme.key_chat_emojiPanelIcon), false);

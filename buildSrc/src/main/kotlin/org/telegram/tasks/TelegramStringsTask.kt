@@ -30,7 +30,22 @@ abstract class TelegramStringsTask : DefaultTask() {
             "AppNameBeta"
         )
 
-        private const val STRING_RESOURCE_ID_BASE = 0x7F0FFFFE
+        // Library-owned string ids are allocated from 0 upwards by aapt2; the
+        // largest one observed in a shipped Beta APK is 234, over 248 library
+        // string resources.  Entry 0x800 keeps a wide margin above them.
+        //
+        // Pinned ids are handed out in ascending order starting here.
+        //
+        // `entryCount` of a ResTable_type is (highest used entry id + 1), and
+        // every configuration block of the type repeats a full
+        // entryCount x 4-byte offset table.  Pinning the app namespace from the
+        // top of the 16-bit entry space (the previous 0x7F0FFFFE - index
+        // layout) therefore forced entryCount to 65535 for *every* locale, so
+        // each of them carried a 256 KB offset table: 96 locales x 256 KB =
+        // 24.6 MB of resources.arsc for ~12k strings.  Anchoring the same ids
+        // at a low base keeps them just as stable while shrinking that table by
+        // roughly 8x.
+        private const val STRING_RESOURCE_ID_BASE = 0x7F0F0800
     }
 
     @get:Input
@@ -225,7 +240,7 @@ abstract class TelegramStringsTask : DefaultTask() {
             .bufferedWriter(StandardCharsets.UTF_8)
             .use { output ->
                 for ((index, name) in stableStrings.withIndex()) {
-                    val resId = STRING_RESOURCE_ID_BASE - index
+                    val resId = STRING_RESOURCE_ID_BASE + index
                     output.append(packageName)
                     output.append(":string/")
                     output.append(name)

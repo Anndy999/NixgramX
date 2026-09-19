@@ -1,22 +1,17 @@
-NixgramX Private Beta — Telegram 12.10.3 (1327)
+NixgramX Beta - Telegram 12.10.3 (1344)
 
-- Updated Telegram upstream to 12.10.3 (7089).
-- Included #88: restored official Telegram header layouts and diagnostics header spacing.
-- Included #90: prevented original and translated message text from overlapping without changing the translation motion.
-- Fixed the 1319 startup crash by restoring Telegram's generated Lottie and localization assets to the APK.
-- Fixed `LOC_ERR:null` labels by including every NixgramX `strings*.xml` file in generated language packs.
-- Fixed bundled emoji rendering by storing `emoji.pack` uncompressed as required by Android `openFd()`.
-- Fixed N Settings titles that were removed by the Android resource shrinker despite being resolved dynamically at runtime.
-- Added a packaged-APK gate for representative dynamic NixgramX setting strings before private distribution.
-- Added packaging gates that reject private, Beta, and Stable APKs missing required generated assets.
-- Preserved Side Drawer navigation, bottom navigation modes, multi-account sorting, theme switching, and NGX diagnostics.
-- CI passed for the 12.10.3 upstream sync and both included fixes.
+- Shrunk the APK: resources.arsc dropped from 27.35 MB to ~1.2 MB. String resource ids are now
+  anchored to a low entry base instead of the top of the 16-bit space, and dependency locales are
+  filtered down to the app's own 19 (the 1339 build shipped 96 locale blocks, each carrying a
+  256 KB offset table).
+- Fixed the emoji panel theme-switch bug: the bottom tabs (表情符号/GIF/贴纸) and category-row icons
+  kept the old palette after a light<->dark switch. EmojiView now implements Theme.Colorable and both
+  PagerSlidingTabStrip and EmojiTabsStrip re-apply their glass glyph colour on theme changes, so the
+  panel follows the theme in both directions.
+- Reverted the glyph contrast guard that regressed dark-wallpaper chats.
 
 Test focus:
-- Header layout in private chats, groups, channels, and forums.
-- Original / translated text switching, rapid taps, scrolling, recycling, long text, captions, replies, and custom emoji.
-- Drawer gestures, account sorting, and light / dark theme switching.
-- N Settings root and every subpage, including Chinese labels and async size refresh.
-
-PRIVATE TEST ONLY — DEVICE TEST PENDING.
-No Public Beta or Stable publication in this build.
+- Emoji panel: open it and switch light<->dark both ways; verify tabs, search row, magnifier and
+  quick reactions stay readable.
+- Dark-wallpaper chat in light theme: verify panel text stays readable.
+- Install size: confirm resources.arsc is ~1.2 MB and the APK installs and launches normally.

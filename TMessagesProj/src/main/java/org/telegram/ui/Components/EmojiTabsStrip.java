@@ -677,8 +677,25 @@ public class EmojiTabsStrip extends ScrollableHorizontalScrollView {
     }
 
     public void updateColors() {
-        if (recentTab != null) {
-            recentTab.updateColor();
+        if (contentView == null) {
+            return;
+        }
+        for (int i = 0; i < contentView.getChildCount(); ++i) {
+            View child = contentView.getChildAt(i);
+            if (child instanceof EmojiTabButton) {
+                ((EmojiTabButton) child).updateColor();
+            } else if (child instanceof EmojiTabsView) {
+                ViewGroup tabs = ((EmojiTabsView) child).contentView;
+                if (tabs == null) {
+                    continue;
+                }
+                for (int a = 0; a < tabs.getChildCount(); ++a) {
+                    View tab = tabs.getChildAt(a);
+                    if (tab instanceof EmojiTabButton) {
+                        ((EmojiTabButton) tab).updateColor();
+                    }
+                }
+            }
         }
     }
 
