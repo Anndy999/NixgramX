@@ -20,22 +20,58 @@ import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundProvider
 
 public class BlurredBackgroundProviderImpl {
     /**
+     * Perceived-brightness cutoff above which a colour is considered "too bright" to serve as a
+     * dark-theme glass target. 0.721f is the value that shipped with the original single-site
+     * clamp; it is kept verbatim so the clamp behaves exactly as before. The strict ">" (rather
+     * than AndroidUtilities.isDarkColor's "<") is intentional: a colour sitting exactly on the
+     * boundary must stay unclamped.
+     */
+    private static final float BRIGHT_GLASS_TARGET_THRESHOLD = 0.721f;
+
+    /**
+     * Last-resort glass target for dark themes whose glass_target, dialogBackground and
+     * windowBackgroundWhite are all bright (broken/third-party themes that still carry the light
+     * defaults). Matches the night.attheme glass_target so the chrome never turns white.
+     */
+    private static final int NIGHT_GLASS_TARGET_FALLBACK = 0xFF232324;
+
+    /**
+     * True when a colour is too bright to be used as a dark-theme glass fill. Single source of
+     * truth for the clamp policy — every glass-target read in this class routes through here so
+     * the threshold can never drift between call sites again.
+     */
+    public static boolean isTooBrightForDarkGlass(int color) {
+        return AndroidUtilities.computePerceivedBrightness(color) > BRIGHT_GLASS_TARGET_THRESHOLD;
+    }
+
+    /**
      * Glass fill target for main tabs / top panel. Dark themes that omit glass_target*
      * (or still carry the light default 0xFFFFFFFF) would otherwise paint solid white chrome.
      * Clamp bright targets to dialogBackground when the UI is dark.
      */
     public static int resolveGlassTargetColor(Theme.ResourcesProvider resourcesProvider, boolean isDark, int glassTargetKey) {
-        int colorTarget = Theme.getColor(glassTargetKey, resourcesProvider);
-        if (isDark && AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
-            colorTarget = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
-            if (AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
-                colorTarget = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
-            }
-            if (AndroidUtilities.computePerceivedBrightness(colorTarget) > 0.721f) {
-                colorTarget = 0xFF232324; // night.attheme glass_target
-            }
+        return clampGlassTargetColor(Theme.getColor(glassTargetKey, resourcesProvider), resourcesProvider, isDark);
+    }
+
+    /**
+     * The clamp itself, for callers that already hold the raw target colour instead of the theme
+     * key — GlassClampedResourceProvider uses this to guard widgets that read
+     * Theme.key_glass_targetMain* directly and would otherwise bypass the policy above.
+     * Idempotent: an already-dark target is returned unchanged, so a value may safely pass
+     * through here more than once.
+     */
+    public static int clampGlassTargetColor(int colorTarget, Theme.ResourcesProvider resourcesProvider, boolean isDark) {
+        if (!isDark || !isTooBrightForDarkGlass(colorTarget)) {
+            return colorTarget;
         }
-        return colorTarget;
+        int clamped = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
+        if (isTooBrightForDarkGlass(clamped)) {
+            clamped = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+        }
+        if (isTooBrightForDarkGlass(clamped)) {
+            clamped = NIGHT_GLASS_TARGET_FALLBACK;
+        }
+        return clamped;
     }
 
     public static BlurredBackgroundProvider mainTabs(Theme.ResourcesProvider resourcesProvider) {
@@ -198,7 +234,7 @@ public class BlurredBackgroundProviderImpl {
                     int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                     // If a dark theme still carries a bright topPanel bg (or glass_target
                     // bleed), clamp so ActionBar capsules don't paint a light fringe fill.
-                    if (isDark && AndroidUtilities.computePerceivedBrightness(colorBg) > 0.721f) {
+                    if (isDark && isTooBrightForDarkGlass(colorBg)) {
                         colorBg = resolveGlassTargetColor(r, true, Theme.key_glass_targetMainTopPanel);
                     }
                     return Theme.multAlpha(colorBg, alpha);

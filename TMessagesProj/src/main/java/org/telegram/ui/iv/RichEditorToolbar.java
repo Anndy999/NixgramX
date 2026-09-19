@@ -29,6 +29,7 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.Components.RLottieImageView;
 import org.telegram.ui.Components.ScaleStateListAnimator;
+import org.telegram.ui.Components.glass.GlassClampedResourceProvider;
 
 import java.util.ArrayList;
 
@@ -100,7 +101,11 @@ public class RichEditorToolbar extends FrameLayout {
     public RichEditorToolbar(Context context, Delegate delegate) {
         super(context);
         this.delegate = delegate;
-        this.resourcesProvider = delegate.getResourcesProvider();
+        // Painting the pills and buttons below reads Theme.key_glass_targetMainTabs directly, which
+        // bypasses the dark-theme clamp in BlurredBackgroundProviderImpl and comes out solid white
+        // whenever a dark theme still carries the light glass_target default. Wrapping the provider
+        // hands those reads the same clamped value the glass fills already get.
+        this.resourcesProvider = new GlassClampedResourceProvider(delegate.getResourcesProvider());
 
         setClipChildren(false);
         setClipToPadding(false);
