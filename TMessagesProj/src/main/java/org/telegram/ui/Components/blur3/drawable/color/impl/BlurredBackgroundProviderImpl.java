@@ -74,6 +74,43 @@ public class BlurredBackgroundProviderImpl {
         return clamped;
     }
 
+    /**
+     * Base glyph colours for the glass design, mirroring ThemeColors: the light palette paints
+     * glass on a light surface and uses a near-black glyph, the night palette paints it on a dark
+     * surface and uses white.
+     */
+    private static final int GLASS_ICON_ON_LIGHT_SURFACE = 0xFF1B2227;
+    private static final int GLASS_ICON_ON_DARK_SURFACE = 0xFFFFFFFF;
+
+    /**
+     * Keeps glass-design glyphs readable on the surface they are painted on.
+     *
+     * Glass widgets read Theme.key_glass_defaultIcon and draw at a fraction of its alpha
+     * (0.06 – 0.8), so the colour has to survive an ~8x alpha reduction. That key is deliberately
+     * absent from every palette and resolves through Theme.fallbackKeys to
+     * key_chat_messagePanelIcons — a colour chosen for the message panel, not for a glass one.
+     * Wherever the two disagree — chat palettes and third-party themes resolve the fallback
+     * against their own map — the glyphs end up on the same side of the surface as the surface
+     * itself and wash out; the emoji panel is the worst case, because its pill is painted white
+     * by key_glass_targetMainTopPanel while its icons and labels are painted with the fallback.
+     *
+     * A palette colour that already sits on the opposite side of the surface is returned
+     * untouched, so accent-tinted glyphs and the healthy light and night palettes keep their
+     * exact current appearance. Only the invisible both-light / both-dark combination is
+     * rewritten.
+     */
+    public static int clampGlassIconColor(int iconColor, int glassTargetColor) {
+        final boolean surfaceIsLight = isLightSurface(glassTargetColor);
+        if (isLightSurface(iconColor) != surfaceIsLight) {
+            return iconColor;
+        }
+        return surfaceIsLight ? GLASS_ICON_ON_LIGHT_SURFACE : GLASS_ICON_ON_DARK_SURFACE;
+    }
+
+    private static boolean isLightSurface(int color) {
+        return AndroidUtilities.computePerceivedBrightness(color) > 0.5f;
+    }
+
     public static BlurredBackgroundProvider mainTabs(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
