@@ -255,6 +255,44 @@ android {
 
 androidComponents {
     onVariants(selector().all()) { variant ->
+        // Keep only the locales this app actually ships translations for.
+        //
+        // Every other locale in the APK comes from library dependencies (AppCompat,
+        // Google Play services, media3/ExoPlayer, ...). Those locales contain no app
+        // strings at all, yet each one still materialises a full 65535-slot string
+        // offset table inside resources.arsc, because this app's string type id space
+        // is 65535 entries wide (only 12008 of them are used, ids 5000..49999 are
+        // entirely empty).
+        //
+        // Measured on the 1339 Beta APK: 96 locale configs, resources.arsc 27.35 MB,
+        // of which 24.6 MB was those offset tables, while the real per-locale string
+        // payload was only 1.1-13.8 KB. Dropping the library-only locales reclaims
+        // ~19 MB with no app-visible translation loss.
+        //
+        // resConfigs was deprecated in AGP 8.8 (removed in AGP 10); localeFilters is
+        // the supported API. Locale strings use Android resource-qualifier syntax
+        // (e.g. zh-rCN, not zh-CN). English needs no entry: it is the default config.
+        variant.androidResources.localeFilters.addAll(
+            'ar',
+            'de',
+            'es',
+            'es-rES',
+            'fa-rIR',
+            'in-rID',
+            'it',
+            'it-rIT',
+            'ja-rJP',
+            'ko',
+            'nl',
+            'pl-rPL',
+            'pt-rBR',
+            'ru-rRU',
+            'tr-rTR',
+            'uk-rUA',
+            'vi-rVN',
+            'zh-rCN',
+            'zh-rTW'
+        )
         variant.outputs.forEach { output ->
             String gramName = isBaseBuild ? 'NixgramX_base' : 'NixgramX'
             String first = String.format('%s-v%s(%s)', gramName, verName, verCode)
