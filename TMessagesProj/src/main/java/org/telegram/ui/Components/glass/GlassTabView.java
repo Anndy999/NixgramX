@@ -439,15 +439,33 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     }
 
 
+    /**
+     * Perceived-brightness cutoff below which a colour is too dark to read as an unselected
+     * attach-tab icon once the chrome has been clamped to dark glass. Kept verbatim from the
+     * original inline clamp so behaviour is unchanged.
+     */
+    private static final float DARK_GLASS_ICON_MIN_BRIGHTNESS = 0.45f;
+
+    /**
+     * Last-resort unselected icon colour, used only when neither glass_tabUnselected nor
+     * windowBackgroundWhiteBlackText is light enough to stay legible on dark glass.
+     */
+    private static final int DARK_GLASS_ICON_FALLBACK = 0xFFF6F6F6;
+
+    /** Single source of truth for the "icon too dark for dark glass" policy in this view. */
+    private static boolean isTooDarkForDarkGlass(int color) {
+        return AndroidUtilities.computePerceivedBrightness(color) < DARK_GLASS_ICON_MIN_BRIGHTNESS;
+    }
+
     private static int resolveAttachTabUnselectedColor(Theme.ResourcesProvider resourcesProvider) {
         int color = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
         final boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
         // Default glass_tabUnselected is near-black (for light glass). On dark glass that reads as
         // black icons; after dark glass clamp we need a light unselected color.
-        if (isDark && AndroidUtilities.computePerceivedBrightness(color) < 0.45f) {
+        if (isDark && isTooDarkForDarkGlass(color)) {
             color = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider);
-            if (AndroidUtilities.computePerceivedBrightness(color) < 0.45f) {
-                color = 0xFFF6F6F6;
+            if (isTooDarkForDarkGlass(color)) {
+                color = DARK_GLASS_ICON_FALLBACK;
             }
         }
         return color;

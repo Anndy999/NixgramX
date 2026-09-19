@@ -40,6 +40,11 @@ on:
         required: false
         type: string
         default: ''
+      version_code:
+        description: 'Optional NIXGRAMX_VERSION_CODE override. Empty keeps gradle.properties. Set above the device beta versionCode when the artifact must upgrade-install over an existing beta.'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -137,6 +142,8 @@ jobs:
         env:
           COMMIT_ID: ${{ github.sha }}
           NIXGRAMX_CHANNEL: beta
+          # Optional installability override. Empty falls back to gradle.properties.
+          NIXGRAMX_VERSION_CODE: ${{ inputs.version_code }}
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           export KEYSTORE_PASS="${{ secrets.KEYSTORE_PASS }}"

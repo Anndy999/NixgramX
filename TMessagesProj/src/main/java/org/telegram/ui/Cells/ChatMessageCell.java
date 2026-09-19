@@ -21775,7 +21775,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             }
             drawAnimatedEmojiMessageText(textX, textY, canvas, transitionParams.animateOutTextBlocks, transitionParams.animateOutAnimateEmoji, false, alpha * (1.0f - transitionParams.animateChangeProgress), currentMessageObject.textXOffset, false);
-            drawAnimatedEmojiMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, animatedEmojiStack, true, alpha * transitionParams.animateChangeProgress, currentMessageObject.textXOffset, false);
+            // Incoming custom-emoji glyphs must carry the very same translation draw offset the
+            // incoming text glyphs get in drawMessageText(Canvas). Without it the animated emoji
+            // stay put while the translated text slides, so they visibly detach mid-swap.
+            final float incomingEmojiOffsetY = getTranslationIncomingTextOffsetY(getTranslationIncomingTextProgress());
+            drawAnimatedEmojiMessageText(textX, textY + incomingEmojiOffsetY, canvas, currentMessageObject.textLayoutBlocks, animatedEmojiStack, true, alpha * transitionParams.animateChangeProgress, currentMessageObject.textXOffset, false);
             canvas.restore();
         } else {
             drawAnimatedEmojiMessageText(textX, textY, canvas, currentMessageObject.textLayoutBlocks, animatedEmojiStack, true, alpha, currentMessageObject.textXOffset, false);
@@ -21899,7 +21903,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
         if (transitionParams.animateReplaceCaptionLayout && transitionParams.animateChangeProgress != 1f) {
-            drawAnimatedEmojiMessageText(captionX, captionY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha * transitionParams.animateChangeProgress, captionLayout != null ? captionLayout.textXOffset : 0, true);
+            // Mirror the caption text pass (drawCaptionLayout draws it inside translate(0, offset)):
+            // caption custom emoji are a separate pass and must travel with the text.
+            final float incomingOffsetY = getTranslationIncomingTextOffsetY(getTranslationIncomingTextProgress());
+            drawAnimatedEmojiMessageText(captionX, captionY + incomingOffsetY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha * transitionParams.animateChangeProgress, captionLayout != null ? captionLayout.textXOffset : 0, true);
         } else {
             drawAnimatedEmojiMessageText(captionX, captionY, canvas, captionLayout != null ? captionLayout.textLayoutBlocks : null, animatedEmojiStack, true, alpha, captionLayout != null ? captionLayout.textXOffset : 0, true);
         }
