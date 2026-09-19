@@ -22,6 +22,23 @@ DYNAMIC_SETTINGS_STRING_SAMPLES = {
     "ConfigCellTextInput": "CustomTitle",
 }
 
+# The `string` type must not be pinned across the whole 16-bit entry space.
+#
+# ResTable_type.entryCount is (highest used entry id + 1) and *every*
+# configuration block of the type repeats an entryCount x 4-byte offset table.
+# Pinning the app string namespace from the top of the entry space therefore
+# made each locale carry a 256 KB offset table: 96 locales x 256 KB = 24.6 MB of
+# resources.arsc, i.e. 40% of the shipped Beta APK.  TelegramStringsTask now
+# anchors the same (still stable) ids at entry 0x800, which keeps entryCount
+# near the number of strings actually pinned.
+MAX_STRING_TYPE_ENTRY_COUNT = 0x4000
+
+# Number of locale blocks the `string` type may keep after locale filtering.
+# The app ships 19 locales plus the default configuration.
+MAX_STRING_TYPE_CONFIG_BLOCKS = 32
+
+RES_TABLE_TYPE = 0x0201
+
 
 def java_hash(value: str) -> int:
     result = 0
@@ -135,6 +152,106 @@ def validate_dynamic_settings_localization_assets(localization_hashes: set[int])
         )
 
 
+def read_string_pool(data: bytes, offset: int) -> tuple[list[str], int]:
+    """Decode a ResStringPool chunk; returns (strings, chunk size)."""
+    _, header_size, chunk_size = struct.unpack_from("<HHI", data, offset)
+    count, _, flags, strings_start, styles_start = struct.unpack_from(
+        "<IIIII", data, offset + 8
+    )
+    offsets = struct.unpack_from(f"<{count}I", data, offset + header_size)
+    utf8 = bool(flags & (1 << 8))
+    base = offset + strings_start
+    end = offset + (styles_start if styles_start else chunk_size)
+
+    strings = []
+    for relative in offsets:
+        position = base + relative
+        if position >= end:
+            strings.append("")
+            continue
+        if utf8:
+            length = data[position]
+            if length & 0x80:
+                length = ((length & 0x7F) << 8) | data[position + 1]
+                position += 2
+            else:
+                position += 1
+            byte_length = data[position]
+            if byte_length & 0x80:
+                byte_length = ((byte_length & 0x7F) << 8) | data[position + 1]
+                position += 2
+            else:
+                position += 1
+            raw = data[position : position + byte_length]
+            strings.append(raw.decode("utf-8", "replace"))
+        else:
+            length = struct.unpack_from("<H", data, position)[0]
+            if length & 0x8000:
+                length = ((length & 0x7FFF) << 16) | struct.unpack_from(
+                    "<H", data, position + 2
+                )[0]
+                position += 4
+            else:
+                position += 2
+            raw = data[position : position + length * 2]
+            strings.append(raw.decode("utf-16-le", "replace"))
+    return strings, chunk_size
+
+
+def read_string_type_layout(data: bytes) -> tuple[int, int]:
+    """Return the `string` type's (widest entryCount, config block count).
+
+    entryCount drives the size of the per-configuration offset table, so this
+    is the measurement that catches an id layout pinned across the whole 16-bit
+    entry space.
+    """
+    _, header_size, _ = struct.unpack_from("<HHI", data, 0)
+    _, global_size = read_string_pool(data, header_size)
+    package_offset = header_size + global_size
+    _, package_header_size, package_size = struct.unpack_from(
+        "<HHI", data, package_offset
+    )
+    type_strings_offset = struct.unpack_from("<I", data, package_offset + 268)[0]
+    type_names, _ = read_string_pool(data, package_offset + type_strings_offset)
+
+    widest_entry_count = 0
+    blocks = 0
+    offset = package_offset + package_header_size
+    end = package_offset + package_size
+    while offset + 8 <= end:
+        chunk_type, _, chunk_size = struct.unpack_from("<HHI", data, offset)
+        if chunk_size == 0 or offset + chunk_size > end:
+            break
+        if chunk_type == RES_TABLE_TYPE:
+            type_id = data[offset + 8]
+            if 0 < type_id <= len(type_names) and type_names[type_id - 1] == "string":
+                entry_count = struct.unpack_from("<I", data, offset + 12)[0]
+                widest_entry_count = max(widest_entry_count, entry_count)
+                blocks += 1
+        offset += chunk_size
+
+    if blocks == 0:
+        raise ValueError("resources.arsc contains no `string` type")
+    return widest_entry_count, blocks
+
+
+def validate_string_type_layout(data: bytes) -> tuple[int, int]:
+    entry_count, blocks = read_string_type_layout(data)
+    if entry_count > MAX_STRING_TYPE_ENTRY_COUNT:
+        raise ValueError(
+            "the `string` type spans "
+            f"{entry_count} entries (limit {MAX_STRING_TYPE_ENTRY_COUNT}); every "
+            "configuration block then carries a "
+            f"{entry_count * 4 // 1024} KB offset table"
+        )
+    if blocks > MAX_STRING_TYPE_CONFIG_BLOCKS:
+        raise ValueError(
+            f"the `string` type keeps {blocks} locale blocks "
+            f"(limit {MAX_STRING_TYPE_CONFIG_BLOCKS}); localeFilters did not apply"
+        )
+    return entry_count, blocks
+
+
 def validate(apk_path: Path) -> None:
     required = {
         "assets/lottie_meta.bin",
@@ -147,6 +264,11 @@ def validate(apk_path: Path) -> None:
         missing = sorted(required - names)
         if missing:
             raise ValueError(f"missing generated assets: {', '.join(missing)}")
+        if "resources.arsc" not in names:
+            raise ValueError("resources.arsc is missing from the APK")
+        entry_count, locale_blocks = validate_string_type_layout(
+            apk.read("resources.arsc")
+        )
 
         for name in required:
             if apk.getinfo(name).file_size == 0:
@@ -184,7 +306,8 @@ def validate(apk_path: Path) -> None:
     print(
         f"PASS generated APK assets: {apk_path.name}; "
         f"localization={len(localization_hashes)}, bindings={len(binding_hashes)}, "
-        f"lottie={len(lottie) // 8}"
+        f"lottie={len(lottie) // 8}, string_entry_count={entry_count}, "
+        f"string_locale_blocks={locale_blocks}"
     )
 
 
