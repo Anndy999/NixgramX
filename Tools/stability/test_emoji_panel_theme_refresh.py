@@ -82,11 +82,35 @@ class BottomTabsAndCategoryStripRefreshTest(unittest.TestCase):
                       'PagerSlidingTabStrip must expose updateColors() so EmojiView can refresh '
                       'the 表情符号/GIF/贴纸 labels when the palette changes')
         update = body(source, '    public void updateColors() {')
-        self.assertIn('getGlassIconColor(', update,
-                      'bottom-tab updateColors() must re-read the glass glyph colour, not keep '
-                      'the value baked into the TextView at construction')
         self.assertIn('setSelected(', update,
                       're-running setSelected() is what reapplies TextTab.setTextColor')
+        self.assertIn('child.invalidate()', update,
+                      'icon-tab ripples are software-layer drawables; the parent invalidate '
+                      'does not guarantee each ImageView redraws')
+        self.assertIn('Math.min(currentPosition', update,
+                      'currentPosition can outlive tabsContainer after notifyDataSetChanged')
+
+    def test_bottom_tabs_distinguish_glass_from_themed_palette(self):
+        source = TAB_STRIP.read_text(encoding='utf-8')
+        glyph = body(source, '    private int resolveGlyphColor(float selectedProgress) {')
+        self.assertIn('if (glassDesign)', glyph,
+                      'PagerSlidingTabStrip used to always paint glass_defaultIcon, which '
+                      'falls back to chat_messagePanelIcons on non-glass themes')
+        self.assertIn('getGlassIconColor(', glyph)
+        self.assertIn('key_glass_defaultIcon', source,
+                      'glass branch must still read Theme.key_glass_defaultIcon')
+        self.assertIn('key_chat_emojiBottomPanelIcon', glyph,
+                      'non-glass bottom labels must use the emoji bottom-panel key, not the '
+                      'message-input fallback')
+        self.assertIn('key_chat_emojiPanelIconSelected', glyph)
+        ctor = source[source.index('public PagerSlidingTabStrip(Context context, Theme.ResourcesProvider resourcesProvider, boolean glassDesign)'):]
+        self.assertIn('this.glassDesign = glassDesign', ctor.split('{', 1)[1][:400])
+
+    def test_emoji_view_passes_glass_flag_into_bottom_tabs(self):
+        source = EMOJI_VIEW.read_text(encoding='utf-8')
+        self.assertIn('new PagerSlidingTabStrip(context, resourcesProvider, glassDesign)', source,
+                      'typeTabs is created for both glass and non-glass; the flag has to '
+                      'travel into PagerSlidingTabStrip or the branch is dead')
 
     def test_category_strip_recolours_every_tab_button(self):
         source = CATEGORY_STRIP.read_text(encoding='utf-8')

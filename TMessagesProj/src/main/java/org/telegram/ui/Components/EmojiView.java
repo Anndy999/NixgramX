@@ -2712,7 +2712,7 @@ public class EmojiView extends FrameLayout implements
                 });
             }
 
-            typeTabs = new PagerSlidingTabStrip(context, resourcesProvider);
+            typeTabs = new PagerSlidingTabStrip(context, resourcesProvider, glassDesign);
             typeTabs.setViewPager(pager);
             typeTabs.setShouldExpand(false);
             typeTabs.setIndicatorHeight(AndroidUtilities.dp(3));
