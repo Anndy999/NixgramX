@@ -5787,7 +5787,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         actionBar.getTitleTextView().setVisibility(View.VISIBLE);
                     }
                 }
-                if (actionBar.getBackButton() != null) {
+                if (actionBar.getBackButton() != null && shouldShowRootListBackButton()) {
                     actionBar.getBackButton().setAlpha(progress == 1f ? 0f : 1f);
                 }
 
@@ -14559,6 +14559,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         checkUi_itemSearchVisibility();
     }
 
+    private boolean shouldShowRootListBackButton() {
+        return NixNavigationConfig.isDrawerEnabled()
+                || folderId != 0
+                || communityId != 0
+                || onlySelect
+                || searchString != null;
+    }
+
     private void checkUi_itemBackButtonVisibility() {
         if (actionBar == null) {
             return;
@@ -14567,7 +14575,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final float factor1 = 1f - animatorSearchVisible.getFloatValue();
         final float factor2 = 1f - getRightSlidingProgress();
         final float factor3 = 1f - animatorDoneButtonVisible.getFloatValue();
-        final float factor = Math.max(progressToActionMode, factor1 * factor2 * factor3);
+        float factor = Math.max(progressToActionMode, factor1 * factor2 * factor3);
+        // Bottom tabs still create the back ImageView via setBackButtonImage(0).
+        // Leaving it VISIBLE after RightSlidingDialogContainer closes makes
+        // ActionBar.onLayout keep the 72dp title inset with no icon.
+        if (!shouldShowRootListBackButton()) {
+            factor = progressToActionMode;
+        }
         FragmentFloatingButton.setAnimatedVisibility(actionBar.getBackButton(), factor);
     }
 
