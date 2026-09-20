@@ -1,17 +1,13 @@
-NixgramX Beta - Telegram 12.10.3 (1344)
+NixgramX Beta - Telegram 12.10.3 (1347)
 
-- Shrunk the APK: resources.arsc dropped from 27.35 MB to ~1.2 MB. String resource ids are now
-  anchored to a low entry base instead of the top of the 16-bit space, and dependency locales are
-  filtered down to the app's own 19 (the 1339 build shipped 96 locale blocks, each carrying a
-  256 KB offset table).
-- Fixed the emoji panel theme-switch bug: the bottom tabs (表情符号/GIF/贴纸) and category-row icons
-  kept the old palette after a light<->dark switch. EmojiView now implements Theme.Colorable and both
-  PagerSlidingTabStrip and EmojiTabsStrip re-apply their glass glyph colour on theme changes, so the
-  panel follows the theme in both directions.
-- Reverted the glyph contrast guard that regressed dark-wallpaper chats.
+- Fixed the main-page NixgramX title jumping right after opening a forum group,
+  picking a topic, and returning. Bottom-tab mode still created a blank ActionBar
+  back button; closing the two-column topics pane set it VISIBLE, so onLayout
+  kept the 72dp inset. Root lists without a drawer now keep that button GONE
+  except in action mode.
 
 Test focus:
-- Emoji panel: open it and switch light<->dark both ways; verify tabs, search row, magnifier and
-  quick reactions stay readable.
-- Dark-wallpaper chat in light theme: verify panel text stays readable.
-- Install size: confirm resources.arsc is ~1.2 MB and the APK installs and launches normally.
+- Bottom tabs, drawer off: cold-start title stays left-aligned.
+- Open a forum group, select a topic, back to the main list: NixgramX must not
+  shift right. Repeat with a normal group and a private chat.
+- Archive / select-chat / drawer-on: back/hamburger still appears as before.
