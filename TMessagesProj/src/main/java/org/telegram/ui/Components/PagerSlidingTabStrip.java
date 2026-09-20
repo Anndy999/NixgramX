@@ -68,12 +68,23 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
     private int dividerPadding = AndroidUtilities.dp(12);
     private int tabPadding = AndroidUtilities.dp(24);
 
+    private static final float GLYPH_ALPHA_UNSELECTED = 0.6f;
+    private static final float GLYPH_ALPHA_SELECTED = 0.8f;
+    private static final float RIPPLE_ALPHA_UNSELECTED = 0.05f;
+    private static final float RIPPLE_ALPHA_SELECTED = 0.1f;
+
     private final Theme.ResourcesProvider resourcesProvider;
+    private final boolean glassDesign;
     private int lastScrollX = 0;
 
     public PagerSlidingTabStrip(Context context, Theme.ResourcesProvider resourcesProvider) {
+        this(context, resourcesProvider, false);
+    }
+
+    public PagerSlidingTabStrip(Context context, Theme.ResourcesProvider resourcesProvider, boolean glassDesign) {
         super(context);
         this.resourcesProvider = resourcesProvider;
+        this.glassDesign = glassDesign;
 
         setFillViewport(true);
         setWillNotDraw(false);
@@ -149,14 +160,12 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
             @Override
             public void setSelected(boolean selected) {
                 super.setSelected(selected);
-                Drawable background = getBackground();
-                if (background != null) {
-                    Theme.setSelectorDrawableColor(background, getGlassIconColor(selected ? 0.1f : 0.05f), true);
-                }
+                applyRippleColor(this, selected);
+                invalidate();
             }
         };
         tab.setFocusable(true);
-        RippleDrawable rippleDrawable = (RippleDrawable) Theme.createSelectorDrawable(getGlassIconColor(0.05f), Theme.RIPPLE_MASK_CIRCLE_20DP, AndroidUtilities.dp(18));
+        RippleDrawable rippleDrawable = (RippleDrawable) Theme.createSelectorDrawable(resolveRippleColor(false), Theme.RIPPLE_MASK_CIRCLE_20DP, AndroidUtilities.dp(18));
         Theme.setRippleDrawableForceSoftware(rippleDrawable);
         tab.setBackground(rippleDrawable);
         tab.setImageDrawable(drawable);
@@ -178,7 +187,7 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
         TextTab tab = new TextTab(getContext(), position);
         tab.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         tab.setTypeface(AndroidUtilities.bold());
-        tab.setTextColor(getGlassIconColor(0.6f));
+        tab.setTextColor(resolveGlyphColor(0f));
         tab.setFocusable(true);
         tab.setGravity(Gravity.CENTER);
 //        if (Build.VERSION.SDK_INT >= 21) {
@@ -346,23 +355,50 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
                 (int) (255 * alpha));
     }
 
+    private int resolveGlyphColor(float selectedProgress) {
+        if (glassDesign) {
+            return getGlassIconColor(AndroidUtilities.lerp(GLYPH_ALPHA_UNSELECTED, GLYPH_ALPHA_SELECTED, selectedProgress));
+        }
+        return ColorUtils.blendARGB(
+                Theme.getColor(Theme.key_chat_emojiBottomPanelIcon, resourcesProvider),
+                Theme.getColor(Theme.key_chat_emojiPanelIconSelected, resourcesProvider),
+                selectedProgress);
+    }
+
+    private int resolveRippleColor(boolean selected) {
+        if (glassDesign) {
+            return getGlassIconColor(selected ? RIPPLE_ALPHA_SELECTED : RIPPLE_ALPHA_UNSELECTED);
+        }
+        return Theme.multAlpha(Theme.getColor(Theme.key_chat_emojiBottomPanelIcon, resourcesProvider), 0.18f);
+    }
+
+    private void applyRippleColor(View tab, boolean selected) {
+        Drawable background = tab.getBackground();
+        if (background != null) {
+            Theme.setSelectorDrawableColor(background, resolveRippleColor(selected), true);
+        }
+    }
+
     /**
-     * Re-apply the glass glyph colour to every tab. TextTab / icon tabs bake
-     * {@link #getGlassIconColor(float)} into setTextColor / the ripple at construction and
-     * only re-read it from {@code setSelected()}; a theme switch does not change the
-     * selected index, so without this the previous palette sits on the new surface.
+     * Re-apply tab colours from the current palette. Glyph / ripple colours are baked into
+     * the child views at construction and only re-read from {@code setSelected()}; a theme
+     * switch does not change the selected index, so without this the previous palette sits
+     * on the new surface. Colour truth lives in {@link TextTab#setSelected} / icon
+     * {@code setSelected} via {@link #resolveGlyphColor(float)} — not in this loop.
      */
     public void updateColors() {
         if (tabsContainer == null) {
             return;
         }
-        for (int i = 0; i < tabsContainer.getChildCount(); i++) {
+        final int childCount = tabsContainer.getChildCount();
+        if (childCount == 0) {
+            return;
+        }
+        final int selectedIndex = Math.max(0, Math.min(currentPosition, childCount - 1));
+        for (int i = 0; i < childCount; i++) {
             View child = tabsContainer.getChildAt(i);
-            boolean selected = i == currentPosition;
-            child.setSelected(selected);
-            if (child instanceof TextTab) {
-                ((TextTab) child).setTextColor(getGlassIconColor(selected ? 0.8f : 0.6f));
-            }
+            child.setSelected(i == selectedIndex);
+            child.invalidate();
         }
         invalidate();
     }
@@ -476,16 +512,12 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
         @Override
         public void setSelected(boolean selected) {
             super.setSelected(selected);
-            Drawable background = getBackground();
-            if (background != null) {
-                Theme.setSelectorDrawableColor(background, getGlassIconColor(selected ? 0.1f : 0.05f), true);
-            }
-
-            setTextColor(getGlassIconColor(selected ? 0.8f : 0.6f));
+            applyRippleColor(this, selected);
+            setTextColor(resolveGlyphColor(selected ? 1f : 0f));
         }
 
         public void setSelectedProgress(float progress) {
-            setTextColor(getGlassIconColor(AndroidUtilities.lerp(0.6f, 0.8f, progress)));
+            setTextColor(resolveGlyphColor(progress));
         }
     }
 }
