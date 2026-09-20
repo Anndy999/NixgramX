@@ -21,6 +21,12 @@ qv = Path('.github/workflows/quick-verify.yml').read_text()
 assert 'assembleDebug' not in qv, 'Quick Verify must not assembleDebug'
 assert 'cache-disabled: true' not in qv, 'Quick Verify should enable Gradle cache'
 assert ':TMessagesProj:lintDebug' not in qv, 'Quick Verify must not require full Android lint'
+for name in ('staging.yml', 'canary.yml', 'private-beta.yml'):
+    wf = Path('.github/workflows') / name
+    text = wf.read_text()
+    assert 'Tools/stability/static_checks.py' in text, f'{name} must run static checks before publish'
+    assert "unittest discover -s Tools/stability" in text, f'{name} must run unit tests before publish'
+    assert 'restore-keys:' in text, f'{name} Gradle cache must fall back when the exact key misses'
 fv = Path('.github/workflows/full-verify.yml').read_text()
 assert 'workflow_dispatch' in fv, 'Full Verify must be manual dispatch'
 assert 'assembleDebug' in fv, 'Full Verify must assembleDebug'

@@ -93,6 +93,12 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Stability static checks
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'PyYAML==6.0.2'
+          python3 Tools/stability/static_checks.py
+          python3 -m unittest discover -s Tools/stability -p 'test_*.py'
       - name: Verify beta source
         if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref_name != 'beta'
         run: |
@@ -116,6 +122,8 @@ jobs:
         with:
           path: ~/.gradle
           key: gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            gradle-
       - name: Set up Android SDK Tools
         uses: android-actions/setup-android@v4
         with:

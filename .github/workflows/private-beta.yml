@@ -151,6 +151,12 @@ jobs:
           sha256sum trusted/Tools/scripts/upload_private_beta.py \
             trusted/Tools/scripts/requirements.txt
 
+      - name: Stability static checks
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'PyYAML==6.0.2'
+          python3 Tools/stability/static_checks.py
+          python3 -m unittest discover -s Tools/stability -p 'test_*.py'
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -172,6 +178,8 @@ jobs:
         with:
           path: ~/.gradle
           key: gradle-private-beta-${{ hashFiles('source/**/*.gradle') }}
+          restore-keys: |
+            gradle-private-beta-
 
       - name: Set up Android SDK Tools
         uses: android-actions/setup-android@v4
