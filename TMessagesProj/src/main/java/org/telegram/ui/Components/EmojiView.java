@@ -140,6 +140,7 @@ import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
@@ -1821,10 +1822,7 @@ public class EmojiView extends FrameLayout implements
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 updateEmojiTabsPosition();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
-                    scrollableViewNoiseSuppressor.onScrolled(dx, dy);
-                    invalidateBlurCaptures();
-                }
+                onBlurPanelScrolled(dx, dy);
                 super.onScrolled(recyclerView, dx, dy);
 
                 if (emojiSearchAdapter != null && emojiGridView.getAdapter() == emojiSearchAdapter) {
@@ -2076,10 +2074,7 @@ public class EmojiView extends FrameLayout implements
                     @Override
                     public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                         super.onScrolled(recyclerView, dx, dy);
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
-                            scrollableViewNoiseSuppressor.onScrolled(dx, dy);
-                            invalidateBlurCaptures();
-                        }
+                        onBlurPanelScrolled(dx, dy);
                     }
                 });
                 gifGridView.setOnTouchListener((v, event) -> ContentPreviewViewer.getInstance().onTouch(event, gifGridView, 0, gifOnItemClickListener, contentPreviewViewerDelegate, resourcesProvider));
@@ -2258,10 +2253,7 @@ public class EmojiView extends FrameLayout implements
                 @Override
                 public void onScrolled(int dx, int dy) {
                     super.onScrolled(dx, dy);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
-                        scrollableViewNoiseSuppressor.onScrolled(dx, dy);
-                        invalidateBlurCaptures();
-                    }
+                    onBlurPanelScrolled(dx, dy);
                     if (stickersTabContainer != null) {
                         stickersTab.setUnderlineHeight(stickersGridView.canScrollVertically(-1) ? AndroidUtilities.getShadowHeight() : 0);
                     }
@@ -2724,6 +2716,7 @@ public class EmojiView extends FrameLayout implements
             typeTabs.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
                 @Override
                 public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                    blurCapturesDirty = true;
                     checkGridVisibility(position, positionOffset);
                     EmojiView.this.onPageScrolled(position, getMeasuredWidth() - getPaddingLeft() - getPaddingRight(), positionOffsetPixels);
                     showBottomTab(true, true);
@@ -2876,7 +2869,7 @@ public class EmojiView extends FrameLayout implements
 
         ViewPositionWatcher viewPositionWatcher = new ViewPositionWatcher(this);
         if (typeTabs != null) {
-            viewPositionWatcher.subscribe(typeTabs, this, (v, p) -> invalidateBlurCaptures());
+            viewPositionWatcher.subscribe(typeTabs, this, (v, p) -> blurCapturesDirty = true);
         }
 
         blurredBackgroundDrawableFactory.setSourceRootView(viewPositionWatcher, this);
@@ -2904,10 +2897,24 @@ public class EmojiView extends FrameLayout implements
                 return stickersGridView.drawChild(canvas, child, drawingTime);
             });
         }
-        blurCaptureMethod = (canvas, position) -> {
-            for (IBlur3Capture capture : blurCaptures) {
-                if (capture != null) {
-                    capture.capture(canvas, position);
+        blurCaptureMethod = new IBlur3Capture() {
+            @Override
+            public void capture(Canvas canvas, RectF position) {
+                for (IBlur3Capture capture : blurCaptures) {
+                    if (capture != null) {
+                        capture.capture(canvas, position);
+                    }
+                }
+            }
+
+            @Override
+            public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+                builder.add(pager != null ? pager.getCurrentItem() : -1);
+                builder.add(pager != null ? pager.getScrollX() : 0);
+                for (IBlur3Capture capture : blurCaptures) {
+                    if (capture != null) {
+                        capture.captureCalculateHash(builder, position);
+                    }
                 }
             }
         };
@@ -4520,7 +4527,9 @@ public class EmojiView extends FrameLayout implements
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurredBackgroundSourceRenderNode != null && scrollableViewNoiseSuppressor != null) {
-            invalidateBlurCaptures();
+            if (blurCapturesDirty) {
+                invalidateBlurCaptures();
+            }
 
             final RecordingCanvas c = blurredBackgroundSourceRenderNode.beginRecording(getMeasuredWidth(), getMeasuredHeight());
             c.drawColor(getThemedColor(Theme.key_windowBackgroundWhite));
@@ -4534,8 +4543,25 @@ public class EmojiView extends FrameLayout implements
         super.dispatchDraw(canvas);
     }
 
+    private boolean blurCapturesDirty = true;
+
+    private void onBlurPanelScrolled(int dx, int dy) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
+            return;
+        }
+        if (dx == 0 && dy == 0) {
+            return;
+        }
+        scrollableViewNoiseSuppressor.onScrolled(dx, dy);
+        invalidateBlurCaptures();
+    }
+
     private void invalidateBlurCaptures() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
+            if (getWidth() <= 0 || getHeight() <= 0) {
+                blurCapturesDirty = true;
+                return;
+            }
             ViewPositionWatcher.computeRectInParent(typeTabs, this, blurredRectF);
             blurredRectF.inset(
                 LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48),
@@ -4546,6 +4572,7 @@ public class EmojiView extends FrameLayout implements
 
             scrollableViewNoiseSuppressor.setupRenderNodes(blurredRectList, 1);
             scrollableViewNoiseSuppressor.invalidateResultRenderNodes(blurCaptureMethod, getWidth(), getHeight());
+            blurCapturesDirty = false;
         }
     }
 
