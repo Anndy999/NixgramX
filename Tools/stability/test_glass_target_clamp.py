@@ -96,12 +96,16 @@ public class GlassTargetClampTest {
     static final int DIALOG_BRIGHT = 0xFFF0F0F0;
     static final int WINDOW_DARK = 0xFF121212;
     static final int WINDOW_BRIGHT = 0xFFEAEAEA;
+    // Homepage folder-strip sample when Monet 取色 wrote the accent into glass_target*.
+    static final int ACCENT_GREEN = 0xFF34C635;
 
     public static void main(String[] args) {
         check(AndroidUtilities.computePerceivedBrightness(BOUNDARY_HIGH) > 0.721f,
             "0xFFB8B8B8 must sit above the 0.721 cutoff");
         check(AndroidUtilities.computePerceivedBrightness(BOUNDARY_LOW) <= 0.721f,
             "0xFFB7B7B7 must sit at or below the 0.721 cutoff");
+        check(AndroidUtilities.computePerceivedBrightness(ACCENT_GREEN) < 0.721f,
+            "the homepage accent green must sit below the light-glass cutoff");
 
         Theme.colors.clear();
         Theme.colors.put(Theme.key_dialogBackground, DIALOG_DARK);
@@ -112,12 +116,24 @@ public class GlassTargetClampTest {
         check(BlurredBackgroundProviderImpl.clampGlassTargetColor(NIGHT_TARGET, null, true) == NIGHT_TARGET,
             "an already dark target must survive untouched");
         check(BlurredBackgroundProviderImpl.clampGlassTargetColor(WHITE, null, false) == WHITE,
-            "a light UI must never clamp");
+            "a light surface in a light UI stays unclamped");
         check(BlurredBackgroundProviderImpl.clampGlassTargetColor(BOUNDARY_LOW, null, true) == BOUNDARY_LOW,
             "the cutoff is strict: a colour below it stays unclamped");
         check(BlurredBackgroundProviderImpl.clampGlassTargetColor(BOUNDARY_HIGH, null, true) != BOUNDARY_HIGH,
             "a colour just above the cutoff must be clamped");
 
+        Theme.colors.put(Theme.key_windowBackgroundWhite, WHITE);
+        Theme.colors.put(Theme.key_dialogBackground, WINDOW_BRIGHT);
+        check(BlurredBackgroundProviderImpl.clampGlassTargetColor(ACCENT_GREEN, null, false) == WHITE,
+            "accent fill in a light UI must clamp to windowBackgroundWhite");
+        check(BlurredBackgroundProviderImpl.clampGlassTargetColor(WINDOW_BRIGHT, null, false) == WINDOW_BRIGHT,
+            "a bright-gray surface in a light UI stays unclamped");
+        check(BlurredBackgroundProviderImpl.clampGlassTargetColor(ACCENT_GREEN, null, false)
+                == BlurredBackgroundProviderImpl.clampGlassTargetColor(
+                    BlurredBackgroundProviderImpl.clampGlassTargetColor(ACCENT_GREEN, null, false), null, false),
+            "light accent clamping must be idempotent");
+
+        Theme.colors.put(Theme.key_windowBackgroundWhite, WINDOW_DARK);
         Theme.colors.put(Theme.key_dialogBackground, DIALOG_BRIGHT);
         check(BlurredBackgroundProviderImpl.clampGlassTargetColor(WHITE, null, true) == WINDOW_DARK,
             "a bright dialogBackground must fall through to windowBackgroundWhite");
@@ -150,8 +166,13 @@ public class GlassTargetClampTest {
             "the wrapper must not intercept other glass keys");
 
         Theme.globalDark = false;
+        Theme.colors.put(Theme.key_windowBackgroundWhite, WHITE);
         check(new GlassClampedResourceProvider(null).getColor(Theme.key_glass_targetMainTabs) == WHITE,
-            "with no delegate the global light theme must suppress the clamp");
+            "with no delegate a light surface in a light UI stays unclamped");
+        Theme.colors.put(Theme.key_glass_targetMainTabs, ACCENT_GREEN);
+        check(new GlassClampedResourceProvider(null).getColor(Theme.key_glass_targetMainTabs) == WHITE,
+            "light chrome must clamp an accent glass_target to the surface");
+        Theme.colors.put(Theme.key_glass_targetMainTabs, WHITE);
 
         Theme.globalDark = true;
         check(new GlassClampedResourceProvider(new FixedProvider(WHITE, false))
@@ -272,6 +293,41 @@ class GlassTargetClampSourceTest(unittest.TestCase):
                         'resolveGlassTargetColor must delegate to the shared clamp')
         self.assertTrue('isTooBrightForDarkGlass(' not in body,
                         'resolveGlassTargetColor duplicates the clamp policy instead of delegating')
+        clamp = member(source, '    public static int clampGlassTargetColor(')
+        self.assertTrue('isTooDarkForLightGlass(' in clamp,
+                        'light chrome must clamp accent-dark glass_target fills')
+        self.assertTrue('isTooBrightForDarkGlass(' in clamp,
+                        'dark chrome must still clamp bright glass_target fills')
+
+    def test_home_wordmark_follows_accent_not_body_text(self):
+        theme = (UI / 'ActionBar/Theme.java').read_text(encoding='utf-8')
+        self.assertTrue(
+            'fallbackKeys.put(key_telegram_color_dialogsLogo, key_windowBackgroundWhiteBlueHeader);' in theme,
+            'NixgramX wordmark must fall back to the accent header colour, not body text')
+        self.assertTrue(
+            'fallbackKeys.put(key_telegram_color_dialogsLogo, key_windowBackgroundWhiteBlackText);' not in theme,
+            'wordmark still falls back to body text, so Monet 取色 cannot recolour it')
+        self.assertTrue('themeAccentExclusionKeys.add(key_glass_targetMainTabs);' in theme,
+                        'glass_targetMainTabs must not be remapped by accent 取色')
+        self.assertTrue('themeAccentExclusionKeys.add(key_glass_targetMainTopPanel);' in theme,
+                        'glass_targetMainTopPanel must not be remapped by accent 取色')
+
+    def test_monet_light_defines_home_chrome_keys(self):
+        theme = (ROOT / 'TMessagesProj/src/main/assets/monet_light.attheme').read_text(encoding='utf-8')
+        required = {
+            'glass_targetMainTabs=n1_10': 'folder strip / search field surface',
+            'glass_targetMainTopPanel=n1_10': 'home top-panel surface',
+            'glass_tabSelected=a1_600': 'selected bottom-tab glyph',
+            'glass_tabSelectedText=a1_600': 'selected bottom-tab label',
+            'glass_tabUnselected=n1_400': 'unselected bottom-tab glyph',
+            'telegram_color_dialogsLogo=a1_600': 'NixgramX wordmark',
+        }
+        missing = [f'{key} ({why})' for key, why in required.items() if key not in theme]
+        self.assertEqual(missing, [], 'monet_light.attheme is missing home chrome keys: ' + ', '.join(missing))
+        self.assertNotIn('glass_targetMainTabs=a1_', theme,
+                         'glass_targetMainTabs must stay a surface token, not an accent')
+        self.assertNotIn('glass_targetMainTopPanel=a1_', theme,
+                         'glass_targetMainTopPanel must stay a surface token, not an accent')
 
     def test_wrapper_intercepts_only_the_two_glass_target_keys(self):
         source = WRAPPER.read_text(encoding='utf-8')

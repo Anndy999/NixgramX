@@ -36,6 +36,13 @@ public class BlurredBackgroundProviderImpl {
     private static final int NIGHT_GLASS_TARGET_FALLBACK = 0xFF232324;
 
     /**
+     * Last-resort glass target for light themes whose glass_target was replaced by an accent
+     * (Monet/custom 取色 writing a1_400 into glass_targetMain*) and whose surface fallbacks are
+     * also too dark. White matches ThemeColors' light default for these keys.
+     */
+    private static final int LIGHT_GLASS_TARGET_FALLBACK = 0xFFFFFFFF;
+
+    /**
      * True when a colour is too bright to be used as a dark-theme glass fill. Single source of
      * truth for the clamp policy — every glass-target read in this class routes through here so
      * the threshold can never drift between call sites again.
@@ -45,9 +52,20 @@ public class BlurredBackgroundProviderImpl {
     }
 
     /**
+     * True when a colour is too dark to serve as a light-theme glass fill. Same 0.721 cutoff as
+     * {@link #isTooBrightForDarkGlass(int)}, inverted: an accent green (~0.61) must not paint the
+     * home tab bar / folder strip as a solid capsule.
+     */
+    public static boolean isTooDarkForLightGlass(int color) {
+        return AndroidUtilities.computePerceivedBrightness(color) < BRIGHT_GLASS_TARGET_THRESHOLD;
+    }
+
+    /**
      * Glass fill target for main tabs / top panel. Dark themes that omit glass_target*
      * (or still carry the light default 0xFFFFFFFF) would otherwise paint solid white chrome.
-     * Clamp bright targets to dialogBackground when the UI is dark.
+     * Light themes that put the accent into glass_target* (Monet light historically omitted
+     * these keys; custom 取色 can remap a near-accent surface) would otherwise paint solid
+     * accent chrome. Clamp to a surface colour on both sides.
      */
     public static int resolveGlassTargetColor(Theme.ResourcesProvider resourcesProvider, boolean isDark, int glassTargetKey) {
         return clampGlassTargetColor(Theme.getColor(glassTargetKey, resourcesProvider), resourcesProvider, isDark);
@@ -57,19 +75,32 @@ public class BlurredBackgroundProviderImpl {
      * The clamp itself, for callers that already hold the raw target colour instead of the theme
      * key — GlassClampedResourceProvider uses this to guard widgets that read
      * Theme.key_glass_targetMain* directly and would otherwise bypass the policy above.
-     * Idempotent: an already-dark target is returned unchanged, so a value may safely pass
+     * Idempotent: an already-valid target is returned unchanged, so a value may safely pass
      * through here more than once.
      */
     public static int clampGlassTargetColor(int colorTarget, Theme.ResourcesProvider resourcesProvider, boolean isDark) {
-        if (!isDark || !isTooBrightForDarkGlass(colorTarget)) {
+        if (isDark) {
+            if (!isTooBrightForDarkGlass(colorTarget)) {
+                return colorTarget;
+            }
+            int clamped = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
+            if (isTooBrightForDarkGlass(clamped)) {
+                clamped = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+            }
+            if (isTooBrightForDarkGlass(clamped)) {
+                clamped = NIGHT_GLASS_TARGET_FALLBACK;
+            }
+            return clamped;
+        }
+        if (!isTooDarkForLightGlass(colorTarget)) {
             return colorTarget;
         }
-        int clamped = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
-        if (isTooBrightForDarkGlass(clamped)) {
-            clamped = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+        int clamped = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+        if (isTooDarkForLightGlass(clamped)) {
+            clamped = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
         }
-        if (isTooBrightForDarkGlass(clamped)) {
-            clamped = NIGHT_GLASS_TARGET_FALLBACK;
+        if (isTooDarkForLightGlass(clamped)) {
+            clamped = LIGHT_GLASS_TARGET_FALLBACK;
         }
         return clamped;
     }
