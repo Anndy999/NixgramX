@@ -3742,14 +3742,14 @@ public class Theme {
         fallbackKeys.put(key_glass_defaultText, Theme.key_chat_messagePanelText);
         fallbackKeys.put(key_glass_targetMainTabs, Theme.key_dialogBackground);
         fallbackKeys.put(key_glass_targetMainTopPanel, Theme.key_dialogBackground);
-        fallbackKeys.put(key_glass_tabSelected, Theme.key_chat_messagePanelSend);
-        fallbackKeys.put(key_glass_tabSelectedText, Theme.key_chat_messagePanelSend);
+        fallbackKeys.put(key_glass_tabSelected, Theme.key_featuredStickers_addButton);
+        fallbackKeys.put(key_glass_tabSelectedText, Theme.key_featuredStickers_addButton);
         fallbackKeys.put(key_glass_tabUnselected, Theme.key_windowBackgroundWhiteBlackText);
         fallbackKeys.put(key_actionBarDefaultTitle, key_windowBackgroundWhiteBlackText);
-        fallbackKeys.put(key_telegram_color_dialogsLogo, key_windowBackgroundWhiteBlueHeader);
+        fallbackKeys.put(key_telegram_color_dialogsLogo, key_featuredStickers_addButton);
         fallbackKeys.put(key_profile_title, key_windowBackgroundWhiteBlackText);
-        fallbackKeys.put(key_telegram_color, Theme.key_chat_messagePanelSend);
-        fallbackKeys.put(key_telegram_color_text, Theme.key_windowBackgroundWhiteBlueText4);
+        fallbackKeys.put(key_telegram_color, Theme.key_featuredStickers_addButton);
+        fallbackKeys.put(key_telegram_color_text, Theme.key_featuredStickers_addButton);
 
 
 

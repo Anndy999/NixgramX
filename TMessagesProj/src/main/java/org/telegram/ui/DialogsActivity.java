@@ -12525,8 +12525,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_TEXTCOLOR | ThemeDescription.FLAG_CHECKTAG, new Class[]{FilterTabsView.TabView.class}, null, null, null, Theme.key_profile_tabText));
                 arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_BACKGROUNDFILTER | ThemeDescription.FLAG_DRAWABLESELECTEDSTATE, new Class[]{FilterTabsView.TabView.class}, null, null, null, Theme.key_profile_tabSelector));
             } else {
-                arrayList.add(new ThemeDescription(filterTabsView, 0, new Class[]{FilterTabsView.class}, new String[]{"selectorDrawable"}, null, null, null, Theme.key_actionBarTabLine));
-                arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_TEXTCOLOR | ThemeDescription.FLAG_CHECKTAG, new Class[]{FilterTabsView.TabView.class}, null, null, null, Theme.key_actionBarTabActiveText));
+                arrayList.add(new ThemeDescription(filterTabsView, 0, new Class[]{FilterTabsView.class}, new String[]{"selectorDrawable"}, null, null, null, Theme.key_featuredStickers_addButton));
+                arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_TEXTCOLOR | ThemeDescription.FLAG_CHECKTAG, new Class[]{FilterTabsView.TabView.class}, null, null, null, Theme.key_featuredStickers_addButton));
                 arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_TEXTCOLOR | ThemeDescription.FLAG_CHECKTAG, new Class[]{FilterTabsView.TabView.class}, null, null, null, Theme.key_actionBarTabUnactiveText));
                 arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_actionBarTabSelector));
             }

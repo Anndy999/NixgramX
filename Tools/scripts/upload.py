@@ -209,6 +209,11 @@ def build_full_changelog_tail() -> str:
     )
 
 
+def skip_public_log() -> bool:
+    """When set, @NixgramX APK caption is version-only (no 「日志」 blockquote)."""
+    return (os.environ.get("SKIP_PUBLIC_LOG") or "").strip().lower() in {"1", "true", "yes"}
+
+
 def get_caption() -> str:
     """NagramX CI-style public APK caption: version + Commit Message blockquote + commit links.
 
@@ -223,6 +228,9 @@ def get_caption() -> str:
         pre = f"Dev version. {pre}"
     else:
         pre = f"Release version. {pre}"
+
+    if skip_public_log():
+        return html.escape(pre)
 
     caption = html.escape(pre) + "\n\n"
     caption += "Commit Message:\n"

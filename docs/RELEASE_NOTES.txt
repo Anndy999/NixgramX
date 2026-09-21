@@ -1,3 +1,14 @@
+NixgramX Beta - Telegram 12.10.3 (1349)
+
+- Home title, folder selected tab and bottom-tab selected state now follow the
+  same colour as Theme 取色 / the compose FAB (`featuredStickers_addButton`).
+  The FAB implements Colorable so picking an accent rebuilds its fill.
+
+Test focus:
+- Appearance → theme 取色: title, Unread pill, bottom「聊天」and the + button
+  must share that colour. Repeat on Day and Monet Light.
+- Glass capsules stay light; they must not fill with the accent.
+
 NixgramX Beta - Telegram 12.10.3 (1348)
 
 - Fixed home-screen 取色 on Monet/custom accents: the NixgramX title, folder

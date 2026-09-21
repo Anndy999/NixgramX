@@ -299,14 +299,32 @@ class GlassTargetClampSourceTest(unittest.TestCase):
         self.assertTrue('isTooBrightForDarkGlass(' in clamp,
                         'dark chrome must still clamp bright glass_target fills')
 
-    def test_home_wordmark_follows_accent_not_body_text(self):
+    def test_home_chrome_follows_theme_picker_accent(self):
         theme = (UI / 'ActionBar/Theme.java').read_text(encoding='utf-8')
-        self.assertTrue(
-            'fallbackKeys.put(key_telegram_color_dialogsLogo, key_windowBackgroundWhiteBlueHeader);' in theme,
-            'NixgramX wordmark must fall back to the accent header colour, not body text')
+        for key, why in (
+            ('key_telegram_color_dialogsLogo', 'NixgramX wordmark'),
+            ('key_telegram_color', 'fork accent'),
+            ('key_telegram_color_text', 'fork accent text'),
+            ('key_glass_tabSelected', 'bottom-tab selected glyph'),
+            ('key_glass_tabSelectedText', 'bottom-tab selected label'),
+        ):
+            needle = f'fallbackKeys.put({key}, '
+            self.assertIn('key_featuredStickers_addButton', theme.split(needle, 1)[-1][:80],
+                          f'{why} ({key}) must fall back to featuredStickers_addButton (theme 取色 / FAB)')
         self.assertTrue(
             'fallbackKeys.put(key_telegram_color_dialogsLogo, key_windowBackgroundWhiteBlackText);' not in theme,
-            'wordmark still falls back to body text, so Monet 取色 cannot recolour it')
+            'wordmark still falls back to body text')
+        self.assertTrue(
+            'fallbackKeys.put(key_telegram_color_dialogsLogo, key_windowBackgroundWhiteBlueHeader);' not in theme,
+            'wordmark still falls back to the header token instead of the picker accent')
+        fab = (UI / 'Components/FragmentFloatingButton.java').read_text(encoding='utf-8')
+        self.assertTrue('implements FactorAnimator.Target, Theme.Colorable' in fab,
+                        'compose FAB must implement Colorable so 取色 rebuilds featuredStickers_addButton')
+        tabs = (UI / 'Components/FilterTabsView.java').read_text(encoding='utf-8')
+        self.assertTrue('tabLineColorKey = Theme.key_featuredStickers_addButton' in tabs,
+                        'folder selected pill must use the theme 取色 key')
+        self.assertTrue('activeTextColorKey = Theme.key_featuredStickers_addButton' in tabs,
+                        'folder selected text must use the theme 取色 key')
         self.assertTrue('themeAccentExclusionKeys.add(key_glass_targetMainTabs);' in theme,
                         'glass_targetMainTabs must not be remapped by accent 取色')
         self.assertTrue('themeAccentExclusionKeys.add(key_glass_targetMainTopPanel);' in theme,
@@ -321,6 +339,9 @@ class GlassTargetClampSourceTest(unittest.TestCase):
             'glass_tabSelectedText=a1_600': 'selected bottom-tab label',
             'glass_tabUnselected=n1_400': 'unselected bottom-tab glyph',
             'telegram_color_dialogsLogo=a1_600': 'NixgramX wordmark',
+            'telegram_color=a1_600': 'fork accent',
+            'telegram_color_text=a1_600': 'fork accent text',
+            'featuredStickers_addButton=a1_600': 'theme 取色 / FAB',
         }
         missing = [f'{key} ({why})' for key, why in required.items() if key not in theme]
         self.assertEqual(missing, [], 'monet_light.attheme is missing home chrome keys: ' + ', '.join(missing))
