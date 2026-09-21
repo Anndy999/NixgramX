@@ -1,3 +1,16 @@
+NixgramX Beta - Telegram 12.10.3 (1348)
+
+- Fixed home-screen 取色 on Monet/custom accents: the NixgramX title, folder
+  strip and bottom tab bar were sampling the accent as a fill (solid green
+  capsules, grey wordmark). Glass targets now stay a surface colour; the
+  wordmark follows the accent header token.
+
+Test focus:
+- Monet Light: title is accent (matches FAB), folder strip is a light glass
+  pill with a selected highlight, bottom bar is a light glass capsule with
+  accent selected tab. Repeat after picking a different wallpaper colour.
+- Day + custom accent: same three surfaces. Dark Monet/night unchanged.
+
 NixgramX Beta - Telegram 12.10.3 (1347)
 
 - Fixed the main-page NixgramX title jumping right after opening a forum group,
