@@ -1,3 +1,15 @@
+NixgramX Beta - Telegram 12.10.3 (1350)
+
+- Home list glass blur no longer recaptures the whole dialogs list on every
+  idle dispatchDraw. Capture is hashed (scroll offset / first-row top / adapter
+  count); unchanged frames skip. onScrolled also skips a zero-delta recapture.
+
+Test focus:
+- Scroll the chat list under the folder strip and bottom bar: glass still
+  tracks content, no frozen smear.
+- Idle home with incoming messages: list updates, no extra hitch from blur.
+- Open a forum two-column pane and scroll; blur still updates.
+
 NixgramX Beta - Telegram 12.10.3 (1349)
 
 - Home title, folder selected tab and bottom-tab selected state now follow the
