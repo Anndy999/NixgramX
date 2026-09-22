@@ -15,9 +15,11 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.core.graphics.drawable.WrappedDrawable;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.jspecify.annotations.Nullable;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceBitmap;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 
@@ -80,6 +82,62 @@ public class Blur3Utils {
             if (needSaveTranslation) {
                 canvas.restore();
             }
+        }
+    }
+
+    private static final int HASH_RECTS = 8;
+    private static final RectF[] hashChildPos = new RectF[HASH_RECTS];
+    private static final RectF[] hashChildPosition = new RectF[HASH_RECTS];
+    private static int hashDepth;
+
+    static {
+        for (int i = 0; i < HASH_RECTS; i++) {
+            hashChildPos[i] = new RectF();
+            hashChildPosition[i] = new RectF();
+        }
+    }
+
+    public static void hashRelativeParent(IBlur3Capture capture, IBlur3Hash builder, RectF position, View view, ViewGroup parent) {
+        hashRelativeParent(capture, builder, position, view, parent, 255);
+    }
+
+    /**
+     * Hash companion of {@link #captureRelativeParent}. A missing view contributes a stable
+     * zero instead of {@link IBlur3Hash#unsupported()}, because capture draws nothing in that
+     * case and unsupported() would recapture every frame.
+     */
+    public static void hashRelativeParent(IBlur3Capture capture, IBlur3Hash builder, RectF position, View view, ViewGroup parent, int alpha) {
+        if (capture == null || view == null || parent == null || alpha <= 0) {
+            builder.add(0);
+            return;
+        }
+        builder.add(alpha);
+        final int depth = hashDepth;
+        if (depth >= HASH_RECTS) {
+            builder.unsupported();
+            return;
+        }
+        hashDepth = depth + 1;
+        try {
+            final RectF childPos = hashChildPos[depth];
+            if (!ViewPositionWatcher.computeRectInParent(view, parent, childPos)) {
+                builder.add(0);
+                return;
+            }
+            builder.add(1);
+            builder.addF(childPos.left);
+            builder.addF(childPos.top);
+            if (view instanceof RecyclerView) {
+                final RecyclerView recyclerView = (RecyclerView) view;
+                builder.add(recyclerView.computeHorizontalScrollOffset());
+                builder.add(recyclerView.computeVerticalScrollOffset());
+            }
+            final RectF childPosition = hashChildPosition[depth];
+            childPosition.set(position);
+            childPosition.offset(-childPos.left, -childPos.top);
+            capture.captureCalculateHash(builder, childPosition);
+        } finally {
+            hashDepth = depth;
         }
     }
 

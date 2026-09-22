@@ -294,6 +294,7 @@ import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
@@ -6242,10 +6243,24 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         bottomButton2Container.setTranslationY(dp(69));
         contentView.addView(bottomButton2Container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL));
 
-        iBlur3Capture = (c, p) -> {
-            listViewCapture.capture(c, p);
-            if (sharedMediaLayout.iBlur3Capture != null) {
-                sharedMediaLayout.iBlur3Capture.capture(c, p);
+        iBlur3Capture = new IBlur3Capture() {
+            @Override
+            public void capture(Canvas canvas, RectF position) {
+                listViewCapture.capture(canvas, position);
+                if (sharedMediaLayout.iBlur3Capture != null) {
+                    sharedMediaLayout.iBlur3Capture.capture(canvas, position);
+                }
+            }
+
+            @Override
+            public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+                listViewCapture.captureCalculateHash(builder, position);
+                if (sharedMediaLayout.iBlur3Capture != null) {
+                    builder.add(1);
+                    sharedMediaLayout.iBlur3Capture.captureCalculateHash(builder, position);
+                } else {
+                    builder.add(0);
+                }
             }
         };
 

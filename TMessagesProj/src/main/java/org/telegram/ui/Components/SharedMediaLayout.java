@@ -19,6 +19,7 @@ import android.content.DialogInterface;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.RectF;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Outline;
@@ -141,6 +142,7 @@ import org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
@@ -3830,14 +3832,36 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             storiesContainer.setInitialTabId(initialStoryAlbumId);
         }
 
-        iBlur3Capture = (canvas, position) -> {
-            for (MediaPage mediaPage : mediaPages) {
-                if (mediaPage.iBlur3Capture != null) {
-                    mediaPage.iBlur3Capture.capture(canvas, position);
+        iBlur3Capture = new IBlur3Capture() {
+            @Override
+            public void capture(Canvas canvas, RectF position) {
+                for (MediaPage mediaPage : mediaPages) {
+                    if (mediaPage.iBlur3Capture != null) {
+                        mediaPage.iBlur3Capture.capture(canvas, position);
+                    }
+                }
+                if (giftsContainer != null && giftsContainer.iBlur3Capture != null) {
+                    giftsContainer.iBlur3Capture.capture(canvas, position);
                 }
             }
-            if (giftsContainer != null && giftsContainer.iBlur3Capture != null) {
-                giftsContainer.iBlur3Capture.capture(canvas, position);
+
+            @Override
+            public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+                builder.add(mediaPages.length);
+                for (MediaPage mediaPage : mediaPages) {
+                    if (mediaPage.iBlur3Capture != null) {
+                        builder.add(1);
+                        mediaPage.iBlur3Capture.captureCalculateHash(builder, position);
+                    } else {
+                        builder.add(0);
+                    }
+                }
+                if (giftsContainer != null && giftsContainer.iBlur3Capture != null) {
+                    builder.add(1);
+                    giftsContainer.iBlur3Capture.captureCalculateHash(builder, position);
+                } else {
+                    builder.add(0);
+                }
             }
         };
     }

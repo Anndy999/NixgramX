@@ -106,6 +106,7 @@ import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
@@ -650,7 +651,7 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
                 if (isDragByGesture) {
                     selectTab(Math.round(position), true);
                 }
-                blur3_InvalidateBlur();
+                blurCapturesDirty = true;
                 checkUi_actionBar();
             }
 
@@ -659,7 +660,7 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
                 super.onScrollEnd();
                 selectTab(viewPagerFixed.getCurrentPosition(), true);
                 setGestureSelectedOverride(0, false);
-                blur3_InvalidateBlur();
+                blurCapturesDirty = true;
             }
 
             @Override
@@ -749,7 +750,12 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
             @Override
             protected void dispatchDraw(@NonNull Canvas canvas) {
                 if (Build.VERSION.SDK_INT >= 31 && scrollableViewNoiseSuppressor != null) {
-                    blur3_InvalidateBlur();
+                    if (getThemedColor(Theme.key_windowBackgroundWhite) != lastBlurCaptureColor) {
+                        blurCapturesDirty = true;
+                    }
+                    if (blurCapturesDirty) {
+                        blur3_InvalidateBlur();
+                    }
 
                     final int width = getMeasuredWidth();
                     final int height = getMeasuredHeight();
@@ -809,24 +815,26 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         listBlur3Capture = new ViewGroupPartRenderer(recyclerListView, contentLayout, recyclerListView::drawChild);
         if (boostLayout != null) {
             boostLayout.iBlur3Capture = new ViewGroupPartRenderer(boostLayout.listView, contentLayout, boostLayout.listView::drawChild);
+            watchBlurList(boostLayout.listView);
             boostLayout.listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null && (dx != 0 || dy != 0)) {
                         scrollableViewNoiseSuppressor.onScrolled(dx, dy);
-                        blur3_InvalidateBlur();
+                        blurCapturesDirty = true;
                     }
                 }
             });
         }
         if (monetizationLayout != null) {
             monetizationLayout.iBlur3Capture = new ViewGroupPartRenderer(monetizationLayout.listView, contentLayout, monetizationLayout.listView::drawChild);
+            watchBlurList(monetizationLayout.listView);
             monetizationLayout.listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null && (dx != 0 || dy != 0)) {
                         scrollableViewNoiseSuppressor.onScrolled(dx, dy);
-                        blur3_InvalidateBlur();
+                        blurCapturesDirty = true;
                     }
                 }
             });
@@ -868,6 +876,33 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
                     //canvas.translate(fragmentPosition.left, fragmentPosition.top);
                     cap.capture(canvas, position);
                     canvas.restore();
+                }
+            }
+
+            @Override
+            public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+                builder.add(getThemedColor(Theme.key_windowBackgroundWhite));
+                for (int a = 0; a < 3; a++) {
+                    IBlur3Capture cap = null;
+                    View view = null;
+                    if (a == 0) {
+                        cap = listBlur3Capture;
+                        view = recyclerListView;
+                    } else if (a == 1 && boostLayout != null) {
+                        cap = boostLayout.iBlur3Capture;
+                        view = boostLayout;
+                    } else if (monetizationLayout != null) {
+                        cap = monetizationLayout.iBlur3Capture;
+                        view = monetizationLayout;
+                    }
+                    if (cap == null || view == null) {
+                        builder.add(0);
+                        continue;
+                    }
+                    builder.add(1);
+                    // capture() ignores a failed computeRectInParent (the continue is commented out).
+                    // Do not call unsupported() here or every frame recaptures.
+                    cap.captureCalculateHash(builder, position);
                 }
             }
         };
@@ -920,6 +955,7 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         };
         recyclerListView.setItemAnimator(null);
 
+        watchBlurList(recyclerListView);
         recyclerListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -928,9 +964,9 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
                         loadMessages();
                     }
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null && (dx != 0 || dy != 0)) {
                     scrollableViewNoiseSuppressor.onScrolled(dx, dy);
-                    blur3_InvalidateBlur();
+                    blurCapturesDirty = true;
                 }
             }
         });
@@ -3627,6 +3663,8 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
     private final @NonNull BlurredBackgroundDrawableViewFactory iBlur3FactoryLiquidGlass;
 
     private IBlur3Capture iBlur3Capture;
+    private boolean blurCapturesDirty = true;
+    private int lastBlurCaptureColor;
 
     private final ArrayList<RectF> iBlur3Positions = new ArrayList<>();
     private final RectF iBlur3PositionActionBar = new RectF();
@@ -3635,8 +3673,28 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
         iBlur3Positions.add(iBlur3PositionMainTabs);
     }
 
+    private void watchBlurList(RecyclerView listView) {
+        if (listView == null) {
+            return;
+        }
+        listView.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
+            @Override
+            public void onChildViewAttachedToWindow(@NonNull View view) {
+                blurCapturesDirty = true;
+            }
+
+            @Override
+            public void onChildViewDetachedFromWindow(@NonNull View view) {
+                blurCapturesDirty = true;
+            }
+        });
+    }
+
     private void blur3_InvalidateBlur() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null || fragmentView == null) {
+            return;
+        }
+        if (fragmentView.getMeasuredWidth() <= 0 || fragmentView.getMeasuredHeight() <= 0) {
             return;
         }
 
@@ -3650,5 +3708,7 @@ public class StatisticActivity extends BaseFragment implements NotificationCente
 
         scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3Positions, 2);
         scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, fragmentView.getMeasuredWidth(), fragmentView.getMeasuredHeight());
+        lastBlurCaptureColor = getThemedColor(Theme.key_windowBackgroundWhite);
+        blurCapturesDirty = false;
     }
 }

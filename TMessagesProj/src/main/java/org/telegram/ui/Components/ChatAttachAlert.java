@@ -1350,17 +1350,41 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
         iBlur3FactoryFade = new BlurredBackgroundDrawableViewFactory(iBlur3SourceColor);
 
-        iBlur3Capture = (canvas, position) -> {
-            for (int a = 0; a < 2; a++) {
+        iBlur3Capture = new IBlur3Capture() {
+            @Override
+            public void capture(Canvas canvas, RectF position) {
+                for (int a = 0; a < 2; a++) {
+                    drawAttachLayout(canvas, position, a, false, null);
+                }
+            }
+
+            @Override
+            public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+                for (int a = 0; a < 2; a++) {
+                    drawAttachLayout(null, position, a, true, builder);
+                }
+            }
+
+            private void drawAttachLayout(Canvas canvas, RectF position, int a, boolean hash, IBlur3Hash builder) {
                 AttachAlertLayout layout = a == 0 ? currentAttachLayout : nextAttachLayout;
-                if (layout != null && layout.iBlur3Capture != null && layout.getVisibility() == View.VISIBLE) {
-                    final float alphaF;
-                    if (a == 0 && nextAttachLayout != null && nextAttachLayout.getVisibility() == View.VISIBLE) {
-                        alphaF =  layout.getAlpha() * (1f - nextAttachLayout.getAlpha());
-                    } else {
-                        alphaF = layout.getAlpha();
+                if (layout == null || layout.iBlur3Capture == null || layout.getVisibility() != View.VISIBLE) {
+                    if (hash) {
+                        builder.add(0);
                     }
-                    final int alpha = (int) (alphaF * 255);
+                    return;
+                }
+                final float alphaF;
+                if (a == 0 && nextAttachLayout != null && nextAttachLayout.getVisibility() == View.VISIBLE) {
+                    alphaF = layout.getAlpha() * (1f - nextAttachLayout.getAlpha());
+                } else {
+                    alphaF = layout.getAlpha();
+                }
+                final int alpha = (int) (alphaF * 255);
+                if (hash) {
+                    builder.add(1);
+                    builder.addF(alphaF);
+                    Blur3Utils.hashRelativeParent(layout.iBlur3Capture, builder, position, layout.iBlur3CaptureView, getContainerView(), alpha);
+                } else {
                     Blur3Utils.captureRelativeParent(layout.iBlur3Capture, canvas, position, layout.iBlur3CaptureView, getContainerView(), alpha);
                 }
             }
