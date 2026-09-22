@@ -185,8 +185,17 @@ public class SelectAudioAlert extends BottomSheetWithRecyclerListView implements
         }
         iBlur3FactoryFade = new BlurredBackgroundDrawableViewFactory(iBlur3SourceColor);
 
-        iBlur3Capture = (canvas, position) -> {
-            Blur3Utils.captureRelativeParent(recyclerListView, canvas, position, recyclerListView, getContainerView(), 0xFF);
+        iBlur3Capture = new IBlur3Capture() {
+            @Override
+            public void capture(Canvas canvas, RectF position) {
+                Blur3Utils.captureRelativeParent(recyclerListView, canvas, position, recyclerListView, getContainerView(), 0xFF);
+            }
+
+            @Override
+            public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+                builder.add(recyclerListView.computeVerticalScrollOffset());
+                Blur3Utils.hashRelativeParent(recyclerListView, builder, position, recyclerListView, getContainerView(), 0xFF);
+            }
         };
 
         fadeView = new ChatAttachAlert.SearchFadeView(context, Theme.key_windowBackgroundGray, resourcesProvider);
