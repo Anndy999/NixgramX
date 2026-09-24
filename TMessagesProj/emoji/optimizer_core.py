@@ -291,4 +291,3 @@ def map_jobs(fn, jobs, workers, label):
             if (i + 1) % 500 == 0:
                 print(f'{label}: {i + 1}; {time.monotonic() - start:.1f}s', flush=True)
     return out
-

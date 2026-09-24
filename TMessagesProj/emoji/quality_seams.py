@@ -16,4 +16,3 @@ def passes_seam(image,baseline,original,axis,cut):
   source=sample(original);a=np.abs(uniform_filter1d(sample(image)-source,5,axis=0));b=np.abs(uniform_filter1d(sample(baseline)-source,5,axis=0))
   if np.any(a[mask]>np.maximum(b[mask]*2.,4.)):return False
  return True
-
