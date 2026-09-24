@@ -1,6 +1,5 @@
 package org.telegram.messenger.voip;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Point;
@@ -26,11 +25,10 @@ import org.webrtc.SurfaceTextureHelper;
 import org.webrtc.VideoCapturer;
 import org.webrtc.voiceengine.WebRtcAudioRecord;
 
-@TargetApi(18)
 public class VideoCapturerDevice {
 
-    private static final int CAPTURE_WIDTH = Build.VERSION.SDK_INT <= 19 ? 480 : 1280;
-    private static final int CAPTURE_HEIGHT = Build.VERSION.SDK_INT <= 19 ? 320 : 720;
+    private static final int CAPTURE_WIDTH = 1280;
+    private static final int CAPTURE_HEIGHT = 720;
     private static final int CAPTURE_FPS = 30;
 
     public static EglBase eglBase;
@@ -366,7 +364,7 @@ public class VideoCapturerDevice {
         });
     }
 
-    private EglBase.Context getSharedEGLContext() {
+    private static EglBase.Context getSharedEGLContext() {
         if (eglBase == null) {
             eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
         }
