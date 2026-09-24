@@ -1489,13 +1489,23 @@ public class LocaleController {
         if (TextUtils.isEmpty(key)) {
             return "LOC_ERR:" + key;
         }
-        // Nix keep: prefer generated localization assets for key-only callers (fix 8538c3d46)
-        // before falling through to official getStringV2 path (res=0).
+        // Nix keep (8538c3d46): generated localization assets first for key-only
+        // callers (N-Settings / resource shrinker). Then Android resource-table
+        // fallback via getStringResId — required by Tools/stability coverage.
+        // Official 12.10.4 collapses this to getString(key, 0)/getStringV2 only.
         String value = getInstance().getLocalizationAssetString(key);
         if (value != null) {
             return value;
         }
-        return getString(key, 0);
+        int resourceId = getStringResId(key);
+        if (resourceId != 0) {
+            return getString(key, resourceId);
+        }
+        return getServerString(key);
+    }
+
+    public static int getStringResId(String key) {
+        return ApplicationLoader.applicationContext.getResources().getIdentifier(key, "string", ApplicationLoader.applicationContext.getPackageName());
     }
 
     public static String nullable(String val) {
