@@ -214,12 +214,8 @@ public class ProxySettingsActivity extends BaseFragment {
 
                     currentProxyInfo.settings = ProxySettings.builder()
                         .setType(currentType)
-                        .setAddress(currentType == ProxySettings.Type.WEB
-                                ? WebProxyTransport.normalizeHost(inputFields[FIELD_IP].getText().toString())
-                                : inputFields[FIELD_IP].getText().toString())
-                        .setPort(currentType == ProxySettings.Type.WEB
-                                ? 443
-                                : Utilities.parseInt(inputFields[FIELD_PORT].getText().toString()))
+                        .setAddress(inputFields[FIELD_IP].getText().toString())
+                        .setPort(currentType == ProxySettings.Type.WEB ? 0 : Utilities.parseInt(inputFields[FIELD_PORT].getText().toString()))
                         .setUser(currentType == ProxySettings.Type.SOCKS5 ? inputFields[FIELD_USER].getText().toString() : "")
                         .setPassword(currentType == ProxySettings.Type.SOCKS5 ? inputFields[FIELD_PASSWORD].getText().toString() : "")
                         .setSecret(currentType != ProxySettings.Type.SOCKS5 ? inputFields[FIELD_SECRET].getText().toString() : "")
