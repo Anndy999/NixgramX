@@ -34,7 +34,6 @@ import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
-import android.graphics.RecordingCanvas;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -138,12 +137,12 @@ import org.telegram.ui.Components.ListView.RecyclerListViewWithOverlayDraw;
 import org.telegram.ui.Components.Premium.PremiumButtonView;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
-import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
 import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
+import org.telegram.ui.Components.blur3.utils.Blur3Utils;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
@@ -156,6 +155,7 @@ import org.telegram.ui.Components.inset.InAppKeyboardInsetView;
 import org.telegram.ui.ContentPreviewViewer;
 import org.telegram.ui.StickersActivity;
 import org.telegram.ui.Stories.recorder.ButtonWithCounterView;
+import org.telegram.utils.glass.GlassEngine;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -1565,6 +1565,8 @@ public class EmojiView extends FrameLayout implements
     private final BlurredBackgroundSourceColor blurredBackgroundSourceColor;
     private final BlurredBackgroundDrawableViewFactory blurredBackgroundDrawableFactory;
 
+    private final GlassEngine glassEngine = new GlassEngine();
+
     public EmojiView(BaseFragment fragment, boolean needAnimatedEmoji, boolean needStickers, boolean needGif, final Context context, boolean needSearch, final TLRPC.ChatFull chatFull, ViewGroup parentView, boolean shouldDrawBackground, Theme.ResourcesProvider resourcesProvider, boolean frozenAtStart, boolean glassDesign) {
         super(context);
         this.shouldDrawBackground = shouldDrawBackground;
@@ -1653,15 +1655,8 @@ public class EmojiView extends FrameLayout implements
             MediaDataController.getInstance(currentAccount).checkFeaturedEmoji();
             animatedEmojiTextColorFilter = new PorterDuffColorFilter(getThemedColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN);
         }
-        emojiGridView = new EmojiGridView(context) {
-            @Override
-            public boolean onInterceptTouchEvent(MotionEvent event) {
-                if (ignorePagerScroll) {
-                    return false;
-                }
-                return super.onInterceptTouchEvent(event);
-            }
-        };
+        emojiGridView = new EmojiGridView(context);
+        glassEngine.addScrolledView(emojiGridView);
         DefaultItemAnimator emojiItemAnimator = new DefaultItemAnimator();
         emojiItemAnimator.setAddDelay(0);
         emojiItemAnimator.setAddDuration(220);
@@ -2043,6 +2038,7 @@ public class EmojiView extends FrameLayout implements
                         super.requestLayout();
                     }
                 };
+                glassEngine.addScrolledView(gifGridView);
                 gifGridView.setClipToPadding(false);
                 gifGridView.setLayoutManager(gifLayoutManager = new GifLayoutManager(context));
                 gifGridView.addItemDecoration(new RecyclerView.ItemDecoration() {
@@ -2066,7 +2062,6 @@ public class EmojiView extends FrameLayout implements
                     }
                 });
                 gifGridView.setPadding(0, searchFieldHeight, 0, AndroidUtilities.dp(44) + bottomInset);
-                gifGridView.setOverScrollMode(RecyclerListView.OVER_SCROLL_NEVER);
                 ((SimpleItemAnimator) gifGridView.getItemAnimator()).setSupportsChangeAnimations(false);
                 gifGridView.setAdapter(gifAdapter = new GifAdapter(context, true));
                 gifSearchAdapter = new GifAdapter(context);
@@ -2268,7 +2263,14 @@ public class EmojiView extends FrameLayout implements
                         }
                     }
                 }
+
+                @Override
+                protected void dispatchDraw(Canvas canvas) {
+                    super.dispatchDraw(canvas);
+                    glassEngine.invalidate();
+                }
             };
+            glassEngine.addScrolledView(stickersGridView);
             stickersGridView.setLayoutManager(stickersLayoutManager = new GridLayoutManager(context, 5) {
                 @Override
                 public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, int position) {
@@ -2633,6 +2635,8 @@ public class EmojiView extends FrameLayout implements
                 super.setCurrentItem(item, smoothScroll);
             }
         };
+        glassEngine.addScrolledView(pager);
+        pager.setOverScrollMode(OVER_SCROLL_NEVER);
         pager.setAdapter(emojiPagerAdapter = new EmojiPagesAdapter());
 
         backspaceButton = new ImageView(context) {
@@ -2855,71 +2859,54 @@ public class EmojiView extends FrameLayout implements
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            scrollableViewNoiseSuppressor = new DownscaleScrollableNoiseSuppressor();
             blurredBackgroundSourceRenderNode = new BlurredBackgroundSourceRenderNode(null);
+            blurredBackgroundSourceRenderNode.setUnderSource(blurredBackgroundSourceColor);
+            blurredBackgroundSourceRenderNode.setScrollableNoiseSuppressor(scrollableViewNoiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
+
             blurredBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(blurredBackgroundSourceRenderNode);
             blurredBackgroundDrawableFactory.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+            blurredBackgroundDrawableFactory.setOutset(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? dp(8) : dp(48));
+            blurredBackgroundDrawableFactory.setGlassEngine(glassEngine);
 
-            scrollableViewNoiseSuppressor = new DownscaleScrollableNoiseSuppressor();
+            // glassEngine.addAdditionalInvalidationCondition(() -> !scrollableViewNoiseSuppressor.hasDisplayLists(DownscaleScrollableNoiseSuppressor.DRAW_GLASS));
         } else {
             blurredBackgroundSourceRenderNode = null;
             blurredBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(blurredBackgroundSourceColor);
+            blurredBackgroundDrawableFactory.setGlassEngine(glassEngine);
 
             scrollableViewNoiseSuppressor = null;
         }
 
+        // Nix idle skip: tab movement marks dirty. Source offsets are owned by GlassEngine,
+        // so this watcher is not installed as the factory source root.
         ViewPositionWatcher viewPositionWatcher = new ViewPositionWatcher(this);
         if (typeTabs != null) {
             viewPositionWatcher.subscribe(typeTabs, this, (v, p) -> blurCapturesDirty = true);
         }
 
-        blurredBackgroundDrawableFactory.setSourceRootView(viewPositionWatcher, this);
-
-        final IBlur3Capture[] blurCaptures = new IBlur3Capture[3];
-        if (emojiGridView != null) {
-            emojiGridView.addEdgeEffectListener(() -> emojiGridView.postOnAnimation(this::invalidateBlurCaptures));
-            blurCaptures[0] = new ViewGroupPartRenderer(emojiGridView, this, emojiGridView::drawChild);
-        }
-        if (gifGridView != null) {
-            gifGridView.addEdgeEffectListener(() -> gifGridView.postOnAnimation(this::invalidateBlurCaptures));
-            blurCaptures[1] = new ViewGroupPartRenderer(gifGridView, this, gifGridView::drawChild);
-        }
-        if (stickersGridView != null) {
-            stickersGridView.addEdgeEffectListener(() -> stickersGridView.postOnAnimation(this::invalidateBlurCaptures));
-            blurCaptures[2] = new ViewGroupPartRenderer(stickersGridView, this, (canvas, child, drawingTime) -> {
-                if (child instanceof RecyclerListViewWithOverlayDraw.OverlayView) {
-                    RecyclerListViewWithOverlayDraw.OverlayView overlayView = (RecyclerListViewWithOverlayDraw.OverlayView) child;
-                    canvas.save();
-                    canvas.translate(child.getX(), child.getY());
-                    overlayView.preDraw(stickersGridView, canvas);
-                    canvas.restore();
-                }
-
-                return stickersGridView.drawChild(canvas, child, drawingTime);
-            });
-        }
         blurCaptureMethod = new IBlur3Capture() {
             @Override
             public void capture(Canvas canvas, RectF position) {
-                for (IBlur3Capture capture : blurCaptures) {
-                    if (capture != null) {
-                        capture.capture(canvas, position);
-                    }
-                }
+                Blur3Utils.captureRelativeParent(emojiGridView, canvas, position, emojiGridView, EmojiView.this);
+                Blur3Utils.captureRelativeParent(gifGridView, canvas, position, gifGridView, EmojiView.this);
+                Blur3Utils.captureRelativeParent(stickersGridView, canvas, position, stickersGridView, EmojiView.this);
             }
 
             @Override
             public void captureCalculateHash(IBlur3Hash builder, RectF position) {
                 builder.add(pager != null ? pager.getCurrentItem() : -1);
                 builder.add(pager != null ? pager.getScrollX() : 0);
-                for (IBlur3Capture capture : blurCaptures) {
-                    if (capture != null) {
-                        capture.captureCalculateHash(builder, position);
-                    }
-                }
+                Blur3Utils.hashRelativeParent(emojiGridView, builder, position, emojiGridView, EmojiView.this);
+                Blur3Utils.hashRelativeParent(gifGridView, builder, position, gifGridView, EmojiView.this);
+                Blur3Utils.hashRelativeParent(stickersGridView, builder, position, stickersGridView, EmojiView.this);
             }
         };
 
         setBlurredBackgroundDrawableFactory(blurredBackgroundDrawableFactory);
+
+        glassEngine.setRoot(this);
+        glassEngine.setGlassInvalidationListener(this::invalidateBlurCaptures);
     }
 
     private boolean mForceHideBackspaceButton;
@@ -3027,6 +3014,10 @@ public class EmojiView extends FrameLayout implements
 
         @Override
         public boolean onInterceptTouchEvent(MotionEvent event) {
+            if (ignorePagerScroll) {
+                return false;
+            }
+
             boolean result = ContentPreviewViewer.getInstance().onInterceptTouchEvent(event, this, 0, contentPreviewViewerDelegate, resourcesProvider);
             return super.onInterceptTouchEvent(event) || result;
         }
@@ -3174,6 +3165,7 @@ public class EmojiView extends FrameLayout implements
         @Override
         protected void dispatchDraw(Canvas canvas) {
             super.dispatchDraw(canvas);
+            glassEngine.invalidate();
 
             if (lastChildCount != getChildCount()) {
                 updateEmojiDrawables();
@@ -4526,24 +4518,17 @@ public class EmojiView extends FrameLayout implements
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && blurredBackgroundSourceRenderNode != null && scrollableViewNoiseSuppressor != null) {
-            if (blurCapturesDirty) {
-                invalidateBlurCaptures();
-            }
-
-            final RecordingCanvas c = blurredBackgroundSourceRenderNode.beginRecording(getMeasuredWidth(), getMeasuredHeight());
-            c.drawColor(getThemedColor(Theme.key_windowBackgroundWhite));
-            if (SharedConfig.chatBlurEnabled()) {
-                scrollableViewNoiseSuppressor.draw(c, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
-            }
-            blurredBackgroundSourceRenderNode.endRecording();
-        }
-
         updateBottomTabContainerPosition();
         super.dispatchDraw(canvas);
     }
 
     private boolean blurCapturesDirty = true;
+
+    private static final int GLASS_RECAPTURE_FLAGS =
+        GlassEngine.FLAG_INVALIDATED_SCROLL
+            | GlassEngine.FLAG_INVALIDATED_SCROLL_EDGES
+            | GlassEngine.FLAG_INVALIDATED_POSITIONS
+            | GlassEngine.FLAG_INVALIDATED_THEMED;
 
     private void onBlurPanelScrolled(int dx, int dy) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
@@ -4553,10 +4538,16 @@ public class EmojiView extends FrameLayout implements
             return;
         }
         scrollableViewNoiseSuppressor.onScrolled(dx, dy);
-        invalidateBlurCaptures();
+        blurCapturesDirty = true;
     }
 
-    private void invalidateBlurCaptures() {
+    private void invalidateBlurCaptures(int flags) {
+        // Grid dispatchDraw calls glassEngine.invalidate() every frame (FLAG_INVALIDATED_OTHER).
+        // Recapture on scroll/position/theme, or when Nix marked the panel dirty.
+        // Hash inside invalidateResultRenderNodes still skips an unchanged capture.
+        if ((flags & GLASS_RECAPTURE_FLAGS) == 0 && !blurCapturesDirty) {
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && scrollableViewNoiseSuppressor != null) {
             if (getWidth() <= 0 || getHeight() <= 0) {
                 blurCapturesDirty = true;
@@ -4570,7 +4561,7 @@ public class EmojiView extends FrameLayout implements
             blurredRectF.right = getMeasuredWidth();
             blurredRectF.bottom = Math.min(blurredRectF.bottom, getMeasuredHeight());
 
-            scrollableViewNoiseSuppressor.setupRenderNodes(blurredRectList, 1);
+            scrollableViewNoiseSuppressor.setupRenderNodes(blurredRectList, blurredRectF.isEmpty() ? 0 : 1);
             scrollableViewNoiseSuppressor.invalidateResultRenderNodes(blurCaptureMethod, getWidth(), getHeight());
             blurCapturesDirty = false;
         }
