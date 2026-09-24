@@ -1,4 +1,4 @@
-package org.telegram.proxy;
+package org.telegram.utils.proxy;
 
 import android.annotation.SuppressLint;
 import android.graphics.Color;

@@ -1,4 +1,4 @@
-package org.telegram.proxy;
+package org.telegram.utils.proxy;
 
 import android.content.SharedPreferences;
 import android.net.Uri;

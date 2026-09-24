@@ -1,4 +1,4 @@
-package org.telegram.proxy;
+package org.telegram.utils.proxy;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.tgnet.RequestTimeDelegate;
