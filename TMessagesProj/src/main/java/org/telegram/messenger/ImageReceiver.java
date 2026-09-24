@@ -3094,7 +3094,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                         fileDrawable.stop();
                     }
                 } else {
-                    if (fileDrawable.getParents().isEmpty()) {
+                    if (!fileDrawable.hasParents()) {
                         fileDrawable.recycle();
                     }
                 }
