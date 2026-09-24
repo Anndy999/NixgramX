@@ -301,7 +301,7 @@ public:
             for (auto &videoSegment : segment->video) {
                 videoSegment->isPlaying = true;
                 cancelPendingVideoQualityUpdate(videoSegment);
-                
+
                 std::shared_ptr<VideoStreamingSharedState> sharedVideoState;
                 auto endpointId = videoSegment->part->getActiveEndpointId();
                 if (endpointId.has_value()) {
@@ -313,7 +313,7 @@ public:
                         _sharedVideoStateByEndpointId.insert(std::make_pair(endpointId.value(), sharedVideoState));
                     }
                 }
-                
+
                 auto frame = videoSegment->part->getFrameAtRelativeTimestamp(sharedVideoState.get(), relativeTimestamp);
                 if (frame) {
                     if (videoSegment->lastFramePts != frame->pts) {
@@ -335,7 +335,7 @@ public:
 
             for (auto &videoSegment : segment->unified) {
                 videoSegment->isPlaying = true;
-                
+
                 absl::optional<std::string> endpointId = "unified";
                 std::shared_ptr<VideoStreamingSharedState> sharedVideoState;
                 if (endpointId.has_value()) {
@@ -435,15 +435,15 @@ public:
                     if (audioChannels.empty()) {
                         break;
                     }
-                    
+
                     if (audioChannels[0].numSamples < 480) {
                         RTC_LOG(LS_INFO) << "render: got less than 10ms of audio data (" << audioChannels[0].numSamples << " samples)";
                     }
-                    
+
                     int numChannels = std::min(2, (int)audioChannels.size());
 
                     webrtc::AudioFrame frameOut;
-                    
+
                     if (numChannels == 1) {
                         frameOut.UpdateFrame(0, audioChannels[0].pcmData.data(), audioChannels[0].pcmData.size(), 48000, webrtc::AudioFrame::SpeechType::kNormalSpeech, webrtc::AudioFrame::VADActivity::kVadActive, numChannels);
                     } else if (numChannels == _audioRingBufferNumChannels) {
@@ -637,7 +637,7 @@ public:
                             }
 
                             strong->_pendingRequestTimeTask.reset();
-                            
+
                             int64_t adjustedTimestamp = 0;
                             if (timestamp > 0) {
                                 adjustedTimestamp = (int64_t)((timestamp / strong->_segmentDuration * strong->_segmentDuration) - strong->_segmentBufferDuration);
@@ -878,7 +878,7 @@ public:
 
                                         strong->_nextSegmentTimestamp = responseTimestampBoundary;
                                     }
-                                    
+
                                     strong->discardAllPendingSegments();
                                     strong->requestSegmentsIfNeeded();
                                     strong->checkPendingSegments();

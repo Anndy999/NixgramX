@@ -71,10 +71,10 @@ void AudioCapturePostProcessor::Process(webrtc::AudioBuffer *originalBuffer) {
     if (!_denoiseState) {
         return;
     }
-    
+
     webrtc::AudioBuffer *buffer = originalBuffer;
     bool freeBuffer = false;
-    
+
     if (buffer->num_frames() != _frameSamples.size()) {
         //TODO:optimize by running processing in another thread
         freeBuffer = true;
@@ -180,7 +180,7 @@ void AudioCapturePostProcessor::Process(webrtc::AudioBuffer *originalBuffer) {
         }
         _externalAudioSamplesMutex->Unlock();
     }
-    
+
     if (freeBuffer) {
         delete buffer;
     }

@@ -126,7 +126,7 @@ std::optional<IndexStartCodeSizePair> FindNextH26XNaluIndex(const uint8_t* buffe
 struct UnencryptedRange {
     size_t offset = 0;
     size_t size = 0;
-    
+
     UnencryptedRange(size_t offset_, size_t size_) :
     offset(offset_), size(size_) {
     }
@@ -140,7 +140,7 @@ struct UnencryptedRange {
  *
  * This function works with WebRTC's Annex B format H.264 frames and ensures
  * the PPS ID is included in the unencrypted portion.
- * 
+ *
  * The method also ensures that all NAL units start codes are four bytes in length,
  * as WebRTC will always do this on the receiver side.
  *
@@ -169,7 +169,7 @@ std::vector<uint8_t> calculateH264FramePlaintextHeaderSize(rtc::ArrayView<const 
 
     // Track the maximum offset we need to keep unencrypted
     size_t maxOffset = 0;
-    std::vector<size_t> naluToUpdate; 
+    std::vector<size_t> naluToUpdate;
 
     for (const auto& naluIndex : naluIndices) {
         size_t startCodeLength = naluIndex.payload_start_offset - naluIndex.start_offset;
@@ -264,7 +264,7 @@ std::vector<uint8_t> calculateH264FramePlaintextHeaderSize(rtc::ArrayView<const 
     if (offset < frame.size()) {
         std::copy(frame.begin() + offset, frame.end(), frameData.begin() + offset + naluToUpdate.size());
     }
-        
+
     headerSize = static_cast<uint32_t>(maxOffset + naluToUpdate.size());
     return frameData;
 }
@@ -294,13 +294,13 @@ std::vector<uint8_t> calculateVp8FramePlaintextHeaderSize(rtc::ArrayView<const u
         headerSize = 0;
         return std::vector<uint8_t>();
     }
-    
+
     // First byte of VP8 payload header
     uint8_t first_byte = frame[0];
-    
+
     // Check P bit (inverse key frame flag) - bit 7 (0x80)
     bool is_key_frame = (first_byte & P_BIT) == 0;
-    
+
     if (is_key_frame) {
         // For key frames, leave 10 bytes unencrypted to cover the full uncompressed VP8 header
         // This includes the frame dimensions

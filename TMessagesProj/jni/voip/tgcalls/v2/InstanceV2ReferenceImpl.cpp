@@ -475,16 +475,16 @@ public:
         peerConnectionFactoryDependencies.network_monitor_factory = PlatformInterface::SharedInstance()->createNetworkMonitorFactory();
 
         peerConnectionFactoryDependencies.adm = _audioDeviceModule;
-        
+
         webrtc:: AudioProcessingBuilder builder;
         peerConnectionFactoryDependencies.audio_processing = builder.Create();
-        
+
         peerConnectionFactoryDependencies.audio_encoder_factory = webrtc::CreateAudioEncoderFactory<webrtc::AudioEncoderOpus>();
         peerConnectionFactoryDependencies.audio_decoder_factory = webrtc::CreateAudioDecoderFactory<webrtc::AudioDecoderOpus>();
 
         peerConnectionFactoryDependencies.video_encoder_factory = PlatformInterface::SharedInstance()->makeVideoEncoderFactory(true);
         peerConnectionFactoryDependencies.video_decoder_factory = PlatformInterface::SharedInstance()->makeVideoDecoderFactory();
-        
+
         webrtc::EnableMedia(peerConnectionFactoryDependencies);
 
         peerConnectionFactoryDependencies.event_log_factory = std::make_unique<webrtc::RtcEventLogFactory>(peerConnectionFactoryDependencies.task_queue_factory.get());
@@ -659,12 +659,12 @@ public:
         _peerConnectionObserver = std::make_unique<PeerConnectionDelegateAdapter>(std::move(delegateParameters));
 
         peerConnectionDependencies.observer = _peerConnectionObserver.get();
-        
+
         _networkMonitorFactory = PlatformInterface::SharedInstance()->createNetworkMonitorFactory();
         _socketFactory = std::make_unique<rtc::BasicPacketSocketFactory>(_threads->getNetworkThread()->socketserver());
         _networkManager = std::make_unique<rtc::BasicNetworkManager>(_networkMonitorFactory.get(), _threads->getNetworkThread()->socketserver());
         _relayPortFactory = std::make_unique<ReflectorRelayPortFactory>(_rtcServers, false, 0, _threads->getNetworkThread()->socketserver(), getCustomParameterBool(_customParameters, "network_reflector_resolve_remote_candidate_ip"));
-        
+
         auto portAllocator = std::make_unique<cricket::BasicPortAllocator>(_networkManager.get(), _socketFactory.get(), nullptr, _relayPortFactory.get());
 
         if (getCustomParameterBool(_customParameters, "network_disable_stun_when_unconfigured")) {
@@ -1156,7 +1156,7 @@ public:
 
     void beginSignaling() {
         _didBeginNegotiation = true;
-        
+
         if (_encryptionKey.isOutgoing) {
             sendLocalDescription();
         }
@@ -1336,7 +1336,7 @@ public:
             }
         }
     }
-    
+
     void handleRemoteSdp(std::string const &type, std::string const &sdp) {
         webrtc::SdpParseError sdpParseError;
         std::unique_ptr<webrtc::SessionDescriptionInterface> remoteDescription(webrtc::CreateSessionDescription(type, sdp, &sdpParseError));
@@ -1883,12 +1883,12 @@ private:
 
     std::unique_ptr<webrtc::RtcEventLogNull> _eventLog;
     std::unique_ptr<webrtc::TaskQueueFactory> _taskQueueFactory;
-    
+
     std::unique_ptr<rtc::NetworkMonitorFactory> _networkMonitorFactory;
     std::unique_ptr<rtc::BasicPacketSocketFactory> _socketFactory;
     std::unique_ptr<rtc::BasicNetworkManager> _networkManager;
     std::unique_ptr<cricket::RelayPortFactoryInterface> _relayPortFactory;
-    
+
     webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> _peerConnectionFactory;
     std::unique_ptr<PeerConnectionDelegateAdapter> _peerConnectionObserver;
     webrtc::scoped_refptr<webrtc::PeerConnectionInterface> _peerConnection;

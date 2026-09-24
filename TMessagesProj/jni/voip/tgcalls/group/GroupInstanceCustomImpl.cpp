@@ -785,7 +785,7 @@ public:
         webrtc::MutexLock lock(&_mutex);
         _value = value;
     }
-    
+
     GroupLevelValue get() {
         webrtc::MutexLock lock(&_mutex);
         return _value;
@@ -1662,7 +1662,7 @@ public:
             strong->writeStateLogRecords();
 
             strong->beginLogTimer(1000);
-            
+
             //strong->generateVideoKeyframe();
         }, webrtc::TimeDelta::Millis(delayMs));
     }
@@ -1926,7 +1926,7 @@ public:
             }
         });
     }
-    
+
     void generateVideoKeyframe() {
         if (!_outgoingVideoChannel) {
             return;
@@ -2858,7 +2858,7 @@ public:
             _connectionMode = connectionMode;
             _isUnifiedBroadcast = isUnifiedBroadcast;
             onConnectionModeUpdated(previousMode, keepBroadcastIfWasEnabled);
-            
+
             GroupNetworkState effectiveNetworkState = _effectiveNetworkState;
             effectiveNetworkState.connectionMode = _connectionMode;
 

@@ -44,7 +44,7 @@ public:
 
     virtual void Stop() override {
     }
-    
+
     virtual void setIsActive(bool isActive) override {
     }
 
@@ -317,7 +317,7 @@ class PlatformVideoFrame {
 public:
     PlatformVideoFrame() {
     }
-    
+
     virtual ~PlatformVideoFrame() = default;
 };
 
@@ -332,7 +332,7 @@ public:
     virtual std::unique_ptr<rtc::NetworkMonitorFactory> createNetworkMonitorFactory() {
         return nullptr;
     }
-    
+
 	virtual std::unique_ptr<webrtc::VideoEncoderFactory> makeVideoEncoderFactory(bool preferHardwareEncoding = false, bool isScreencast = false) = 0;
 	virtual std::unique_ptr<webrtc::VideoDecoderFactory> makeVideoDecoderFactory() = 0;
 	virtual bool supportsEncoding(const std::string &codecName) = 0;
