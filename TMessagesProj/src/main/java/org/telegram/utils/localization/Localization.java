@@ -1,4 +1,4 @@
-package org.telegram.localization;
+package org.telegram.utils.localization;
 
 import android.content.Context;
 import android.util.SparseArray;
