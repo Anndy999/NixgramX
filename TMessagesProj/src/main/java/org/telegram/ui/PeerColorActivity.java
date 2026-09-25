@@ -139,6 +139,7 @@ import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.BlurredBackgroundWithFadeDrawable;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
@@ -4182,7 +4183,28 @@ public class PeerColorActivity extends BaseFragment implements NotificationCente
     private final @Nullable DownscaleScrollableNoiseSuppressor scrollableViewNoiseSuppressor;
     private final @Nullable BlurredBackgroundSourceRenderNode glassBackgroundSourceRenderNode;
     private final @NonNull BlurredBackgroundDrawableViewFactory glassBackgroundDrawableFactory;
-    private IBlur3Capture iBlur3Capture = this::drawList;
+    private final IBlur3Capture iBlur3Capture = new IBlur3Capture() {
+        @Override
+        public void capture(Canvas canvas, RectF position) {
+            drawList(canvas, position);
+        }
+
+        @Override
+        public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+            hashColorList(namePage != null ? namePage.listView : null, builder, position);
+            hashColorList(profilePage != null ? profilePage.listView : null, builder, position);
+        }
+
+        private void hashColorList(RecyclerListView listView, IBlur3Hash builder, RectF position) {
+            if (listView == null || contentView == null) {
+                builder.add(0);
+                return;
+            }
+            builder.add(listView.computeVerticalScrollOffset());
+            builder.add(listView.computeHorizontalScrollOffset());
+            Blur3Utils.hashRelativeParent(listView, builder, position, listView, contentView);
+        }
+    };
 
     private final ArrayList<RectF> glassDrawablesPositions = new ArrayList<>();
     private final ArrayList<RectF> glassDrawablesPositionsMerged = new ArrayList<>();

@@ -27,8 +27,8 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_version_and_identity(self):
         props = (ROOT / "gradle.properties").read_text(encoding="utf-8")
 
-        self.assertIn("APP_VERSION_CODE=7089", props)
-        self.assertIn("APP_VERSION_NAME=12.10.3", props)
+        self.assertIn("APP_VERSION_CODE=7099", props)
+        self.assertIn("APP_VERSION_NAME=12.10.4", props)
         self.assertIn("NIXGRAMX_VERSION_NAME=12.10.3", props)
         # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
         # on every release. Assert the invariant, not a frozen value: the key

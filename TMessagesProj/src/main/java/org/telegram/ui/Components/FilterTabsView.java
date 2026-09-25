@@ -931,8 +931,8 @@ public class FilterTabsView extends FrameLayout {
     private int scrollingToChild = -1;
     private final GradientDrawable selectorDrawable;
 
-    private int tabLineColorKey = Theme.key_actionBarTabLine;
-    private int activeTextColorKey = Theme.key_actionBarTabActiveText;
+    private int tabLineColorKey = Theme.key_featuredStickers_addButton;
+    private int activeTextColorKey = Theme.key_featuredStickers_addButton;
     private int unactiveTextColorKey = Theme.key_actionBarTabUnactiveText;
     private int selectorColorKey = Theme.key_actionBarTabSelector;
     private int backgroundColorKey = Theme.key_actionBarDefault;
@@ -1678,6 +1678,12 @@ public class FilterTabsView extends FrameLayout {
     public void updateColors() {
         if (blurredBackgroundDrawable != null) {
             blurredBackgroundDrawable.updateColors();
+        }
+        if (selectorDrawable != null) {
+            selectorDrawable.setColor(Theme.getColor(tabLineColorKey, resourcesProvider));
+        }
+        if (listView != null) {
+            listView.invalidateViews();
         }
         invalidate();
     }

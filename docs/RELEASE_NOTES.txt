@@ -1,17 +1,62 @@
-NixgramX Beta - Telegram 12.10.3 (1344)
+NixgramX Stable - Telegram 12.10.4 (1353)
 
-- Shrunk the APK: resources.arsc dropped from 27.35 MB to ~1.2 MB. String resource ids are now
-  anchored to a low entry base instead of the top of the 16-bit space, and dependency locales are
-  filtered down to the app's own 19 (the 1339 build shipped 96 locale blocks, each carrying a
-  256 KB offset table).
-- Fixed the emoji panel theme-switch bug: the bottom tabs (表情符号/GIF/贴纸) and category-row icons
-  kept the old palette after a light<->dark switch. EmojiView now implements Theme.Colorable and both
-  PagerSlidingTabStrip and EmojiTabsStrip re-apply their glass glyph colour on theme changes, so the
-  panel follows the theme in both directions.
-- Reverted the glyph contrast guard that regressed dark-wallpaper chats.
+- Follow upstream Telegram 12.10.4 (7099).
+- EPK3 emoji.pack replaces loose emoji PNGs.
+- NotificationCenter ObserversGroup / addGlobal cascade.
+- GlassEngine + Nix glass stacking.
+- Proxy package move to org.telegram.utils.proxy; WEB proxy validation; calls no longer use SOCKS proxy (matches official).
+- VoIP tgcalls v2wasm/WAMR + absl; media/ffmpeg video JNI bump.
+- LocaleController string-lookup rewrite with Nix asset hooks kept.
+- DB 177	o178 music browse index.
+
+Device: NOT TESTED (Owner waived Private Beta / device gate for this release).
+
+NixgramX Beta - Telegram 12.10.3 (1350)
+
+- Home list glass blur no longer recaptures the whole dialogs list on every
+  idle dispatchDraw. Capture is hashed (scroll offset / first-row top / adapter
+  count); unchanged frames skip. onScrolled also skips a zero-delta recapture.
 
 Test focus:
-- Emoji panel: open it and switch light<->dark both ways; verify tabs, search row, magnifier and
-  quick reactions stay readable.
-- Dark-wallpaper chat in light theme: verify panel text stays readable.
-- Install size: confirm resources.arsc is ~1.2 MB and the APK installs and launches normally.
+- Scroll the chat list under the folder strip and bottom bar: glass still
+  tracks content, no frozen smear.
+- Idle home with incoming messages: list updates, no extra hitch from blur.
+- Open a forum two-column pane and scroll; blur still updates.
+
+NixgramX Beta - Telegram 12.10.3 (1349)
+
+- Home title, folder selected tab and bottom-tab selected state now follow the
+  same colour as Theme 取色 / the compose FAB (`featuredStickers_addButton`).
+  The FAB implements Colorable so picking an accent rebuilds its fill.
+
+Test focus:
+- Appearance → theme 取色: title, Unread pill, bottom「聊天」and the + button
+  must share that colour. Repeat on Day and Monet Light.
+- Glass capsules stay light; they must not fill with the accent.
+
+NixgramX Beta - Telegram 12.10.3 (1348)
+
+- Fixed home-screen 取色 on Monet/custom accents: the NixgramX title, folder
+  strip and bottom tab bar were sampling the accent as a fill (solid green
+  capsules, grey wordmark). Glass targets now stay a surface colour; the
+  wordmark follows the accent header token.
+
+Test focus:
+- Monet Light: title is accent (matches FAB), folder strip is a light glass
+  pill with a selected highlight, bottom bar is a light glass capsule with
+  accent selected tab. Repeat after picking a different wallpaper colour.
+- Day + custom accent: same three surfaces. Dark Monet/night unchanged.
+
+NixgramX Beta - Telegram 12.10.3 (1347)
+
+- Fixed the main-page NixgramX title jumping right after opening a forum group,
+  picking a topic, and returning. Bottom-tab mode still created a blank ActionBar
+  back button; closing the two-column topics pane set it VISIBLE, so onLayout
+  kept the 72dp inset. Root lists without a drawer now keep that button GONE
+  except in action mode.
+
+Test focus:
+- Bottom tabs, drawer off: cold-start title stays left-aligned.
+- Open a forum group, select a topic, back to the main list: NixgramX must not
+  shift right. Repeat with a normal group and a private chat.
+- Archive / select-chat / drawer-on: back/hamburger still appears as before.
