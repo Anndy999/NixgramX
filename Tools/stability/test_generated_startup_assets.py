@@ -136,6 +136,25 @@ class GeneratedStartupAssetsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "GhostMode"):
             verifier.validate_dynamic_settings_localization_assets(set())
 
+    def test_validate_emoji_pack_accepts_committed_epk3_asset(self):
+        verifier = load_verifier()
+        data = (ROOT / "TMessagesProj" / "src" / "main" / "assets" / "emoji.pack").read_bytes()
+        verifier.validate_emoji_pack(data)
+
+    def test_validate_emoji_pack_rejects_legacy_and_damaged_headers(self):
+        verifier = load_verifier()
+        # Legacy format used first u32 as metadata length divisible by 12.
+        with self.assertRaisesRegex(ValueError, "unsupported emoji pack magic"):
+            verifier.validate_emoji_pack((12 * 10).to_bytes(4, "little") + b"\x00" * 40)
+        with self.assertRaisesRegex(ValueError, "truncated EPK3 header"):
+            verifier.validate_emoji_pack(b"EPK3")
+        # Valid-looking magic/version but wrong declared length.
+        import struct
+        bad = struct.pack("<4sHHIIIIII", b"EPK3", 3, 20, 64, 64, 1, 1, 999, 0)
+        bad += b"\x00" * (32 - len(bad) + 20)
+        with self.assertRaisesRegex(ValueError, "EPK3 header fields inconsistent"):
+            verifier.validate_emoji_pack(bad)
+
 
 if __name__ == "__main__":
     unittest.main()
