@@ -1,4 +1,9 @@
-"""Emoji panel glass capture must hash so popup animation can skip a full grid recapture."""
+"""Emoji panel glass capture must hash so popup animation can skip a full grid recapture.
+
+After 12.10.4 GlassEngine adoption, invalidation is driven by GlassEngine flags;
+Nix still gates unconditional FLAG_INVALIDATED_OTHER frames with blurCapturesDirty
+and keeps a hash-capable blurCaptureMethod (via Blur3Utils.hashRelativeParent).
+"""
 import unittest
 from pathlib import Path
 
@@ -11,13 +16,18 @@ class EmojiBlurCaptureHashTest(unittest.TestCase):
         source = EMOJI.read_text(encoding='utf-8')
         self.assertIn('blurCaptureMethod = new IBlur3Capture()', source)
         self.assertIn('public void captureCalculateHash(IBlur3Hash builder, RectF position)', source)
-        self.assertIn('capture.captureCalculateHash(builder, position)', source)
+        # GlassEngine-era path hashes grids through Blur3Utils (RecyclerListView is IBlur3Capture).
+        self.assertIn('Blur3Utils.hashRelativeParent', source)
         self.assertNotIn('blurCaptureMethod = (canvas, position) ->', source)
 
     def test_dispatch_draw_does_not_recapture_unconditionally(self):
         source = EMOJI.read_text(encoding='utf-8')
-        self.assertIn('if (blurCapturesDirty)', source)
+        # GlassEngine may fire FLAG_INVALIDATED_OTHER every frame; Nix skips unless dirty
+        # or a scroll/position/theme flag is set.
+        self.assertIn('GLASS_RECAPTURE_FLAGS', source)
+        self.assertIn('!blurCapturesDirty', source)
         self.assertIn('blurCapturesDirty = false', source)
+        self.assertIn('glassEngine.setGlassInvalidationListener', source)
 
     def test_on_scrolled_skips_zero_delta(self):
         source = EMOJI.read_text(encoding='utf-8')
