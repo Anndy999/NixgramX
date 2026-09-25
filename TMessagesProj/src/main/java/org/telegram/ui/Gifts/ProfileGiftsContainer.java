@@ -14,6 +14,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Canvas;
+import android.graphics.RectF;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
@@ -100,6 +101,7 @@ import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
@@ -2154,16 +2156,35 @@ public class ProfileGiftsContainer extends FrameLayout implements NotificationCe
     public void initBlurCapture(ViewGroup parent) {
         iBlur3CaptureParent = parent;
 
-        iBlur3Capture = (canvas, position) -> {
-            View[] pages = viewPager.getViewPages();
-            for (View view : pages) {
-                if (view instanceof Page) {
-                    Page page = (Page) view;
-                    if (page.iBlur3Capture == null) {
-                        page.iBlur3Capture = new ViewGroupPartRenderer(page.listView, iBlur3CaptureParent, page.listView::drawChild);
+        iBlur3Capture = new IBlur3Capture() {
+            @Override
+            public void capture(Canvas canvas, RectF position) {
+                for (View view : viewPager.getViewPages()) {
+                    if (view instanceof Page) {
+                        pageCapture((Page) view).capture(canvas, position);
                     }
-                    page.iBlur3Capture.capture(canvas, position);
                 }
+            }
+
+            @Override
+            public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+                View[] pages = viewPager.getViewPages();
+                builder.add(pages.length);
+                for (View view : pages) {
+                    if (view instanceof Page) {
+                        builder.add(1);
+                        pageCapture((Page) view).captureCalculateHash(builder, position);
+                    } else {
+                        builder.add(0);
+                    }
+                }
+            }
+
+            private IBlur3Capture pageCapture(Page page) {
+                if (page.iBlur3Capture == null) {
+                    page.iBlur3Capture = new ViewGroupPartRenderer(page.listView, iBlur3CaptureParent, page.listView::drawChild);
+                }
+                return page.iBlur3Capture;
             }
         };
     }

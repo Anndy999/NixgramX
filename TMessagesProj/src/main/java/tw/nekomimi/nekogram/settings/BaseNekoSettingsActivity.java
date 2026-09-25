@@ -266,6 +266,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
     protected void updateRows() {
         rowCount = 0;
         rowMap.clear();
+        rowMapReverse.clear();
     }
 
     @Override

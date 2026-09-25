@@ -40,6 +40,11 @@ on:
         required: false
         type: string
         default: ''
+      omit_public_log:
+        description: 'If true, public @NixgramX APK caption is version-only (no 「日志」).'
+        required: false
+        type: boolean
+        default: false
       version_code:
         description: 'Optional NIXGRAMX_VERSION_CODE override. Empty keeps gradle.properties. Set above the device beta versionCode when the artifact must upgrade-install over an existing beta.'
         required: false
@@ -202,6 +207,7 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Beta release' }}
           BUILD_TIMESTAMP: ${{ needs.build.outputs.build_timestamp }}
           RELEASE_NOTES: ${{ github.event.inputs.release_notes || '' }}
+          SKIP_PUBLIC_LOG: ${{ github.event.inputs.omit_public_log || 'false' }}
         run: |
           python -m pip install -r Tools/scripts/requirements.txt
           COMMIT_MESSAGE="$(git log -1 --format=%s HEAD)"
