@@ -1,0 +1,13 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+index a13c0f13fba1639e4ff2fbb82f30e421219f1020..c3a70edf55c01e0753550e916ca79b5312dab986 100644
+--- a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
++++ b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+@@ -79,8 +79,6 @@ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.atomic.AtomicInteger;
+ 
+ import javax.net.ssl.SSLException;
+-
+-@OptIn(markerClass = UnstableApi.class)
+ public class ConnectionsManager extends BaseController {
+ 
+     public final static int ConnectionTypeGeneric = 1;
