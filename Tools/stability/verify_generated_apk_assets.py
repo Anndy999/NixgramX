@@ -124,17 +124,29 @@ def parse_binding_hashes(data: bytes) -> set[int]:
 
 
 def validate_emoji_pack(data: bytes) -> None:
-    emoji_metadata_length, offset = read_u32(data, 0)
-    if emoji_metadata_length == 0 or emoji_metadata_length % 12:
-        raise ValueError("invalid emoji metadata length")
-    emoji_end = offset + emoji_metadata_length
-    if emoji_end + 4 > len(data):
-        raise ValueError("truncated emoji metadata")
-    mask_metadata_length, mask_start = read_u32(data, emoji_end)
-    if mask_metadata_length == 0 or mask_metadata_length % 10:
-        raise ValueError("invalid emoji mask metadata length")
-    if mask_start + mask_metadata_length > len(data):
-        raise ValueError("truncated emoji mask metadata")
+    """Validate EPK3 v2/3 header (matches Pack.__init__ / EmojiPack.java)."""
+    header_size = 32
+    entry_size = 20
+    side = 64
+    if len(data) < header_size:
+        raise ValueError("truncated EPK3 header")
+    magic, version, size, width, height, count, emoji_count, length, flags = struct.unpack_from(
+        "<4sHHIIIIII", data, 0
+    )
+    if magic != b"EPK3":
+        raise ValueError(f"unsupported emoji pack magic: {magic!r}")
+    if version not in (2, 3):
+        raise ValueError(f"unsupported EPK3 version: {version}")
+    if (size, width, height, length, flags) != (entry_size, side, side, len(data), 0):
+        raise ValueError(
+            "EPK3 header fields inconsistent with pack length "
+            f"(entry={size}, side={width}x{height}, length={length}, flags={flags}, "
+            f"file={len(data)})"
+        )
+    if count < 1 or count > 65535 or emoji_count < 0 or emoji_count > count:
+        raise ValueError(f"invalid EPK3 record counts: count={count}, emoji={emoji_count}")
+    if header_size + count * entry_size > len(data):
+        raise ValueError("EPK3 metadata table exceeds pack length")
 
 
 def validate_dynamic_settings_localization_assets(localization_hashes: set[int]) -> None:
