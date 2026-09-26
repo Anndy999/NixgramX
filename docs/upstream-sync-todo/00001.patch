@@ -4,7 +4,7 @@ index acebb8688b7f46ac74e421ea13b8321b06949df1..378c5a0201db1a27a3c1aa1540d467d1
 +++ b/TMessagesProj/src/main/java/org/telegram/messenger/ChannelBoostsController.java
 @@ -1,7 +1,5 @@
  package org.telegram.messenger;
- 
+
 -import androidx.media3.common.util.Consumer;
 -
  import org.telegram.tgnet.ConnectionsManager;
@@ -13,7 +13,7 @@ index acebb8688b7f46ac74e421ea13b8321b06949df1..378c5a0201db1a27a3c1aa1540d467d1
 @@ -34,12 +32,12 @@ public class ChannelBoostsController {
          connectionsManager = ConnectionsManager.getInstance(currentAccount);
      }
- 
+
 -    public void getBoostsStats(long dialogId, Consumer<TL_stories.TL_premium_boostsStatus> consumer) {
 +    public void getBoostsStats(long dialogId, Utilities.Callback<TL_stories.TL_premium_boostsStatus> consumer) {
          TL_stories.TL_premium_getBoostsStatus req = new TL_stories.TL_premium_getBoostsStatus();
@@ -34,7 +34,7 @@ index acebb8688b7f46ac74e421ea13b8321b06949df1..378c5a0201db1a27a3c1aa1540d467d1
              }
          }));
      }
- 
+
 -    public void userCanBoostChannel(long dialogId, TL_stories.TL_premium_boostsStatus boostsStatus, Consumer<CanApplyBoost> consumer) {
 +    public void userCanBoostChannel(long dialogId, TL_stories.TL_premium_boostsStatus boostsStatus, Utilities.Callback<CanApplyBoost> consumer) {
          CanApplyBoost canApplyBoost = new CanApplyBoost();
@@ -57,4 +57,4 @@ index acebb8688b7f46ac74e421ea13b8321b06949df1..378c5a0201db1a27a3c1aa1540d467d1
 +            consumer.run(canApplyBoost);
          });
      }
- 
+

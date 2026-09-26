@@ -3,12 +3,12 @@ index 34ced4af68bf327e7d61d4197ae63f4259b08773..12dc19d2b9ab56e4d67ff3f852727d91
 --- a/TMessagesProj/src/main/java/org/telegram/ui/Stories/StoriesController.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/Stories/StoriesController.java
 @@ -10,12 +10,8 @@ import android.webkit.MimeTypeMap;
- 
+
  import androidx.annotation.NonNull;
  import androidx.annotation.Nullable;
 -import androidx.annotation.OptIn;
  import androidx.collection.LongSparseArray;
- 
+
 -import androidx.media3.common.util.Consumer;
 -import androidx.media3.common.util.UnstableApi;
 -
@@ -18,15 +18,15 @@ index 34ced4af68bf327e7d61d4197ae63f4259b08773..12dc19d2b9ab56e4d67ff3f852727d91
 @@ -92,7 +88,6 @@ import java.util.Objects;
  import java.util.Set;
  import java.util.TreeSet;
- 
+
 -@OptIn(markerClass = UnstableApi.class)
  public class StoriesController {
- 
+
      public final static int STATE_READ = 0;
 @@ -1568,16 +1563,16 @@ public class StoriesController {
- 
+
      LongSparseArray<TL_stories.StoryItem> resolvedStories = new LongSparseArray<>();
- 
+
 -    public void resolveStoryAlbumLink(long peerId, int storyAlbumId, Consumer<TL_stories.TL_storyAlbum> consumer) {
 +    public void resolveStoryAlbumLink(long peerId, int storyAlbumId, Utilities.Callback<TL_stories.TL_storyAlbum> consumer) {
          StoriesCollections collections = getStoryAlbumsList(peerId, false);
@@ -53,12 +53,12 @@ index 34ced4af68bf327e7d61d4197ae63f4259b08773..12dc19d2b9ab56e4d67ff3f852727d91
                      }
                  }
              }
- 
+
 -            consumer.accept(null);
 +            consumer.run(null);
          }));
      }
- 
+
 -    public void resolveLiveStoryLink(long peerId, Consumer<TL_stories.StoryItem> consumer) {
 +    public void resolveLiveStoryLink(long peerId, Utilities.Callback<TL_stories.StoryItem> consumer) {
          TL_stories.PeerStories userStoriesLocal = getStories(peerId);
@@ -89,7 +89,7 @@ index 34ced4af68bf327e7d61d4197ae63f4259b08773..12dc19d2b9ab56e4d67ff3f852727d91
              }
          });
      }
- 
+
 -    public void resolveStoryLink(long peerId, int storyId, Consumer<TL_stories.StoryItem> consumer) {
 +    public void resolveStoryLink(long peerId, int storyId, Utilities.Callback<TL_stories.StoryItem> consumer) {
          TL_stories.PeerStories userStoriesLocal = getStories(peerId);
@@ -122,7 +122,7 @@ index 34ced4af68bf327e7d61d4197ae63f4259b08773..12dc19d2b9ab56e4d67ff3f852727d91
 @@ -4508,7 +4503,7 @@ public class StoriesController {
          return null;
      }
- 
+
 -    public void canSendStoryFor(long dialogId, Consumer<Boolean> consumer, boolean showLimitsBottomSheet, Theme.ResourcesProvider resourcesProvider) {
 +    public void canSendStoryFor(long dialogId, Utilities.Callback<Boolean> consumer, boolean showLimitsBottomSheet, Theme.ResourcesProvider resourcesProvider) {
          final TL_stories.TL_stories_canSendStory tl_stories_canSendStory = new TL_stories.TL_stories_canSendStory();
