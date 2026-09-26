@@ -11,11 +11,7 @@
     "2ad0f47d37c5db49e964c29cc19dbb5847c3ddd6",
     "c84801762fd5f936c8296ecf09a14a48ebfc4fe4"
   ],
-  "pending": {
-    "version": "12.10.5",
-    "build": "7105",
-    "commit": "dc780e81ed1261c369c27870e8e0999a1eb0b600"
-  },
+  "pending": null,
   "prepared_target": {
     "version": "12.10.5",
     "build": "7105",
