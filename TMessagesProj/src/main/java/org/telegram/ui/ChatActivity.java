@@ -2690,8 +2690,10 @@ public class ChatActivity extends BaseFragment implements
         @Override
         public void setVideoRecordingCameraFront(boolean front) {
             checkInstantCameraView();
-            if (instantCameraView != null) {
-                instantCameraView.setUseFrontCamera(front);
+            // Nix Camera1 InstantCameraView only — Base/View2 lack setUseFrontCamera (ROUND-CORE).
+            // Camera2 facing remains SharedSettings.roundVideoLastCamera until ROUND-CORE ports NaConfig.
+            if (instantCameraView instanceof InstantCameraView) {
+                ((InstantCameraView) instantCameraView).setUseFrontCamera(front);
             }
         }
 
