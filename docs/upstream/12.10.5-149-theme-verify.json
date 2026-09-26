@@ -1,0 +1,30 @@
+{
+  "issue": 149,
+  "area": "THEME",
+  "version": "12.10.5",
+  "old_official": "c84801762fd5f936c8296ecf09a14a48ebfc4fe4",
+  "new_official": "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+  "base_branch": "upstream-sync/12.10.5",
+  "base_tip": "9a623e42f4248720823f89780cf08c77f9d42cf8",
+  "file": "TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ThemeDescription.java",
+  "l2_status": "clean-applied",
+  "three_way": {
+    "official_old_blob": "69e7f5649b1181c0b56a726cc89a78c7c259a360",
+    "official_new_blob": "bcdfdbbc0ba2c29710e5f8bc7365bf75b7c4080b",
+    "nix_beta_blob": "69e7f5649b1181c0b56a726cc89a78c7c259a360",
+    "nix_current_blob": "bcdfdbbc0ba2c29710e5f8bc7365bf75b7c4080b",
+    "nix_local_delta_vs_old": "none",
+    "current_equals_official_new": true
+  },
+  "upstream_change_summary": "Internal refactor of processColor into applyDirectViewColor / applyReflectedFieldColor / applyReflectedObjectColor / applyTextViewColor / applyDrawableColor / applyClippingSwitcherColor; constructors and FLAG_* surface unchanged; GroupCreateSpan.updateColors relocated within file; one RippleDrawable SDK_INT gate simplified.",
+  "nix_keys_preserved": {
+    "in_ThemeDescription_java": "n/a — no Nix keys lived in this file on beta/main",
+    "glass_keys_Theme_ThemeColors": "kept (out of #149 scope; verified present)",
+    "MonetHelper_Theme": "kept (out of #149 scope; verified present)",
+    "ChatActivity_glass_ThemeDescription_registrations": "untouched call sites still use same constructors + key_glass_*"
+  },
+  "production_edit": "none — L2 clean apply verified; no gaps vs official; no Nix keys to re-weave",
+  "needs_human": [],
+  "device": "NOT TESTED",
+  "send_button_contrast": "adjacent smoke only — not stripped; no ThemeDescription Nix keys removed"
+}

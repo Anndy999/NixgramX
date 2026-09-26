@@ -1,0 +1,23 @@
+diff --git a/TMessagesProj/src/main/res/values/strings.xml b/TMessagesProj/src/main/res/values/strings.xml
+index c8cb17d31ee772dbd8b7bda743a8ee3e3299ab74..1013bb6d88f101640fd4c961f6c0c05a1f55ee9d 100644
+--- a/TMessagesProj/src/main/res/values/strings.xml
++++ b/TMessagesProj/src/main/res/values/strings.xml
+@@ -11221,4 +11221,18 @@
+     <string name="UnsupportedMessageTitle">Unsupported Message</string>
+     <string name="UnsupportedMessageMessage">Update Telegram to view this message</string>
+     <string name="UnsupportedUpdate">Update</string>
++    <string name="RoundVideoSettings">Round Video</string>
++    <string name="RoundVideoGeneral">Recorder</string>
++    <string name="RoundVideoUseNewRecorder">Use Camera2 recorder</string>
++    <string name="RoundVideoOutputResolution">Output resolution</string>
++    <string name="RoundVideoCameraResolution">Camera resolution</string>
++    <string name="RoundVideoCameraResolutionHigh">High</string>
++    <string name="RoundVideoCameraResolutionMedium">Medium</string>
++    <string name="RoundVideoCameraResolutionLow">Low</string>
++    <string name="RoundVideoFrameRate">Frame rate</string>
++    <string name="RoundVideoBitrate">Video bitrate</string>
++    <string name="RoundVideoGeneralInfo">60 FPS is used only when both front and rear cameras support it. Otherwise recording falls back to 30 FPS.</string>
++    <string name="RoundVideoComposition">Composition</string>
++    <string name="RoundVideoCompositionEnabled">Round video styling</string>
++    <string name="RoundVideoCompositionInfo">Disable styling to record a plain square without outside-circle blur, dimming or Telegram overlays.</string>
+ </resources>

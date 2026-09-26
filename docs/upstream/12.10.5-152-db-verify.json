@@ -1,0 +1,26 @@
+{
+  "issue": 152,
+  "area": "DB",
+  "version": "12.10.5",
+  "old_official": "c84801762fd5f936c8296ecf09a14a48ebfc4fe4",
+  "new_official": "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+  "base_branch": "upstream-sync/12.10.5",
+  "base_tip": "9a623e42f4248720823f89780cf08c77f9d42cf8",
+  "files": [
+    "TMessagesProj/src/main/java/org/telegram/messenger/DatabaseMigrationHelper.java",
+    "TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java"
+  ],
+  "l2_status": "clean-applied",
+  "three_way": {
+    "migrate_178_to_179_block_matches_official_new": true,
+    "last_db_version_on_head": 179,
+    "last_db_version_on_official_new": 179,
+    "last_db_version_on_official_old": 178,
+    "migrate_block_sha256": "f819f8d0c9725a5e3f969bd1ab6c6fb71f916ac0fa840e35520b1689bdea998e",
+    "nix_local_outside_owned_hunks": "dialog_filter_neko + Ayu/Neko MessagesStorage hooks — kept, out of scope"
+  },
+  "upstream_change_summary": "DatabaseMigrationHelper: if (version == 178) DELETE FROM downloading_documents; PRAGMA user_version = 179. MessagesStorage: LAST_DB_VERSION 178→179.",
+  "production_edit": "none — L2 clean apply verified identical for owned hunks; lock via this verify artifact + empty commit",
+  "needs_human": [],
+  "device": "NOT TESTED"
+}
