@@ -1,3 +1,14 @@
+NixgramX Stable - Telegram 12.10.5 (1354)
+
+- Follow upstream Telegram 12.10.5 (7105).
+- Round Video Camera2 recorder stack (utils/camera/roundvideo/*, InstantCameraView2/Base) + related settings/strings.
+- Typed settings helpers (utils/settings/*); ThemeDescription updates.
+- DB 178→179: clear downloading_documents.
+- Media session / stories misc from official 7105.
+- InstantCameraView2: Nix zoom/facing/vibration NOT ported this cycle (follow official).
+
+Device: NOT TESTED (Owner waived Private Beta / device gate for this release).
+
 NixgramX Stable - Telegram 12.10.4 (1353)
 
 - Follow upstream Telegram 12.10.4 (7099).

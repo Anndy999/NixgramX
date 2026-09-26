@@ -27,9 +27,9 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_version_and_identity(self):
         props = (ROOT / "gradle.properties").read_text(encoding="utf-8")
 
-        self.assertIn("APP_VERSION_CODE=7099", props)
-        self.assertIn("APP_VERSION_NAME=12.10.4", props)
-        self.assertIn("NIXGRAMX_VERSION_NAME=12.10.3", props)
+        self.assertIn("APP_VERSION_CODE=7105", props)
+        self.assertIn("APP_VERSION_NAME=12.10.5", props)
+        self.assertIn("NIXGRAMX_VERSION_NAME=12.10.5", props)
         # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
         # on every release. Assert the invariant, not a frozen value: the key
         # must be declared exactly once and hold an integer.
@@ -41,9 +41,13 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_upstream_state_is_complete(self):
         state = json.loads((ROOT / "docs/upstream-base.json").read_text(encoding="utf-8"))
 
-        self.assertEqual("9552e5541e1274b9557c9832b204dbfcaf44b3dc", state["base"]["commit"])
+        # 12.10.5 Stable close-out: base/prepared_target match official 7105.
+        self.assertEqual("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["base"]["commit"])
+        self.assertEqual("12.10.5", state["base"]["version"])
+        self.assertEqual("7105", state["base"]["build"])
         self.assertIn(state["base"]["commit"], state["synced_commits"])
         self.assertIsNone(state["pending"])
+        self.assertEqual(state["base"], state["prepared_target"])
 
 
 if __name__ == "__main__":

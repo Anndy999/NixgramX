@@ -1,0 +1,26 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java b/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
+index 08a83dd6ae790f9f53ade72ebc0fcbf10e913c0c..e5c909ecad8b611564fb534bb54b53f31c011343 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MusicBrowserService.java
+@@ -13,10 +13,11 @@ import android.media.browse.MediaBrowser;
+ import android.os.Build;
+ import android.os.Bundle;
+ import android.os.Process;
+-import android.os.SystemClock;
+ import android.service.media.MediaBrowserService;
+ import android.widget.Toast;
+
++import androidx.annotation.NonNull;
++
+ import java.util.List;
+
+ import javax.annotation.Nullable;
+@@ -56,7 +57,7 @@ public class MusicBrowserService extends MediaBrowserService {
+     }
+
+     @Override
+-    public void onLoadChildren(String parentMediaId, Result<List<MediaBrowser.MediaItem>> result) {
++    public void onLoadChildren(@NonNull String parentMediaId, @NonNull Result<List<MediaBrowser.MediaItem>> result) {
+         TelegramMediaSession holder = TelegramMediaSession.getInstance(this);
+         if (holder.isPasscodeLocked()) {
+             Toast.makeText(getApplicationContext(), LocaleController.getString(R.string.EnterYourTelegramPasscode), Toast.LENGTH_LONG).show();
