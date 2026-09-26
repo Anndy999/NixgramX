@@ -1,0 +1,48 @@
+{
+  "issue": 146,
+  "area": "ROUND-CORE",
+  "version": "12.10.5",
+  "old_official": "c84801762fd5f936c8296ecf09a14a48ebfc4fe4",
+  "new_official": "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+  "base_branch": "upstream-sync/12.10.5",
+  "base_tip": "9b7af430c28beafedde82595c6b6fefa64f5d7a5",
+  "owned_files_identical_to_new": {
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoCameraController.java": "4279f5c66f0da34c38eeee454fee395a3f034e4f",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoSession.java": "6c1151fba24e7a2b3ddf85db096d491dcabbe1c5",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoOverlayRenderer.java": "96291e76ac8cd88b212d17a76abcc0ffd5522781",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoGlProcessor.java": "8a8d59cc124124d200d31abbdedc0fc5818b78a5",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoCodecRecorder.java": "e625c4ec0612421bdbc50c022a613c4a4f636637",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoMp4Writer.java": "d1f1a5657e808a1a2b95081ecf7566d45f1fb2d8",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoRemuxer.java": "a3f81917cadb85a3a0bc32d71200316e8dcfead9",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoSwitchTimingStore.java": "f001fe34d02f7d16a007705111586f8881a2d26d",
+    "TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoDiagnostics.java": "a8e484648122fbd55bd3bfb3104de3ad7cebfc0f",
+    "TMessagesProj/src/main/java/org/telegram/ui/Components/InstantCameraViewBase.java": "e292237bc1fbd02e582e66f18f37dfa7abad0c39",
+    "TMessagesProj/src/main/java/org/telegram/ui/Components/InstantCameraView2.java": "f26efd1a18cac97f3680f3fab255d5639c254e47",
+    "TMessagesProj/src/main/java/org/telegram/ui/Components/TelegramRoundVideoUpload.java": "a69ca2b84bbd48779a91fc2b86468c202669b252"
+  },
+  "instant_camera_view": {
+    "path": "TMessagesProj/src/main/java/org/telegram/ui/Components/InstantCameraView.java",
+    "official_old_blob": "41da65017a7470a29126098105fd1b4381e9e15e",
+    "official_new_blob": "2d020559207ee7857c69a2cc6549277787428436",
+    "nix_current_blob": "6016c9bf7930cf8f0ad612e89c5b9add5b1e2f9c",
+    "official_new_hunks_present": [
+      "extends InstantCameraViewBase",
+      "dispatchAnimationState",
+      "RectF getCameraRect",
+      "NotificationCenter.getGlobalInstance heavy-ops",
+      "InstantViewCameraContainer extends InstantCameraViewBase.InstantViewCameraContainer"
+    ],
+    "nix_hooks_preserved": [
+      "NekoConfig.disableVibration",
+      "NaConfig.getCameraInVideoMessages + initialCameraFront",
+      "ZoomControlView + locked/pinch zoom helpers"
+    ]
+  },
+  "production_edit": "none \u2014 L2 clean apply verified; InstantCameraView already three-way correct",
+  "needs_human": [
+    "InstantCameraView2 has no Nix zoom/NaConfig/Neko vibration (enhancement, not sync gap)",
+    "Device NOT TESTED \u2014 round-record gate only after Owner asks (coord ROUND-UI)"
+  ],
+  "device": "NOT TESTED",
+  "qv_pin": "docs/upstream/12.10.5-146-round-core-verify.json (non-.md so PR workflow paths-ignore does not skip)"
+}
