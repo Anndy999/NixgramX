@@ -177,11 +177,11 @@ public abstract class InstantCameraViewBase extends FrameLayout {
     /**
      * Nix: prefer front/rear camera before showCamera (ChatActivityEnterView pendingCameraFront).
      * Official InstantCameraViewBase has no such API; InstantCameraView owns the real impl.
-     * InstantCameraView2 stubs via initialFacing / live setCameraFacing.
-     * ROUND-CORE follow-up if Camera2 NaConfig parity needs more than this compile hoist.
+     * Default no-op so Camera2 InstantCameraView2 compiles; facing parity is ROUND-CORE / NEEDS HUMAN
+     * (do not invent View2 NaConfig zoom/facing/vib without three-way evidence).
      */
     public void setUseFrontCamera(boolean useFront) {
-        // default no-op; subclasses override
+        // default no-op; InstantCameraView overrides
     }
 
     /** Common camera container required by the send-to-message transition. */

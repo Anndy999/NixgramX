@@ -124,8 +124,6 @@ public final class InstantCameraView2 extends InstantCameraViewBase {
     private long lastPreviewUiFrameRealtimeNs;
     private boolean recordingUiFallbackRegistered;
     private boolean handlingPreviewTextureInvalidate;
-    /** Nix pendingCameraFront preference; null = use SharedSettings.roundVideoLastCamera. */
-    private Boolean preferredUseFrontCamera;
 
     private final Runnable recordingUiFallback = () -> {
         if (!isRecordingState()) return;
@@ -371,13 +369,8 @@ public final class InstantCameraView2 extends InstantCameraViewBase {
         showInitialPlaceholder();
         upload = new TelegramRoundVideoUpload(currentAccount, secretChat);
         activeOutputResolution = SharedSettings.roundVideoOutputResolution.get();
-        RoundVideoSession.CameraFacing initialFacing = preferredUseFrontCamera != null
-                ? (preferredUseFrontCamera
-                        ? RoundVideoSession.CameraFacing.FRONT
-                        : RoundVideoSession.CameraFacing.BACK)
-                : SharedSettings.roundVideoLastCamera.get();
         session = new RoundVideoSession.Builder(getContext(), textureView)
-                .setInitialFacing(initialFacing)
+                .setInitialFacing(SharedSettings.roundVideoLastCamera.get())
                 .setOutputResolution(activeOutputResolution)
                 .setVideoBitrate(SharedSettings.roundVideoVideoBitrate.get())
                 .setCameraResolution(SharedSettings.roundVideoCameraResolution.get())
@@ -940,17 +933,6 @@ public final class InstantCameraView2 extends InstantCameraViewBase {
                 flashOnDrawable.setCallback(flashButton);
             }
             flashButton.setImageDrawable(flashOnDrawable);
-        }
-    }
-
-
-    @Override
-    public void setUseFrontCamera(boolean useFront) {
-        preferredUseFrontCamera = useFront;
-        if (session != null) {
-            session.setCameraFacing(useFront
-                    ? RoundVideoSession.CameraFacing.FRONT
-                    : RoundVideoSession.CameraFacing.BACK);
         }
     }
 
