@@ -41,13 +41,14 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_upstream_state_is_complete(self):
         state = json.loads((ROOT / "docs/upstream-base.json").read_text(encoding="utf-8"))
 
-        # During 12.10.5 sync: base stays at last closed-out official until Owner close-out.
+        # Sync content done: pending cleared for adaptation gate; base flips on release prep.
         self.assertEqual("c84801762fd5f936c8296ecf09a14a48ebfc4fe4", state["base"]["commit"])
         self.assertIn(state["base"]["commit"], state["synced_commits"])
-        self.assertIsNotNone(state["pending"])
-        self.assertEqual("12.10.5", state["pending"]["version"])
-        self.assertEqual("7105", state["pending"]["build"])
-        self.assertEqual("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["pending"]["commit"])
+        self.assertIsNone(state["pending"])
+        target = state["prepared_target"]
+        self.assertEqual("12.10.5", target["version"])
+        self.assertEqual("7105", target["build"])
+        self.assertEqual("dc780e81ed1261c369c27870e8e0999a1eb0b600", target["commit"])
 
 
 if __name__ == "__main__":
