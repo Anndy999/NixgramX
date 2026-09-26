@@ -174,6 +174,16 @@ public abstract class InstantCameraViewBase extends FrameLayout {
     /** Applies the host pan translation. */
     public abstract void onPanTranslationUpdate(float translationY);
 
+    /**
+     * Nix: prefer front/rear camera before showCamera (ChatActivityEnterView pendingCameraFront).
+     * Official InstantCameraViewBase has no such API; InstantCameraView owns the real impl.
+     * InstantCameraView2 stubs via initialFacing / live setCameraFacing.
+     * ROUND-CORE follow-up if Camera2 NaConfig parity needs more than this compile hoist.
+     */
+    public void setUseFrontCamera(boolean useFront) {
+        // default no-op; subclasses override
+    }
+
     /** Common camera container required by the send-to-message transition. */
     public abstract static class InstantViewCameraContainer extends FrameLayout {
         /** Creates a transition container. */
