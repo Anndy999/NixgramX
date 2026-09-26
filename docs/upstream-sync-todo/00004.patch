@@ -5,8 +5,8 @@ index 9c443be59f7f32197db639beffad369d7bf2f177..d8fa0bce326c63db8bcf975ae6025b0b
 @@ -136,7 +136,6 @@ import java.util.TimerTask;
  import java.util.concurrent.ConcurrentHashMap;
  import java.util.concurrent.CountDownLatch;
- 
+
 -@OptIn(markerClass = UnstableApi.class)
  public class MediaController implements AudioManager.OnAudioFocusChangeListener, NotificationCenter.NotificationCenterDelegate, SensorEventListener {
- 
+
      private native int startRecord(String path, int sampleRate);

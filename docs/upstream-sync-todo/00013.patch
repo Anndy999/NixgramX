@@ -16,7 +16,7 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
          private boolean enterAnimation;
 +        private boolean externalFrameClock;
 +        private long externalBlinkStartMs = -1L;
- 
+
          @Override
          protected void onAttachedToWindow() {
 @@ -1024,12 +1027,34 @@ public class ChatActivityEnterView extends FrameLayout implements
@@ -29,7 +29,7 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
              drawable.stop();
              invalidate();
          }
- 
+
 +        void setExternalFrameClock(boolean enabled) {
 +            externalFrameClock = enabled;
 +            lastUpdateTime = System.currentTimeMillis();
@@ -57,7 +57,7 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 @@ -1043,32 +1068,35 @@ public class ChatActivityEnterView extends FrameLayout implements
              }
              redDotPaint.setAlpha((int) (255 * alpha));
- 
+
 -            long dt = (System.currentTimeMillis() - lastUpdateTime);
 -            if (enterAnimation) {
 -                alpha = 1;
@@ -104,12 +104,12 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 -            invalidate();
 +            if (!externalFrameClock) invalidate();
          }
- 
+
          public void playDeleteAnimation() {
 @@ -2572,40 +2600,6 @@ public class ChatActivityEnterView extends FrameLayout implements
          this(context, parent, fragment, isChat, null);
      }
- 
+
 -    private NotificationCenter.ObserversGroup observersGroup;
 -
 -    private void addObservers() {
@@ -150,7 +150,7 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 @@ -2620,7 +2614,24 @@ public class ChatActivityEnterView extends FrameLayout implements
          setWillNotDraw(false);
          setClipChildren(false);
- 
+
 -        addObservers();
 +        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.recordStarted);
 +        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.recordPaused);
@@ -170,7 +170,7 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 +        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.didUpdatePremiumGiftFieldIcon);
 +        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.currentUserPremiumStatusChanged);
 +        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
- 
+
          parentActivity = context;
          parentFragment = fragment;
 @@ -6489,7 +6500,24 @@ public class ChatActivityEnterView extends FrameLayout implements
@@ -234,12 +234,12 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 +            NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.messageReceivedByServer2);
 +            NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.sendingMessagesChanged);
          }
- 
+
          sendPlainEnabled = true;
 @@ -10425,6 +10477,31 @@ public class ChatActivityEnterView extends FrameLayout implements
          messageEditText.setSelection(start, messageEditText.length());
      }
- 
+
 +    /** Synchronizes the video timeline with an external trim control. */
 +    public void setVideoTimelineTrim(float start, float end) {
 +        if (videoTimelineView != null) {
@@ -270,11 +270,11 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
              return 0;
 @@ -13937,8 +14014,19 @@ public class ChatActivityEnterView extends FrameLayout implements
          StaticLayout cancelLayout;
- 
+
          private boolean pressed;
 +        private boolean externalFrameClock;
          public Rect cancelRect = new Rect();
- 
+
 +        void setExternalFrameClock(boolean enabled) {
 +            externalFrameClock = enabled;
 +            lastUpdateTime = System.currentTimeMillis();
@@ -287,11 +287,11 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 +
          Drawable selectableBackground;
          private int lastSize;
- 
+
 @@ -14163,7 +14251,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                  setPressed(false);
              }
- 
+
 -            if (cancelToProgress != 1) {
 +            if (cancelToProgress != 1 && !externalFrameClock) {
                  invalidate();
@@ -304,7 +304,7 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 +        long externalElapsedMs;
 +        long lastDrawRealtimeMs;
 +        boolean externalFrameClock;
- 
+
          SpannableStringBuilder replaceIn = new SpannableStringBuilder();
          SpannableStringBuilder replaceOut = new SpannableStringBuilder();
 @@ -14211,10 +14302,23 @@ public class ChatActivityEnterView extends FrameLayout implements
@@ -315,7 +315,7 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
              lastSendTypingTime = startTime;
              invalidate();
          }
- 
+
 +        void setExternalFrameClock(boolean enabled) {
 +            externalFrameClock = enabled;
 +            lastDrawRealtimeMs = SystemClock.elapsedRealtime();
@@ -341,11 +341,11 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
 +                    : stopTime - startTime;
              long time = t / 1000;
              int ms = (int) (t % 1000L) / 10;
- 
+
 @@ -14324,8 +14430,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                  }
              }
- 
+
 +            long drawRealtimeMs = SystemClock.elapsedRealtime();
 +            long drawDeltaMs = lastDrawRealtimeMs == 0L
 +                    ? 16L
@@ -358,9 +358,9 @@ index 1d15a87b7d53c3d8018dbac1b3fa0271838a3768..a8f9973061553dce80d45a1c16984e7f
                      replaceTransition = 0f;
                  }
 @@ -14370,7 +14481,7 @@ public class ChatActivityEnterView extends FrameLayout implements
- 
+
              oldString = newString;
- 
+
 -            if (isRunning || replaceTransition != 0) {
 +            if ((isRunning || replaceTransition != 0) && !externalFrameClock) {
                  invalidate();
