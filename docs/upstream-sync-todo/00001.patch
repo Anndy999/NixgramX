@@ -57,4 +57,3 @@ index acebb8688b7f46ac74e421ea13b8321b06949df1..378c5a0201db1a27a3c1aa1540d467d1
 +            consumer.run(canApplyBoost);
          });
      }
-
