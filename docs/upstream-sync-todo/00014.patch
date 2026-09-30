@@ -1,0 +1,15 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/drawable/color/BlurredBackgroundProviderBuilder.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/drawable/color/BlurredBackgroundProviderBuilder.java
+index b3b1c5291d9cdb5286e484309f37e41737521be2..c05b9fa4014320dd08158b5817f30644c1dd7986 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/drawable/color/BlurredBackgroundProviderBuilder.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/drawable/color/BlurredBackgroundProviderBuilder.java
+@@ -131,8 +131,8 @@ public class BlurredBackgroundProviderBuilder implements BlurredBackgroundProvid
+     }
+ 
+     private boolean isDark() {
+-        return resourcesProvider instanceof DarkThemeResourceProvider ||
+-            resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
++        return (resourcesProvider instanceof DarkThemeResourceProvider) ||
++            (resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark());
+     }
+ 
+     private static ColorProvider create(@ColorInt int colorInLightMode, @ColorInt int colorInDarkMode) {

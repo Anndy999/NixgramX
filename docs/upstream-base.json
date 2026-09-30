@@ -12,12 +12,16 @@
     "c84801762fd5f936c8296ecf09a14a48ebfc4fe4",
     "dc780e81ed1261c369c27870e8e0999a1eb0b600"
   ],
-  "pending": null,
-  "prepared_target": {
-    "version": "12.10.5",
-    "build": "7105",
-    "commit": "dc780e81ed1261c369c27870e8e0999a1eb0b600"
+  "pending": {
+    "version": "12.10.6",
+    "build": "7112",
+    "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242"
   },
-  "prepared_base": "upstream-sync/12.10.4",
+  "prepared_target": {
+    "version": "12.10.6",
+    "build": "7112",
+    "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242"
+  },
+  "prepared_base": "beta",
   "refreshed_nix_base": "a591a47959922c69673812a9d98818442333dab2"
 }
