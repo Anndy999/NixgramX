@@ -1,0 +1,19 @@
+{
+  "issue": 166,
+  "area": "NATIVE-VOIP",
+  "base": "72eb00141d28888bfc347701b4a2073daa853a64",
+  "official_old": "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+  "official_new": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
+  "l2_prepare": "4faec58d0",
+  "code_change": false,
+  "files": {
+    "GroupInstanceCustomImpl.cpp": {
+      "ssrc_guard_nix_lines": "3427-3434",
+      "blame": "4faec58d0",
+      "nix_bitrate_locals_untouched": true
+    },
+    "h265_bitstream_parser.cc": {"nix_equals_new": true},
+    "h265_sps_parser.cc": {"nix_equals_new": true}
+  },
+  "evidence_doc": "docs/upstream-sync-12.10.6-166-NATIVE-VOIP-VERIFY.md"
+}
