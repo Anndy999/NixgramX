@@ -1,8 +1,8 @@
 {
   "base": {
-    "version": "12.10.5",
-    "build": "7105",
-    "commit": "dc780e81ed1261c369c27870e8e0999a1eb0b600"
+    "version": "12.10.6",
+    "build": "7112",
+    "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242"
   },
   "synced_commits": [
     "62b56a07ca7e30e39f7fd00a6728d6bbd716ca1c",
@@ -10,7 +10,8 @@
     "9552e5541e1274b9557c9832b204dbfcaf44b3dc",
     "2ad0f47d37c5db49e964c29cc19dbb5847c3ddd6",
     "c84801762fd5f936c8296ecf09a14a48ebfc4fe4",
-    "dc780e81ed1261c369c27870e8e0999a1eb0b600"
+    "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+    "f2908b14133bbffbf7ab04f641ecb5bfaf533242"
   ],
   "pending": null,
   "prepared_target": {

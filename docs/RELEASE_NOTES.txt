@@ -1,3 +1,15 @@
+NixgramX Stable - Telegram 12.10.6 (1355)
+
+- Follow upstream Telegram 12.10.6 (7112).
+- Group calls: guard SSRC lookup against empty source groups.
+- H.265: bitstream / SPS parsing bounds checks.
+- Rich text: style-run bounds and parseInt hardening.
+- ChatMessageCell: show edit time while editing (messagePrimaryEditedDate).
+- Small UI/media fixes from official 7112 (ChatActivity, PhotoViewer, etc.).
+- InstantCameraView2: follows official; Nix zoom/facing/vibration NOT ported.
+
+Device: NOT TESTED.
+
 NixgramX Stable - Telegram 12.10.5 (1354)
 
 - Follow upstream Telegram 12.10.5 (7105).
