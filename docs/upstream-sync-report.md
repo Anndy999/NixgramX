@@ -13,7 +13,8 @@
 ## Sync result
 - changed files count: 19
 - clean applied files: 17
-- conflict/adaptation files: 2
+- conflict/adaptation files: 0 (resolved by #168 UI-MEDIA)
+- adapted after L2: 2
 
 ## Clean applied files
 - TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.cpp
@@ -34,9 +35,9 @@
 - TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoSession.java
 - gradle.properties
 
-## Conflict/adaptation files — TODO
-- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00007.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/drawable/color/BlurredBackgroundProviderBuilder.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00014.patch
+## Conflict/adaptation files — RESOLVED (#168)
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — adapted edit-time while isEditing()+edit_date==0 (cell-local; TimeStringHelper untouched); 00007.patch removed
+- TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/drawable/color/BlurredBackgroundProviderBuilder.java — Nix if/else already ≡ official parentheses; 00014.patch removed (satisfied, no code change)
 
 ## Submodule changes
 - None
