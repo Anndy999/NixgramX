@@ -27,8 +27,8 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_version_and_identity(self):
         props = (ROOT / "gradle.properties").read_text(encoding="utf-8")
 
-        self.assertIn("APP_VERSION_CODE=7105", props)
-        self.assertIn("APP_VERSION_NAME=12.10.5", props)
+        self.assertIn("APP_VERSION_CODE=7112", props)
+        self.assertIn("APP_VERSION_NAME=12.10.6", props)
         self.assertIn("NIXGRAMX_VERSION_NAME=12.10.5", props)
         # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
         # on every release. Assert the invariant, not a frozen value: the key
@@ -41,13 +41,26 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_upstream_state_is_complete(self):
         state = json.loads((ROOT / "docs/upstream-base.json").read_text(encoding="utf-8"))
 
-        # 12.10.5 Stable close-out: base/prepared_target match official 7105.
-        self.assertEqual("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["base"]["commit"])
-        self.assertEqual("12.10.5", state["base"]["version"])
-        self.assertEqual("7105", state["base"]["build"])
-        self.assertIn(state["base"]["commit"], state["synced_commits"])
+        previous = {
+            "version": "12.10.5",
+            "build": "7105",
+            "commit": "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+        }
+        target = {
+            "version": "12.10.6",
+            "build": "7112",
+            "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
+        }
+
+        # 12.10.6 aggregation close-out (#164): sync content done, pending
+        # cleared for the adaptation gate; base stays 12.10.5 until Stable prep
+        # promotes prepared_target (12.10.6/7112) into base.
         self.assertIsNone(state["pending"])
-        self.assertEqual(state["base"], state["prepared_target"])
+        self.assertEqual(previous, state["base"])
+        self.assertEqual(target, state["prepared_target"])
+        self.assertIn(state["base"]["commit"], state["synced_commits"])
+        # 12.10.5 official commit must never drop out of synced history.
+        self.assertIn("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["synced_commits"])
 
 
 if __name__ == "__main__":

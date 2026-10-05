@@ -1,0 +1,30 @@
+{
+  "issue": 167,
+  "area": "CORE-TEXT",
+  "base": "72eb00141d28888bfc347701b4a2073daa853a64",
+  "official_old": "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+  "official_new": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
+  "l2_prepare": "4faec58d0",
+  "code_change": false,
+  "files": {
+    "MediaDataController.java": {
+      "style_run_safe_legacy": true,
+      "custom_emoji_skip_safe_line": 7165,
+      "custom_emoji_skip_legacy_line": 7281,
+      "caps_present": true
+    },
+    "MessageObject.java": {
+      "invalid_run_range_skip_line": 8362,
+      "official_hunk_present": true
+    },
+    "Utilities.java": {
+      "nix_equals_new": true,
+      "parseInt_bounds": true
+    },
+    "DispatchQueueMainThreadSync.java": {
+      "deleted_on_tip": true,
+      "stray_refs": false
+    }
+  },
+  "evidence_doc": "docs/upstream-sync-12.10.6-167-CORE-TEXT-VERIFY.md"
+}
