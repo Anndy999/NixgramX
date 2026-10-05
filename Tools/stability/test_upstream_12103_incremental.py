@@ -52,19 +52,15 @@ class Upstream12103IncrementalTest(unittest.TestCase):
             "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
         }
 
-        # 12.10.6 sync: prepared_target is official 7112 for the whole cycle.
+        # 12.10.6 aggregation close-out (#164): sync content done, pending
+        # cleared for the adaptation gate; base stays 12.10.5 until Stable prep
+        # promotes prepared_target (12.10.6/7112) into base.
+        self.assertIsNone(state["pending"])
+        self.assertEqual(previous, state["base"])
         self.assertEqual(target, state["prepared_target"])
         self.assertIn(state["base"]["commit"], state["synced_commits"])
-        if state["base"] == target:
-            # Owner close-out done: base promoted, pending cleared.
-            self.assertIsNone(state["pending"])
-        else:
-            # In-flight: base stays at last closed-out official (12.10.5) until
-            # Owner close-out; pending is 12.10.6 while task PRs land and is
-            # cleared (null) before the aggregate PR passes the adaptation gate.
-            self.assertEqual(previous, state["base"])
-            if state["pending"] is not None:
-                self.assertEqual(target, state["pending"])
+        # 12.10.5 official commit must never drop out of synced history.
+        self.assertIn("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["synced_commits"])
 
 
 if __name__ == "__main__":
