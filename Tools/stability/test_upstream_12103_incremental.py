@@ -27,8 +27,8 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_version_and_identity(self):
         props = (ROOT / "gradle.properties").read_text(encoding="utf-8")
 
-        self.assertIn("APP_VERSION_CODE=7105", props)
-        self.assertIn("APP_VERSION_NAME=12.10.5", props)
+        self.assertIn("APP_VERSION_CODE=7112", props)
+        self.assertIn("APP_VERSION_NAME=12.10.6", props)
         self.assertIn("NIXGRAMX_VERSION_NAME=12.10.5", props)
         # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
         # on every release. Assert the invariant, not a frozen value: the key
@@ -41,13 +41,30 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_upstream_state_is_complete(self):
         state = json.loads((ROOT / "docs/upstream-base.json").read_text(encoding="utf-8"))
 
-        # 12.10.5 Stable close-out: base/prepared_target match official 7105.
-        self.assertEqual("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["base"]["commit"])
-        self.assertEqual("12.10.5", state["base"]["version"])
-        self.assertEqual("7105", state["base"]["build"])
+        previous = {
+            "version": "12.10.5",
+            "build": "7105",
+            "commit": "dc780e81ed1261c369c27870e8e0999a1eb0b600",
+        }
+        target = {
+            "version": "12.10.6",
+            "build": "7112",
+            "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
+        }
+
+        # 12.10.6 sync: prepared_target is official 7112 for the whole cycle.
+        self.assertEqual(target, state["prepared_target"])
         self.assertIn(state["base"]["commit"], state["synced_commits"])
-        self.assertIsNone(state["pending"])
-        self.assertEqual(state["base"], state["prepared_target"])
+        if state["base"] == target:
+            # Owner close-out done: base promoted, pending cleared.
+            self.assertIsNone(state["pending"])
+        else:
+            # In-flight: base stays at last closed-out official (12.10.5) until
+            # Owner close-out; pending is 12.10.6 while task PRs land and is
+            # cleared (null) before the aggregate PR passes the adaptation gate.
+            self.assertEqual(previous, state["base"])
+            if state["pending"] is not None:
+                self.assertEqual(target, state["pending"])
 
 
 if __name__ == "__main__":
