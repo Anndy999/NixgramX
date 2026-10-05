@@ -102,6 +102,7 @@ import androidx.core.math.MathUtils;
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.AppGlobalConfig;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BotForumHelper;
 import org.telegram.messenger.BotInlineKeyboard;
@@ -18659,7 +18660,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             drawBookmarkInTime = showBookmarkInTime;
         }
         // bookmark end
-        final int editedDate = edited && currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date;
+        int editedDate = edited && currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date;
+        // Upstream 12.10.6 (f2908b14): while editing, edit_date may still be 0 — show "now" for primary-edited-date mode.
+        if (AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get()
+                && editedDate == 0 && currentMessageObject.isEditing()) {
+            editedDate = ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+        }
         if (currentMessageObject.isWelcomeMessage()) {
             timeString = ""; // Long.toString(currentMessageObject.getId());
         } else if (currentMessageObject.notime || currentMessageObject.isSponsored() || currentMessageObject.isQuickReply() || currentMessageObject.isWelcomeMessage()) {
