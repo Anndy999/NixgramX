@@ -1,0 +1,50 @@
+diff --git a/TMessagesProj_AppHockeyApp/build.gradle b/TMessagesProj_AppHockeyApp/build.gradle
+index 0fa817196a4acec26b76f1130a569fc5a024c731..96013741d2e45790d99b7d34346ad7fedd3657f4 100644
+--- a/TMessagesProj_AppHockeyApp/build.gradle
++++ b/TMessagesProj_AppHockeyApp/build.gradle
+@@ -36,7 +36,6 @@ android {
+ 
+     defaultConfig.applicationId = APP_PACKAGE
+ 
+-    sourceSets.main.jniLibs.srcDirs = ['../TMessagesProj/jni/']
+ 
+     lintOptions {
+         disable 'MissingTranslation'
+@@ -72,6 +71,12 @@ android {
+         }
+     }
+ 
++    packagingOptions {
++        jniLibs {
++            useLegacyPackaging = true
++        }
++    }
++
+     buildTypes {
+         HA_private {
+             matchingFallbacks = ['release']
+@@ -132,15 +137,6 @@ android {
+                 abiVersionCode = 1
+             }
+         }
+-        bundleAfat_SDK23 {
+-            ndk {
+-                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+-            }
+-            minSdkVersion 23
+-            ext {
+-                abiVersionCode = 2
+-            }
+-        }
+         afat {
+             ndk {
+                 abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+@@ -168,7 +164,7 @@ android {
+     }
+ 
+     defaultConfig {
+-        minSdkVersion 21
++        minSdkVersion 23
+         targetSdkVersion 36
+         versionName APP_VERSION_NAME
+         ndkVersion "27.2.12479018"

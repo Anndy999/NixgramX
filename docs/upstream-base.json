@@ -13,11 +13,15 @@
     "dc780e81ed1261c369c27870e8e0999a1eb0b600",
     "f2908b14133bbffbf7ab04f641ecb5bfaf533242"
   ],
-  "pending": null,
+  "pending": {
+    "version": "13.0.2",
+    "build": "7175",
+    "commit": "f32ffeec763f0bdbf4bec25b52d654f77bff733d"
+  },
   "prepared_target": {
-    "version": "12.10.6",
-    "build": "7112",
-    "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242"
+    "version": "13.0.2",
+    "build": "7175",
+    "commit": "f32ffeec763f0bdbf4bec25b52d654f77bff733d"
   },
   "prepared_base": "beta",
   "refreshed_nix_base": "a591a47959922c69673812a9d98818442333dab2"
