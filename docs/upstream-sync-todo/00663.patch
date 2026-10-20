@@ -1,0 +1,22 @@
+diff --git a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_RichText.kt b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_RichText.kt
+index 93e33e1244cbe5c8172ee171b1e427ed0c695db7..981e60b82acf066e143da000c6e3886ce4673a10 100644
+--- a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_RichText.kt
++++ b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_RichText.kt
+@@ -461,4 +461,17 @@ public sealed class TlGen_RichText : TlGen_Object {
+       public const val MAGIC: UInt = 0xAFC79CD6U
+     }
+   }
++
++  public data class TL_textTonAddress(
++    public val text: TlGen_RichText,
++  ) : TlGen_RichText() {
++    public override fun serializeToStream(stream: OutputSerializedData) {
++      stream.writeInt32(MAGIC.toInt())
++      text.serializeToStream(stream)
++    }
++
++    public companion object {
++      public const val MAGIC: UInt = 0x3CD2A36AU
++    }
++  }
+ }

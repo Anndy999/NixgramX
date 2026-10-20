@@ -1,0 +1,35 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java
+index 0a9ed5a93512b9b705c27f62e15cfd95a07cf847..f8960d3546bdd425b2ddf571e5ca757f82155947 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java
+@@ -2217,6 +2217,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
+     }
+ 
+     public boolean doNotDrawGlassMenu;
++    private boolean drawGlassTitle = true;
++
++    public void setDrawGlassTitle(boolean draw) {
++        if (drawGlassTitle != draw) {
++            drawGlassTitle = draw;
++            invalidate();
++        }
++    }
+ 
+     @Override
+     protected void dispatchDraw(Canvas canvas) {
+@@ -2232,7 +2240,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
+         final int t = getHeight() - (getCurrentActionBarHeight() + s) / 2 - p;
+         final int b = t + s + p * 2;
+ 
+-        if (glassDrawable != null && !glassOnlyBack) {
++        if (glassDrawable != null && !glassOnlyBack && drawGlassTitle) {
+             final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * animatorHasMenuItems.getFloatValue()));
+             final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
+ 
+@@ -2474,4 +2482,4 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
+             invalidate();
+         }
+     }
+-}
+\ No newline at end of file
++}
