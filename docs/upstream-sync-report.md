@@ -2,57 +2,1061 @@
 # Telegram Upstream Sync
 
 ## From
-- Telegram old base version: 12.10.5
-- old commit: dc780e81ed1261c369c27870e8e0999a1eb0b600
+- Telegram old base version: 12.10.6
+- old commit: f2908b14133bbffbf7ab04f641ecb5bfaf533242
 
 ## To
-- Telegram new version: 12.10.6
-- new build: 7112
-- new commit: f2908b14133bbffbf7ab04f641ecb5bfaf533242
+- Telegram new version: 13.1.1
+- new build: 7237
+- new commit: 3de37c8cfb039452be7398909461da6288babf15
 
 ## Sync result
-- changed files count: 19
-- clean applied files: 17
-- conflict/adaptation files: 0 (resolved by #168 UI-MEDIA)
-- adapted after L2: 2
+- changed files count: 851
+- clean applied files: 731
+- conflict/adaptation files: 120
 
 ## Clean applied files
-- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.cpp
-- TMessagesProj/jni/voip/webrtc/common_video/h265/h265_bitstream_parser.cc
-- TMessagesProj/jni/voip/webrtc/common_video/h265/h265_sps_parser.cc
-- TMessagesProj/src/main/java/org/telegram/messenger/DispatchQueueMainThreadSync.java
-- TMessagesProj/src/main/java/org/telegram/messenger/MediaDataController.java
+- .gitmodules
+- TMessagesProj/jni/CMakeLists.txt
+- TMessagesProj/jni/TgNetWrapper.cpp
+- TMessagesProj/jni/audio.c
+- TMessagesProj/jni/gram-wallet/.gitignore
+- TMessagesProj/jni/gram-wallet/Cargo.lock
+- TMessagesProj/jni/gram-wallet/Cargo.toml
+- TMessagesProj/jni/gram-wallet/rust-toolchain.toml
+- TMessagesProj/jni/gram-wallet/src/lib.rs
+- TMessagesProj/jni/gram-wallet/src/ton_connect.rs
+- TMessagesProj/jni/gram-wallet/wallet-engine.patch
+- TMessagesProj/jni/image.cpp
+- TMessagesProj/jni/prebuild/build_prisma.sh
+- TMessagesProj/jni/prebuild/build_wallet_engine.sh
+- TMessagesProj/jni/prebuild/include/wallet-engine/gram_wallet.cpp
+- TMessagesProj/jni/prebuild/include/wallet-engine/gram_wallet.hpp
+- TMessagesProj/jni/prebuild/include/wallet-engine/gram_wallet_scaffolding.hpp
+- TMessagesProj/jni/prebuild/include/wallet-engine/wallet_engine.cpp
+- TMessagesProj/jni/prebuild/include/wallet-engine/wallet_engine.hpp
+- TMessagesProj/jni/prebuild/include/wallet-engine/wallet_engine_scaffolding.hpp
+- TMessagesProj/jni/prebuild/lib/arm64-v8a/libprisma.a
+- TMessagesProj/jni/prebuild/lib/arm64-v8a/libwallet_engine.a
+- TMessagesProj/jni/prebuild/lib/armeabi-v7a/libprisma.a
+- TMessagesProj/jni/prebuild/lib/armeabi-v7a/libwallet_engine.a
+- TMessagesProj/jni/prebuild/lib/x86/libprisma.a
+- TMessagesProj/jni/prebuild/lib/x86/libwallet_engine.a
+- TMessagesProj/jni/prebuild/lib/x86_64/libprisma.a
+- TMessagesProj/jni/prebuild/lib/x86_64/libwallet_engine.a
+- TMessagesProj/jni/prisma/CMakeLists.txt
+- TMessagesProj/jni/prisma/bridge/PrismaEngine.cpp
+- TMessagesProj/jni/prisma/bridge/PrismaEngine.h
+- TMessagesProj/jni/prisma/bridge/PrismaIncludes.h
+- TMessagesProj/jni/prisma/bridge/PrismaJni.cpp
+- TMessagesProj/jni/prisma/generate.js
+- TMessagesProj/jni/prisma/generate_prisma_grammars.sh
+- TMessagesProj/jni/prisma/libprisma/Highlight.cpp
+- TMessagesProj/jni/prisma/libprisma/Highlight.h
+- TMessagesProj/jni/prisma/libprisma/SyntaxHighlighter.cpp
+- TMessagesProj/jni/tde2e/bridge.cpp
+- TMessagesProj/jni/tgcalls
+- TMessagesProj/jni/tgnet/ConnectionsManager.cpp
+- TMessagesProj/jni/tgnet/ConnectionsManager.h
+- TMessagesProj/jni/tgnet/DownloadRequestBudget.h
+- TMessagesProj/jni/tgnet/Handshake.cpp
+- TMessagesProj/jni/tgnet/MTProtoScheme.h
+- TMessagesProj/jni/tgnet/TLSHello.cpp
+- TMessagesProj/jni/third_party/boost-regex
+- TMessagesProj/jni/third_party/libprisma
+- TMessagesProj/jni/tlottie
+- TMessagesProj/jni/voip/CMakeLists.txt
+- TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp
+- TMessagesProj/jni/voip/tgcalls/AudioDeviceHelper.cpp
+- TMessagesProj/jni/voip/tgcalls/AudioDeviceHelper.h
+- TMessagesProj/jni/voip/tgcalls/AudioFrame.h
+- TMessagesProj/jni/voip/tgcalls/CodecSelectHelper.cpp
+- TMessagesProj/jni/voip/tgcalls/CodecSelectHelper.h
+- TMessagesProj/jni/voip/tgcalls/CryptoHelper.cpp
+- TMessagesProj/jni/voip/tgcalls/CryptoHelper.h
+- TMessagesProj/jni/voip/tgcalls/EncryptedConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/EncryptedConnection.h
+- TMessagesProj/jni/voip/tgcalls/FakeAudioDeviceModule.cpp
+- TMessagesProj/jni/voip/tgcalls/FakeAudioDeviceModule.h
+- TMessagesProj/jni/voip/tgcalls/FakeVideoTrackSource.cpp
+- TMessagesProj/jni/voip/tgcalls/FakeVideoTrackSource.h
+- TMessagesProj/jni/voip/tgcalls/FieldTrialsConfig.cpp
+- TMessagesProj/jni/voip/tgcalls/FieldTrialsConfig.h
+- TMessagesProj/jni/voip/tgcalls/Instance.cpp
+- TMessagesProj/jni/voip/tgcalls/Instance.h
+- TMessagesProj/jni/voip/tgcalls/InstanceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/InstanceImpl.h
+- TMessagesProj/jni/voip/tgcalls/LogSinkImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/LogSinkImpl.h
+- TMessagesProj/jni/voip/tgcalls/Manager.cpp
+- TMessagesProj/jni/voip/tgcalls/Manager.h
+- TMessagesProj/jni/voip/tgcalls/MediaManager.cpp
+- TMessagesProj/jni/voip/tgcalls/MediaManager.h
+- TMessagesProj/jni/voip/tgcalls/Message.cpp
+- TMessagesProj/jni/voip/tgcalls/Message.h
+- TMessagesProj/jni/voip/tgcalls/NetworkManager.cpp
+- TMessagesProj/jni/voip/tgcalls/NetworkManager.h
+- TMessagesProj/jni/voip/tgcalls/PlatformContext.h
+- TMessagesProj/jni/voip/tgcalls/StaticThreads.cpp
+- TMessagesProj/jni/voip/tgcalls/StaticThreads.h
+- TMessagesProj/jni/voip/tgcalls/Stats.h
+- TMessagesProj/jni/voip/tgcalls/ThreadLocalObject.cpp
+- TMessagesProj/jni/voip/tgcalls/ThreadLocalObject.h
+- TMessagesProj/jni/voip/tgcalls/TurnCustomizerImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/TurnCustomizerImpl.h
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterface.cpp
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterface.h
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterfaceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/VideoCapturerInterface.h
+- TMessagesProj/jni/voip/tgcalls/desktop_capturer/DesktopCaptureSource.cpp
+- TMessagesProj/jni/voip/tgcalls/desktop_capturer/DesktopCaptureSource.h
+- TMessagesProj/jni/voip/tgcalls/desktop_capturer/DesktopCaptureSourceHelper.cpp
+- TMessagesProj/jni/voip/tgcalls/desktop_capturer/DesktopCaptureSourceHelper.h
+- TMessagesProj/jni/voip/tgcalls/desktop_capturer/DesktopCaptureSourceManager.cpp
+- TMessagesProj/jni/voip/tgcalls/desktop_capturer/DesktopCaptureSourceManager.h
+- TMessagesProj/jni/voip/tgcalls/group/AVIOContextImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/group/AVIOContextImpl.h
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPart.cpp
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPart.h
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartInternal.cpp
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartInternal.h
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartPersistentDecoder.cpp
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartPersistentDecoder.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupAudioCapturePostProcessor.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupFrameTransformer.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupFrameTransformerTest.cpp
+- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceImpl.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceReferenceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceReferenceImpl.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupJoinPayload.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupJoinPayloadInternal.cpp
+- TMessagesProj/jni/voip/tgcalls/group/GroupJoinPayloadInternal.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupNetworkManager.cpp
+- TMessagesProj/jni/voip/tgcalls/group/GroupNetworkManager.h
+- TMessagesProj/jni/voip/tgcalls/group/StreamingAudioRenderer.cpp
+- TMessagesProj/jni/voip/tgcalls/group/StreamingAudioRenderer.h
+- TMessagesProj/jni/voip/tgcalls/group/StreamingAudioRendererTest.cpp
+- TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.h
+- TMessagesProj/jni/voip/tgcalls/group/VideoStreamingPart.cpp
+- TMessagesProj/jni/voip/tgcalls/group/VideoStreamingPart.h
+- TMessagesProj/jni/voip/tgcalls/platform/android/AndroidContext.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/android/AndroidContext.h
+- TMessagesProj/jni/voip/tgcalls/platform/android/AndroidInterface.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/android/AndroidInterface.h
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCameraCapturer.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCameraCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCapturerInterfaceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCapturerInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/AudioDeviceModuleIOS.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/AudioDeviceModuleMacos.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/CustomExternalCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/CustomExternalCapturer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/CustomSimulcastEncoderAdapter.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/CustomSimulcastEncoderAdapter.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinFFMpeg.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinFFMpeg.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinInterface.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinInterface.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinVideoSource.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinVideoSource.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DesktopCaptureSourceViewMac.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DesktopCaptureSourceViewMac.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DesktopSharingCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DesktopSharingCapturer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/ExtractCVPixelBuffer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/ExtractCVPixelBuffer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/RTCCodecSpecificInfoH265+Private.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/RTCCodecSpecificInfoH265.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/RTCCodecSpecificInfoH265.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/RTCH265ProfileLevelId.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/RTCH265ProfileLevelId.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/SQueue.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/SQueue.m
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/SQueueLocalObject.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/SQueueLocalObject.m
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGCMIOCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGCMIOCapturer.m
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGCMIODevice.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGCMIODevice.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCCVPixelBuffer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCCVPixelBuffer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoDecoderFactory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoDecoderFactory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoEncoderFactory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoEncoderFactory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH264.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH264.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH265.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH265.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH264.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH264.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH265.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH265.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCMIOCapture.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCMIOCapture.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturerMac.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturerMac.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCaptureView.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCaptureView.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCapturerInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCapturerInterfaceImpl.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalView.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalView.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalViewMac.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalViewMac.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferView.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferView.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferViewMac.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferViewMac.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/h264_encoder_impl.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/h264_encoder_impl.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/h265_nalu_rewriter.cc
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/h265_nalu_rewriter.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/CallAudioTone.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession+Configuration.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession+Private.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSessionConfiguration.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSessionConfiguration.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCNativeAudioSessionDelegateAdapter.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCNativeAudioSessionDelegateAdapter.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_module_ios.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_module_ios.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_voice_processing_audio_unit.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_voice_processing_audio_unit.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/macOS/TGRTCMTLI420Renderer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/macOS/TGRTCMTLI420Renderer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/macOS/TGRTCMTLRenderer+Private.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/macOS/TGRTCMTLRenderer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/macOS/TGRTCMTLRenderer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/macOS/TGRTCMetalContextHolder.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/macOS/TGRTCMetalContextHolder.m
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_decoder_factory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_decoder_factory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_encoder_factory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_encoder_factory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/fake/FakeInterface.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/fake/FakeInterface.h
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/DesktopInterface.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/DesktopInterface.h
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCameraCapturer.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCameraCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerInterfaceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerTrackSource.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerTrackSource.h
+- TMessagesProj/jni/voip/tgcalls/platform/uwp/UwpContext.h
+- TMessagesProj/jni/voip/tgcalls/platform/uwp/UwpScreenCapturer.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/uwp/UwpScreenCapturer.h
+- TMessagesProj/jni/voip/tgcalls/third-party/json11.cpp
+- TMessagesProj/jni/voip/tgcalls/third-party/json11.hpp
+- TMessagesProj/jni/voip/tgcalls/utils/gzip.cpp
+- TMessagesProj/jni/voip/tgcalls/utils/gzip.h
+- TMessagesProj/jni/voip/tgcalls/v2/ContentNegotiation.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/ContentNegotiation.h
+- TMessagesProj/jni/voip/tgcalls/v2/CustomDcSctpSocket.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/CustomDcSctpSocket.h
+- TMessagesProj/jni/voip/tgcalls/v2/CustomParameters.h
+- TMessagesProj/jni/voip/tgcalls/v2/DirectNetworkingImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/DirectNetworkingImpl.h
+- TMessagesProj/jni/voip/tgcalls/v2/ExternalSignalingConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/ExternalSignalingConnection.h
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceNetworking.h
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2CompatImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2CompatImpl.h
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2Impl.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2Impl.h
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.h
+- TMessagesProj/jni/voip/tgcalls/v2/MtProtoIceTransport.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/MtProtoIceTransport.h
+- TMessagesProj/jni/voip/tgcalls/v2/MtProtoIceTransportTest.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/NativeNetworkingImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/NativeNetworkingImpl.h
+- TMessagesProj/jni/voip/tgcalls/v2/RawTcpSocket.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/RawTcpSocket.h
+- TMessagesProj/jni/voip/tgcalls/v2/ReflectorPort.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/ReflectorPort.h
+- TMessagesProj/jni/voip/tgcalls/v2/ReflectorRelayPortFactory.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/ReflectorRelayPortFactory.h
+- TMessagesProj/jni/voip/tgcalls/v2/Signaling.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/Signaling.h
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingConnection.h
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingEncryption.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingEncryption.h
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingSctpConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingSctpConnection.h
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingTranslator.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingTranslator.h
+- TMessagesProj/jni/voip/tgcalls/v2_4_0_0/Signaling_4_0_0.cpp
+- TMessagesProj/jni/voip/tgcalls/v2_4_0_0/Signaling_4_0_0.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CLAUDE.md
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CallCoreABI.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CallCoreBackend.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CallCoreHost.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CallCoreHost.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CoreBase64.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CoreFactory.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CoreGzip.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/CoreGzip.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/EmbeddedCoreModule.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/HostCompressionService.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/InstanceV2PumpImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/InstanceV2PumpImpl.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/NativeCoreBackend.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/NativeCoreBackend.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/ReferenceCallCore.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/ReferenceCallCore.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/SignalingFraming.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/SignalingFraming.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/VariantCallCore.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/VariantCallCore.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/WamrCoreBackend.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/WamrCoreBackend.h
+- TMessagesProj/jni/voip/tgcalls/v2wasm/reference_core_factory.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/variant_core_factory.cpp
+- TMessagesProj/jni/voip/tgcalls/v2wasm/wasm_module_entry.cpp
+- TMessagesProj/jni/voip/webrtc/api/peer_connection_interface.cc
+- TMessagesProj/jni/voip/webrtc/api/peer_connection_interface.h
+- TMessagesProj/jni/voip/webrtc/p2p/base/ice_transport_internal.cc
+- TMessagesProj/jni/voip/webrtc/pc/peer_connection.cc
+- TMessagesProj/jni/voip/webrtc/pc/peer_connection.h
+- TMessagesProj/jni/voip/webrtc/pc/peer_connection_internal.h
+- TMessagesProj/jni/voip/webrtc/pc/sdp_offer_answer.cc
+- TMessagesProj/jni/wallet-engine
+- TMessagesProj/jni/wallet/GramWalletAdapter.cpp
+- TMessagesProj/jni/wallet/GramWalletAdapter.h
+- TMessagesProj/jni/wallet/WalletEngineBridge.cpp
+- TMessagesProj/jni/wallet/WalletJournal.h
+- TMessagesProj/proguard-rules.pro
+- TMessagesProj/src/main/assets/codelng.gzip
+- TMessagesProj/src/main/assets/darkblue.attheme
+- TMessagesProj/src/main/assets/fonts/currency_symbols.txt
+- TMessagesProj/src/main/assets/fonts/gram.ttf
+- TMessagesProj/src/main/assets/fonts/rmono_var.ttf
+- TMessagesProj/src/main/assets/grammars.dat
+- TMessagesProj/src/main/assets/models/diamond.binobj
+- TMessagesProj/src/main/assets/models/diamond_ios/anchors.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/camera.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/facetProjection.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/frames.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/main.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/planes.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/small.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/vertices.bin
+- TMessagesProj/src/main/assets/models/diamond_ios/widths.bin
+- TMessagesProj/src/main/assets/models/diamond_outer.binobj
+- TMessagesProj/src/main/assets/models/diamond_outer_2.binobj
+- TMessagesProj/src/main/assets/night.attheme
+- TMessagesProj/src/main/assets/shaders/diamond/copyFragment.glsl
+- TMessagesProj/src/main/assets/shaders/diamond/diamondFragment.glsl
+- TMessagesProj/src/main/assets/shaders/diamond/diamondVertex.glsl
+- TMessagesProj/src/main/assets/shaders/diamond/fullscreenVertex.glsl
+- TMessagesProj/src/main/assets/shaders/diamond/sparkleFragment.glsl
+- TMessagesProj/src/main/assets/shaders/diamond/sparkleVertex.glsl
+- TMessagesProj/src/main/assets/shaders/fragment5.glsl
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_0.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_1.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_2.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_3.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_4.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_5.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_6.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_0_7.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_0.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_1.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_2.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_3.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_4.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_5.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_6.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/face_1_7.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/finish_dark.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/finish_light.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/grain.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/groove_across.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/groove_along.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_0.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_1.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_2.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_3.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_4.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_5.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_6.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_dark_7.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_0.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_1.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_2.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_3.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_4.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_5.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_6.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_light_7.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_info_mask.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_0.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_1.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_2.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_3.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_4.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_5.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_6.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_dark_7.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_0.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_1.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_2.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_3.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_4.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_5.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_6.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_light_7.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/icon_qr_mask.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/qr_brush_dark.webp
+- TMessagesProj/src/main/assets/wallet_card_2d/qr_brush_light.webp
+- TMessagesProj/src/main/java/org/telegram/messenger/AndroidUtilities.java
+- TMessagesProj/src/main/java/org/telegram/messenger/AppGlobalConfig.java
+- TMessagesProj/src/main/java/org/telegram/messenger/AudioRecorderV2Controller.java
+- TMessagesProj/src/main/java/org/telegram/messenger/Bitmaps.java
+- TMessagesProj/src/main/java/org/telegram/messenger/BotForumHelper.java
+- TMessagesProj/src/main/java/org/telegram/messenger/DialogObject.java
+- TMessagesProj/src/main/java/org/telegram/messenger/DownloadRequestPacer.java
+- TMessagesProj/src/main/java/org/telegram/messenger/FileLoadOperation.java
+- TMessagesProj/src/main/java/org/telegram/messenger/FileLoader.java
+- TMessagesProj/src/main/java/org/telegram/messenger/FileLog.java
+- TMessagesProj/src/main/java/org/telegram/messenger/LocaleController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/MessageCustomParamsHelper.java
 - TMessagesProj/src/main/java/org/telegram/messenger/MessageObject.java
+- TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java
+- TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/PushListenerController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/RichMessageLayout.java
+- TMessagesProj/src/main/java/org/telegram/messenger/RichQuote.java
+- TMessagesProj/src/main/java/org/telegram/messenger/SendMessagesHelper.java
+- TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
+- TMessagesProj/src/main/java/org/telegram/messenger/TelegramQRCodeWriter.java
 - TMessagesProj/src/main/java/org/telegram/messenger/Utilities.java
-- TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
-- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAttachAlertAudioLayout.java
-- TMessagesProj/src/main/java/org/telegram/ui/Components/FragmentContextView.java
-- TMessagesProj/src/main/java/org/telegram/ui/Components/HintsController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/browser/Browser.java
+- TMessagesProj/src/main/java/org/telegram/messenger/camera/CameraController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/utils/BillingUtilities.java
+- TMessagesProj/src/main/java/org/telegram/messenger/utils/Choreographer60FpsContent.java
+- TMessagesProj/src/main/java/org/telegram/messenger/utils/CopyUtilities.java
+- TMessagesProj/src/main/java/org/telegram/messenger/utils/CustomHtml.java
+- TMessagesProj/src/main/java/org/telegram/messenger/utils/tlutils/TlUtils.java
+- TMessagesProj/src/main/java/org/telegram/messenger/video/TextureRenderer.java
+- TMessagesProj/src/main/java/org/telegram/messenger/voip/ConferenceCall.java
+- TMessagesProj/src/main/java/org/telegram/messenger/voip/GroupCallMessagesController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/voip/VoIPService.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/TLClassStore.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/TLRPC.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_account.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_bots.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_communities.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_iv.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_stars.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_toncenter.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_wallet.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBarLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBarMenu.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBarMenuItem.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/AdjustPanLayoutHelper.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/AlertDialog.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/BottomSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/BottomSheetTabDialog.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/BottomSheetTabs.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/INavigationLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/MessageDrawable.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ThemeColors.java
+- TMessagesProj/src/main/java/org/telegram/ui/Adapters/DialogsSearchAdapter.java
+- TMessagesProj/src/main/java/org/telegram/ui/ArticleViewer.java
+- TMessagesProj/src/main/java/org/telegram/ui/AudioRecorderSettingsActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/Business/ChatAttachAlertQuickRepliesLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/CameraScanActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/HeaderCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/StickerSetCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/TextCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/TextSelectionHelper.java
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/UserInfoCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/AIEditorAlert.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/AlertsCreator.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/AnimatedTextView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/BottomSheetWithRecyclerListView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/BulletinFactory.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ButtonBounce.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ButtonSpan.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatActivityEnterView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAttachAlertGramLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAvatarContainer.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ColoredImageSpan.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/CreateBotAlert.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/EdgeEffectTrackerFactory.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/EditTextBoldCursor.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/EditTextCaption.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/EllipsizeSpanAnimator.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/FlickerLoadingView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ForegroundDetector.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/InstantCameraView.java
 - TMessagesProj/src/main/java/org/telegram/ui/Components/InstantCameraView2.java
-- TMessagesProj/src/main/java/org/telegram/ui/Components/RLottieNative.java
-- TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java
-- TMessagesProj/src/main/java/org/telegram/ui/Stories/DarkThemeResourceProvider.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/InstantCameraViewBase.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/LoadingDrawable.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/LoadingSpan.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/MessagePreviewView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Paint/Views/MessageEntityView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/CoolDiamondIcon.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/DiamondProgram.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/DiamondRenderer.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/DiamondSurfaceView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/GLIconRenderer.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/GLIconTextureView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/GLProgramCache.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/Icon3D.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/ObjLoader.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/GLIcon/WalletDiamondTextureView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/StarParticlesView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/Premium/boosts/UserSelectorBottomSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ProfileBalanceView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ProfileGalleryBlurView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/QrColorsPanel.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/QuoteHighlight.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/RecyclerListView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/RoundVideoSettings.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ShareAlert.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/SharedMediaLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/TableLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/TableView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/TelegramRoundVideoUpload.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/UItem.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/UniversalAdapter.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ViewPagerFixed.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/BlurredBackgroundDrawableViewFactory.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/glass/GlassTabView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/inset/WindowInsetsStateHolder.java
+- TMessagesProj/src/main/java/org/telegram/ui/FragmentUsernameBottomSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Gifts/GiftMessageBottomSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Gifts/GiftSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Gifts/ProfileGiftsContainer.java
+- TMessagesProj/src/main/java/org/telegram/ui/Gifts/SendGiftSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/GradientHeaderActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/LinkManager.java
+- TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/LogoutActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/MessageSendPreview.java
+- TMessagesProj/src/main/java/org/telegram/ui/OAuthSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/OrientationController.java
+- TMessagesProj/src/main/java/org/telegram/ui/PasscodeActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/PeerColorActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/PhotoCropActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/PremiumPreviewFragment.java
+- TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity2.java
+- TMessagesProj/src/main/java/org/telegram/ui/ProfileStoriesCollectionTabs.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/Backdrops.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/EmojiPickOverlay.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrBackdrops.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrCodeLayer.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrEmojiPanel.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrGiftSymbol.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrGlass.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrRender.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrScanOverlay.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrShareActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrShareServer.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrShareView.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/QrStarDrawable.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/RimPainter.java
+- TMessagesProj/src/main/java/org/telegram/ui/QrShare/RimTune.java
+- TMessagesProj/src/main/java/org/telegram/ui/RoundVideoSettingsActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/BotStarsActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/GiftOfferSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/MessageSuggestionOfferSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/SellGiftEnterPriceSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/StarGiftSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/StarGiftUniqueActionLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/StarsController.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stars/StarsIntroActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/StatisticActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stories/recorder/ButtonWithCounterView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Stories/recorder/HintView2.java
+- TMessagesProj/src/main/java/org/telegram/ui/StoryCellFactory.java
+- TMessagesProj/src/main/java/org/telegram/ui/TON/TONIntroActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/TopicsFragment.java
+- TMessagesProj/src/main/java/org/telegram/ui/TwoStepVerificationActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/CollectibleCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/CurrenciesController.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/GramWallet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/GramWalletDns.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/GramWalletPolling.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/GramWalletStorage.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/GramWalletStorageAuth.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/GramWalletStreaming.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/GramWalletTonConnect.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/NavBottomSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/NewBottomSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/PasswordRequest.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/ProfileWalletCardDialog.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/TransactionCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletActionLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletActivity.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCard2DMaterial.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCard2DView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCardComponent.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCardGeometry.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCardMotion.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCardProjection.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCardQrBounds.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCardTiltBaseline.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletChatSendTransition.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletDiamondSprite.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletDiamondView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletEngine2.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletGiftCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletGiftPalette.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletGiftStickers.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletImportFragment.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletKeysBackupFragment.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletQrDiamond.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletRecipientView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletSearchTabs.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletSecretPhraseFragment.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletSendEnterAmount.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletSendParticles.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletSendSelectSender.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletSendTransition.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletStickerOutline.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletTestPhraseFragment.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletTonConnectSessionsFragment.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletTransactionAmountView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletWordCell.java
+- TMessagesProj/src/main/java/org/telegram/ui/bots/BotVerifySheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/bots/BotWebViewSheet.java
+- TMessagesProj/src/main/java/org/telegram/ui/iv/RichEditor.java
+- TMessagesProj/src/main/java/org/telegram/ui/iv/RichEditorListView.java
+- TMessagesProj/src/main/java/org/telegram/ui/iv/RichMessageConvert.java
+- TMessagesProj/src/main/java/org/telegram/ui/iv/RichTextCell.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoCameraController.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoCodecRecorder.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoDiagnostics.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoGlProcessor.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoMp4Writer.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoOverlayRenderer.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoRemuxer.java
 - TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoSession.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoSwitchTimingStore.java
+- TMessagesProj/src/main/java/org/telegram/utils/code/highlight/CodeHighlighting.java
+- TMessagesProj/src/main/java/org/telegram/utils/code/highlight/PrismaHighlighter.java
+- TMessagesProj/src/main/java/org/telegram/utils/code/highlight/PrismaHighlightingService.java
+- TMessagesProj/src/main/java/org/telegram/utils/code/highlight/PrismaTokenStyles.java
+- TMessagesProj/src/main/java/org/telegram/utils/localization/Localization.java
+- TMessagesProj/src/main/java/org/telegram/utils/proxy/WebProxyTransport.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioCapture.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioNoiseSuppressor.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecorderDiagnostics.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecorderNative.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecordingSession.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoCameraController.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoCodecRecorder.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoDiagnostics.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoGlProcessor.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoMp4Writer.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoOverlayRenderer.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoRemuxer.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoSession.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoSwitchTimingStore.java
+- TMessagesProj/src/main/java/org/telegram/utils/settings/BooleanSetting.java
+- TMessagesProj/src/main/java/org/telegram/utils/settings/SharedSettings.java
+- TMessagesProj/src/main/res/drawable-hdpi/msg_qr_scan.webp
+- TMessagesProj/src/main/res/drawable-mdpi/msg_qr_scan.webp
+- TMessagesProj/src/main/res/drawable-nodpi/wallet_action_card_gradient.webp
+- TMessagesProj/src/main/res/drawable-xhdpi/msg_qr_scan.webp
+- TMessagesProj/src/main/res/drawable-xxhdpi/msg_qr_scan.webp
+- TMessagesProj/src/main/res/drawable/dialog_gram_transfer.xml
+- TMessagesProj/src/main/res/drawable/filled_card_add.xml
+- TMessagesProj/src/main/res/drawable/filled_card_color.xml
+- TMessagesProj/src/main/res/drawable/filled_card_color_28.xml
+- TMessagesProj/src/main/res/drawable/filled_card_remove.xml
+- TMessagesProj/src/main/res/drawable/filled_gift_send.xml
+- TMessagesProj/src/main/res/drawable/filled_gram_earnings.xml
+- TMessagesProj/src/main/res/drawable/filled_wallet_move.xml
+- TMessagesProj/src/main/res/drawable/ic_gram.xml
+- TMessagesProj/src/main/res/drawable/menu_hide_from_profile.xml
+- TMessagesProj/src/main/res/drawable/menu_show_on_profile.xml
+- TMessagesProj/src/main/res/drawable/mini_gram_16.xml
+- TMessagesProj/src/main/res/drawable/mini_gram_24.xml
+- TMessagesProj/src/main/res/drawable/mini_gram_72.xml
+- TMessagesProj/src/main/res/drawable/mini_gram_72_white.xml
+- TMessagesProj/src/main/res/drawable/profile_balance_gram.xml
+- TMessagesProj/src/main/res/drawable/profile_balance_gram_color.xml
+- TMessagesProj/src/main/res/drawable/scan_qr.xml
+- TMessagesProj/src/main/res/drawable/settings_wallet.xml
+- TMessagesProj/src/main/res/drawable/settings_wallet_dark.xml
+- TMessagesProj/src/main/res/drawable/verified2_bg.xml
+- TMessagesProj/src/main/res/drawable/verified2_fg.xml
+- TMessagesProj/src/main/res/drawable/wallet_apps.xml
+- TMessagesProj/src/main/res/drawable/wallet_buy.xml
+- TMessagesProj/src/main/res/drawable/wallet_card_diamond.xml
+- TMessagesProj/src/main/res/drawable/wallet_card_info.xml
+- TMessagesProj/src/main/res/drawable/wallet_card_qr.xml
+- TMessagesProj/src/main/res/drawable/wallet_comment_locked.xml
+- TMessagesProj/src/main/res/drawable/wallet_comment_unlocked.xml
+- TMessagesProj/src/main/res/drawable/wallet_copy.xml
+- TMessagesProj/src/main/res/drawable/wallet_currency_exchange.xml
+- TMessagesProj/src/main/res/drawable/wallet_globe.xml
+- TMessagesProj/src/main/res/drawable/wallet_gram_14.xml
+- TMessagesProj/src/main/res/drawable/wallet_gram_large.xml
+- TMessagesProj/src/main/res/drawable/wallet_gram_small.xml
+- TMessagesProj/src/main/res/drawable/wallet_help.xml
+- TMessagesProj/src/main/res/drawable/wallet_intro_arrow.xml
+- TMessagesProj/src/main/res/drawable/wallet_intro_chats.xml
+- TMessagesProj/src/main/res/drawable/wallet_intro_options.xml
+- TMessagesProj/src/main/res/drawable/wallet_intro_store.xml
+- TMessagesProj/src/main/res/drawable/wallet_intro_telegram.xml
+- TMessagesProj/src/main/res/drawable/wallet_intro_trade.xml
+- TMessagesProj/src/main/res/drawable/wallet_key.xml
+- TMessagesProj/src/main/res/drawable/wallet_learn_fees.xml
+- TMessagesProj/src/main/res/drawable/wallet_learn_hidden.xml
+- TMessagesProj/src/main/res/drawable/wallet_learn_instant.xml
+- TMessagesProj/src/main/res/drawable/wallet_learn_protected.xml
+- TMessagesProj/src/main/res/drawable/wallet_learn_verified.xml
+- TMessagesProj/src/main/res/drawable/wallet_learn_warn.xml
+- TMessagesProj/src/main/res/drawable/wallet_lock.xml
+- TMessagesProj/src/main/res/drawable/wallet_nft.xml
+- TMessagesProj/src/main/res/drawable/wallet_nft_placeholder.xml
+- TMessagesProj/src/main/res/drawable/wallet_protect.xml
+- TMessagesProj/src/main/res/drawable/wallet_provider_moonpay.xml
+- TMessagesProj/src/main/res/drawable/wallet_provider_wallet.xml
+- TMessagesProj/src/main/res/drawable/wallet_sell.xml
+- TMessagesProj/src/main/res/drawable/wallet_tooltip_arrow.xml
+- TMessagesProj/src/main/res/drawable/wallet_transaction_in.xml
+- TMessagesProj/src/main/res/drawable/wallet_transaction_key.xml
+- TMessagesProj/src/main/res/drawable/wallet_transaction_out.xml
+- TMessagesProj/src/main/res/drawable/wallet_transaction_topup.xml
+- TMessagesProj/src/main/res/drawable/wallet_transaction_walt.xml
+- TMessagesProj/src/main/res/drawable/wallet_transfer.xml
+- TMessagesProj/src/main/res/raw/gram.json
+- TMessagesProj/src/main/res/raw/gram_reverse.json
+- TMessagesProj/src/main/res/raw/qr_resistance_dog.json
+- TMessagesProj/src/main/res/raw/wallet_diamond_blue.json
+- TMessagesProj/src/main/res/raw/wallet_diamond_white.json
+- TMessagesProj/src/main/res/raw/wallet_gift_trash.json
+- TMessagesProj_Modules/media
 - gradle.properties
 
-## Conflict/adaptation files — RESOLVED (#168)
-- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — adapted edit-time while isEditing()+edit_date==0 (cell-local; TimeStringHelper untouched); 00007.patch removed
-- TMessagesProj/src/main/java/org/telegram/ui/Components/blur3/drawable/color/BlurredBackgroundProviderBuilder.java — Nix if/else already ≡ official parentheses; 00014.patch removed (satisfied, no code change)
+## Conflict/adaptation files — TODO
+- Dockerfile — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch
+- TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00002.patch
+- TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00014.patch
+- TMessagesProj/jni/prebuild/build_env.txt — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00015.patch
+- TMessagesProj/jni/tgnet/Defines.h — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00046.patch
+- TMessagesProj/jni/voip/tgcalls/ChannelManager.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00059.patch
+- TMessagesProj/jni/voip/tgcalls/ChannelManager.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00060.patch
+- TMessagesProj/jni/voip/tgcalls/DirectConnectionChannel.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00065.patch
+- TMessagesProj/jni/voip/tgcalls/SctpDataChannelProviderInterfaceImpl.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00089.patch
+- TMessagesProj/jni/voip/tgcalls/SctpDataChannelProviderInterfaceImpl.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00090.patch
+- TMessagesProj/jni/voip/tgcalls/group/GroupAudioCapturePostProcessor.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00117.patch
+- TMessagesProj/jni/voip/tgcalls/group/GroupFrameTransformer.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00119.patch
+- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00122.patch
+- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00123.patch
+- TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00135.patch
+- TMessagesProj/jni/voip/tgcalls/platform/PlatformInterface.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00139.patch
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00272.patch
+- TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00336.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/CodeHighlighting.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00425.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00431.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00433.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/MediaDataController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00434.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00440.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/UserObject.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00447.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/voip/VoipAudioManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00460.patch
+- TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00461.patch
+- TMessagesProj/src/main/java/org/telegram/tgnet/TLParseException.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00463.patch
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_update.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00471.patch
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00473.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatActionCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00491.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00492.patch
+- TMessagesProj/src/main/java/org/telegram/ui/ChannelMonetizationLayout.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00499.patch
+- TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00500.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAttachAlert.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00509.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ItemOptions.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00523.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Components/PasscodeView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00528.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ProfileMusicView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00543.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Components/spoilers/SpoilersTextView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00559.patch
+- TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00560.patch
+- TMessagesProj/src/main/java/org/telegram/ui/MainTabsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00571.patch
+- TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00578.patch
+- TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00580.patch
+- TMessagesProj/src/main/java/org/telegram/ui/QrActivity.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00583.patch
+- TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00600.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Stories/UploadingDotsSpannable.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00610.patch
+- TMessagesProj/src/main/java/org/telegram/ui/TwoStepVerificationSetupActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00617.patch
+- TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00775.patch
+- TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00776.patch
+- TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00777.patch
+- TMessagesProj_AppHuawei/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00778.patch
+- TMessagesProj_AppStandalone/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00779.patch
+- TMessagesProj_AppTests/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00780.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/not_linked_classes.txt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00781.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerification.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00782.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerifierSettings.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00783.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_Chat.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00784.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_ChatFull.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00785.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_CurrencyRate.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00786.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_ExportedNoPaidMessagesToken.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00787.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_FeedItem.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00788.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_FeedPosition.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00789.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_InputReplyTo.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00790.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_InputTonConnectOauthSession.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00791.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_InputWalletCardSticker.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00792.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_InputWalletReplacement.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00793.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_MessageAction.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00794.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_MessageEntity.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00795.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_MessageReplyHeader.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00796.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_OnrampAvailability.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00797.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_OnrampLimits.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00798.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_OnrampMethodAvailability.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00799.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_OnrampProviderInfo.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00800.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_OnrampQuote.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00801.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_OnrampSession.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00802.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_RichText.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00803.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_ShareTheme.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00804.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_ShareThemeBackdropOption.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00805.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_ShareThemeBackdrops.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00806.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_TonConnectManifest.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00807.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_TonConnectNextEventId.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00808.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_TonConnectRequest.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00809.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_TonConnectSession.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00810.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_Update.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00811.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_UrlAuthResult.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00812.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_UserFull.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00813.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_Username.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00814.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_WalletOwnershipProof.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00815.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_WalletState.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00816.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_WalletTransaction.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00817.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_WalletTransactionPeer.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00818.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_WalletUserAddress.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00819.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_feed_FeedMessages.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00820.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_feed_ForYouFeed.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00821.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_feed_InterestCategories.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00822.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_feed_InterestCategory.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00823.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_payments_CurrencyRates.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00824.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_payments_StarGiftDepositPayload.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00825.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_toncenter_ApiResponse.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00826.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_toncenter_StreamingUrl.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00827.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_Card.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00828.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_CardSticker.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00829.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_EncryptedSecretPhrasePart.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00830.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_ExistingBalance.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00831.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_HolderDc.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00832.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_NftAttribute.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00833.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_NftItem.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00834.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_NftItems.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00835.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_ProofChallenge.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00836.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_SecretPhraseParts.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00837.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_TonConnectChallenge.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00838.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_TonConnectPending.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00839.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_TonConnectSessions.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00840.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_Transactions.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00841.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_UserAddresses.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00842.patch
+- TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/test/generated/Test_All.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00843.patch
+- TMessagesProj_AppTests/tlscheme/229.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00844.patch
+- TMessagesProj_AppTests/tlscheme/230.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00845.patch
+- TMessagesProj_AppTests/tlscheme/231.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00846.patch
+- TMessagesProj_AppTests/tlscheme/232.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00847.patch
+- buildSrc/src/main/kotlin/com/example/GenerateSchemeTask.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00849.patch
 
 ## Submodule changes
-- None
+- TMessagesProj/jni/tgcalls: None -> ['160000', 'commit', '1398c1648f52666b3249111ec3c5b531946e41e4']
+- TMessagesProj/jni/third_party/boost-regex: None -> ['160000', 'commit', '4cbcd3078e6ae10d05124379623a1bf03fcb9350']
+- TMessagesProj/jni/third_party/libprisma: None -> ['160000', 'commit', '31a5d6fbbef8136e4a2b3adaf7b95e2ccaa7436d']
+- TMessagesProj/jni/tlottie: ['160000', 'commit', '92df98dc209bc39b1e567ec74a8c86a0af5239de'] -> ['160000', 'commit', '31f1b542f88e7b4be9a01e749920d857535fc715']
+- TMessagesProj/jni/wallet-engine: None -> ['160000', 'commit', '5c65e47cb8d68727c20d89382d0bc51292486b9a']
+- TMessagesProj_Modules/media: ['160000', 'commit', 'c430d207677071b1873f9f18266d55ec45722180'] -> ['160000', 'commit', '09b6c97c0d691c50cd4541e1573995d4066d6f5c']
 
 ## Dependency changes
+- TMessagesProj/build.gradle
+- TMessagesProj_App/build.gradle
+- TMessagesProj_AppHockeyApp/build.gradle
+- TMessagesProj_AppHuawei/build.gradle
+- TMessagesProj_AppStandalone/build.gradle
+- TMessagesProj_AppTests/build.gradle
 - gradle.properties
 
 ## High-risk areas
-- TMessagesProj/jni/voip/webrtc/common_video/h265/h265_bitstream_parser.cc
-- TMessagesProj/jni/voip/webrtc/common_video/h265/h265_sps_parser.cc
+- TMessagesProj/jni/audio.c
+- TMessagesProj/jni/tgnet/ConnectionsManager.cpp
+- TMessagesProj/jni/tgnet/ConnectionsManager.h
+- TMessagesProj/jni/tgnet/DownloadRequestBudget.h
+- TMessagesProj/jni/voip/tgcalls/AudioDeviceHelper.cpp
+- TMessagesProj/jni/voip/tgcalls/AudioDeviceHelper.h
+- TMessagesProj/jni/voip/tgcalls/AudioFrame.h
+- TMessagesProj/jni/voip/tgcalls/DirectConnectionChannel.h
+- TMessagesProj/jni/voip/tgcalls/EncryptedConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/EncryptedConnection.h
+- TMessagesProj/jni/voip/tgcalls/FakeAudioDeviceModule.cpp
+- TMessagesProj/jni/voip/tgcalls/FakeAudioDeviceModule.h
+- TMessagesProj/jni/voip/tgcalls/FakeVideoTrackSource.cpp
+- TMessagesProj/jni/voip/tgcalls/FakeVideoTrackSource.h
+- TMessagesProj/jni/voip/tgcalls/MediaManager.cpp
+- TMessagesProj/jni/voip/tgcalls/MediaManager.h
+- TMessagesProj/jni/voip/tgcalls/NetworkManager.cpp
+- TMessagesProj/jni/voip/tgcalls/NetworkManager.h
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterface.cpp
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterface.h
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterfaceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/VideoCaptureInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/VideoCapturerInterface.h
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPart.cpp
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPart.h
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartInternal.cpp
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartInternal.h
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartPersistentDecoder.cpp
+- TMessagesProj/jni/voip/tgcalls/group/AudioStreamingPartPersistentDecoder.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupAudioCapturePostProcessor.cpp
+- TMessagesProj/jni/voip/tgcalls/group/GroupAudioCapturePostProcessor.h
+- TMessagesProj/jni/voip/tgcalls/group/GroupNetworkManager.cpp
+- TMessagesProj/jni/voip/tgcalls/group/GroupNetworkManager.h
+- TMessagesProj/jni/voip/tgcalls/group/StreamingAudioRenderer.cpp
+- TMessagesProj/jni/voip/tgcalls/group/StreamingAudioRenderer.h
+- TMessagesProj/jni/voip/tgcalls/group/StreamingAudioRendererTest.cpp
+- TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.cpp
+- TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.h
+- TMessagesProj/jni/voip/tgcalls/group/VideoStreamingPart.cpp
+- TMessagesProj/jni/voip/tgcalls/group/VideoStreamingPart.h
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCameraCapturer.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCameraCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCapturerInterfaceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/android/VideoCapturerInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/AudioDeviceModuleIOS.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/AudioDeviceModuleMacos.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinVideoSource.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/DarwinVideoSource.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoDecoderFactory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoDecoderFactory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoEncoderFactory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCDefaultVideoEncoderFactory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH264.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH264.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH265.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoDecoderH265.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH264.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH264.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH265.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/TGRTCVideoEncoderH265.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCMIOCapture.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCMIOCapture.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturer.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturerMac.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCameraCapturerMac.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCaptureView.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCaptureView.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCapturerInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoCapturerInterfaceImpl.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalView.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalView.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalViewMac.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoMetalViewMac.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferView.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferView.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferViewMac.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/VideoSampleBufferViewMac.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/CallAudioTone.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession+Configuration.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession+Private.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSession.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSessionConfiguration.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCAudioSessionConfiguration.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCNativeAudioSessionDelegateAdapter.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/RTCNativeAudioSessionDelegateAdapter.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_module_ios.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_audio_device_module_ios.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_voice_processing_audio_unit.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/iOS/tgcalls_voice_processing_audio_unit.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_decoder_factory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_decoder_factory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_encoder_factory.h
+- TMessagesProj/jni/voip/tgcalls/platform/darwin/objc_video_encoder_factory.mm
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCameraCapturer.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCameraCapturer.h
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerInterfaceImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerInterfaceImpl.h
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerTrackSource.cpp
+- TMessagesProj/jni/voip/tgcalls/platform/tdesktop/VideoCapturerTrackSource.h
+- TMessagesProj/jni/voip/tgcalls/v2/DirectNetworkingImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/DirectNetworkingImpl.h
+- TMessagesProj/jni/voip/tgcalls/v2/ExternalSignalingConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/ExternalSignalingConnection.h
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceNetworking.h
+- TMessagesProj/jni/voip/tgcalls/v2/NativeNetworkingImpl.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/NativeNetworkingImpl.h
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingConnection.h
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingSctpConnection.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingSctpConnection.h
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingTranslator.cpp
+- TMessagesProj/jni/voip/tgcalls/v2/SignalingTranslator.h
+- TMessagesProj/jni/voip/webrtc/api/peer_connection_interface.cc
+- TMessagesProj/jni/voip/webrtc/api/peer_connection_interface.h
+- TMessagesProj/jni/voip/webrtc/pc/peer_connection.cc
+- TMessagesProj/jni/voip/webrtc/pc/peer_connection.h
+- TMessagesProj/jni/voip/webrtc/pc/peer_connection_internal.h
+- TMessagesProj/src/main/java/org/telegram/messenger/AudioRecorderV2Controller.java
+- TMessagesProj/src/main/java/org/telegram/messenger/DownloadRequestPacer.java
+- TMessagesProj/src/main/java/org/telegram/messenger/FileLoader.java
+- TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaDataController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java
+- TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/PushListenerController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/SendMessagesHelper.java
+- TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
+- TMessagesProj/src/main/java/org/telegram/messenger/video/TextureRenderer.java
+- TMessagesProj/src/main/java/org/telegram/messenger/voip/GroupCallMessagesController.java
+- TMessagesProj/src/main/java/org/telegram/messenger/voip/VoipAudioManager.java
+- TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+- TMessagesProj/src/main/java/org/telegram/ui/AudioRecorderSettingsActivity.java
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java
 - TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
-- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAttachAlertAudioLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatActivityEnterView.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/RoundVideoSettings.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/SharedMediaLayout.java
+- TMessagesProj/src/main/java/org/telegram/ui/Components/TelegramRoundVideoUpload.java
+- TMessagesProj/src/main/java/org/telegram/ui/RoundVideoSettingsActivity.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoCameraController.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoCodecRecorder.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoDiagnostics.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoGlProcessor.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoMp4Writer.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoOverlayRenderer.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoRemuxer.java
 - TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoSession.java
+- TMessagesProj/src/main/java/org/telegram/utils/camera/roundvideo/RoundVideoSwitchTimingStore.java
+- TMessagesProj/src/main/java/org/telegram/utils/proxy/WebProxyTransport.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioCapture.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioNoiseSuppressor.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecorderDiagnostics.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecorderNative.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecordingSession.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoCameraController.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoCodecRecorder.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoDiagnostics.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoGlProcessor.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoMp4Writer.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoOverlayRenderer.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoRemuxer.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoSession.java
+- TMessagesProj/src/main/java/org/telegram/utils/recorder/round/RoundVideoSwitchTimingStore.java
+- TMessagesProj_Modules/media
 
 ## NixgramX preservation
 - package name preserved: app.nixgramx.android (identity files retained)
@@ -90,4 +1094,4 @@ Mechanical application is not semantic validation. Resolve every TODO using the 
 After resolving TODOs, set docs/upstream-base.json base to the target, add its commit to synced_commits and clear pending. CI rejects pending adaptations.
 PR waiting for review. No auto merge, no release, no APK publication.
 
-CI run: https://github.com/Anndy999/NixgramX/actions/runs/36764636098 (actual results in job summary).
+CI run: https://github.com/Anndy999/NixgramX/actions/runs/40210681514 (actual results in job summary).

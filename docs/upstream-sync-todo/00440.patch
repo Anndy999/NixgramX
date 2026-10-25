@@ -1,0 +1,23 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java b/TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java
+index c65b2b9a3efb3ce111f2bdb5b16ccd877b80e628..a7d78ea08a9089b40b243e58878737b37038135f 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java
+@@ -53,9 +53,9 @@ import kotlinx.coroutines.GlobalScope;
+ import kotlinx.coroutines.Job;
+ import kotlinx.coroutines.JobCancellationException;
+ 
+-@RequiresApi(api = 28)
+ public class PasskeysController {
+ 
++    @RequiresApi(api = 28)
+     public static void create(Context context, int currentAccount, Utilities.Callback2<TL_account.Passkey, String> done) {
+         if (!BuildVars.SUPPORTS_PASSKEYS) return;
+ 
+@@ -162,6 +162,7 @@ public class PasskeysController {
+         );
+     }
+ 
++    @RequiresApi(api = 28)
+     public static Runnable login(Context context, int currentAccount, boolean clickedButton, Utilities.Callback3<Long, TLRPC.auth_Authorization, String> done) {
+         if (!BuildVars.SUPPORTS_PASSKEYS) return null;
+ 

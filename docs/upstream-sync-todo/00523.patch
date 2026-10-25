@@ -1,0 +1,36 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/Components/ItemOptions.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/ItemOptions.java
+index ee78190e2b97aa2e443ece4e791da987684ddefb..f8ef85a7d85182d028d4eb03d5b3853a62b64cd5 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/ItemOptions.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/ItemOptions.java
+@@ -345,6 +345,10 @@ public class ItemOptions {
+         return add(iconResId, text, false, onClickListener);
+     }
+ 
++    public ItemOptions add(int iconResId, CharSequence text, CharSequence subtext, Runnable onClickListener) {
++        return add(iconResId, null, text, subtext, Theme.key_actionBarDefaultSubmenuItemIcon, Theme.key_actionBarDefaultSubmenuItem, onClickListener);
++    }
++
+     public ItemOptions add(Drawable icon, CharSequence text, Runnable onClickListener) {
+         return add(0, icon, text, Theme.key_actionBarDefaultSubmenuItemIcon, Theme.key_actionBarDefaultSubmenuItem, onClickListener);
+     }
+@@ -362,6 +366,10 @@ public class ItemOptions {
+     }
+ 
+     public ItemOptions add(int iconResId, Drawable iconDrawable, CharSequence text, int iconColorKey, int textColorKey, Runnable onClickListener) {
++        return add(iconResId, iconDrawable, text, null, iconColorKey, textColorKey, onClickListener);
++    }
++
++    public ItemOptions add(int iconResId, Drawable iconDrawable, CharSequence text, CharSequence subtext, int iconColorKey, int textColorKey, Runnable onClickListener) {
+         if (context == null) {
+             return this;
+         }
+@@ -373,6 +381,9 @@ public class ItemOptions {
+         } else {
+             subItem.setText(text);
+         }
++        if (!TextUtils.isEmpty(subtext)) {
++            subItem.setSubtext(subtext);
++        }
+ 
+         subItem.setColors(textColor != null ? textColor : Theme.getColor(textColorKey, resourcesProvider), iconColor != null ? iconColor : Theme.getColor(iconColorKey, resourcesProvider));
+         subItem.setSelectorColor(selectorColor != null ? selectorColor : Theme.multAlpha(Theme.getColor(textColorKey, resourcesProvider), .12f));

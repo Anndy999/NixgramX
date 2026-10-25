@@ -1,0 +1,31 @@
+diff --git a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerification.kt b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerification.kt
+index 8273540c0d61ed59cb901a18d0ce12eb8c2fd271..2a13ba3060a681dc6d51f0b3ad2a4ae27563e8a7 100644
+--- a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerification.kt
++++ b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerification.kt
+@@ -11,8 +11,25 @@ public sealed class TlGen_BotVerification : TlGen_Object {
+   public data class TL_botVerification(
+     public val bot_id: Long,
+     public val icon: Long,
+-    public val description: String,
++    public val description: TlGen_TextWithEntities,
+   ) : TlGen_BotVerification() {
++    public override fun serializeToStream(stream: OutputSerializedData) {
++      stream.writeInt32(MAGIC.toInt())
++      stream.writeInt64(bot_id)
++      stream.writeInt64(icon)
++      description.serializeToStream(stream)
++    }
++
++    public companion object {
++      public const val MAGIC: UInt = 0xF72E0ED9U
++    }
++  }
++
++  public data class TL_botVerification_layer229(
++    public val bot_id: Long,
++    public val icon: Long,
++    public val description: String,
++  ) : TlGen_Object {
+     public override fun serializeToStream(stream: OutputSerializedData) {
+       stream.writeInt32(MAGIC.toInt())
+       stream.writeInt64(bot_id)

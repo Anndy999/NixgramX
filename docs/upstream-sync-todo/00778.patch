@@ -1,0 +1,43 @@
+diff --git a/TMessagesProj_AppHuawei/build.gradle b/TMessagesProj_AppHuawei/build.gradle
+index 724e229b6756daa4bd1a9b2a884a0b7bf7fe7d48..1db94c27e6ee0e7fb5acdcd0c04bece96447f240 100644
+--- a/TMessagesProj_AppHuawei/build.gradle
++++ b/TMessagesProj_AppHuawei/build.gradle
+@@ -35,7 +35,6 @@ android {
+ 
+     defaultConfig.applicationId = APP_PACKAGE
+ 
+-    sourceSets.main.jniLibs.srcDirs = ['../TMessagesProj/jni/']
+ 
+     lintOptions {
+         disable 'MissingTranslation'
+@@ -71,6 +70,12 @@ android {
+         }
+     }
+ 
++    packagingOptions {
++        jniLibs {
++            useLegacyPackaging = true
++        }
++    }
++
+     buildTypes {
+         debug {
+             debuggable true
+@@ -138,7 +143,7 @@ android {
+     }
+ 
+     defaultConfig {
+-        minSdkVersion 21
++        minSdkVersion 23
+         targetSdkVersion 36
+         versionName APP_VERSION_NAME
+         ndkVersion "27.2.12479018"
+@@ -150,7 +155,7 @@ android {
+         externalNativeBuild {
+             cmake {
+                 version '3.22.1'
+-                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-21' //, '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
++                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-23' //, '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                 targets 'tmessages.49'
+             }
+         }
