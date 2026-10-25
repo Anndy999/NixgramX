@@ -248,8 +248,6 @@ android {
         }
     }
 
-    sourceSets.main.jniLibs.srcDirs = ['./jni/']
-
     namespace = 'org.telegram.messenger'
 }
 
@@ -341,6 +339,7 @@ dependencies {
     implementation 'com.googlecode.mp4parser:isoparser:1.0.6'
     implementation 'com.google.mlkit:language-id:17.0.6'
     implementation 'com.google.code.gson:gson:2.14.0'
+    implementation 'com.neovisionaries:nv-websocket-client:2.14'
     implementation ('com.google.guava:guava:33.6.0-android') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'org.checkerframework', module: 'checker-compat-qual'
