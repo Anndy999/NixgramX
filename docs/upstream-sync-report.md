@@ -749,10 +749,10 @@
 - gradle.properties
 
 ## Conflict/adaptation files — TODO
-- Dockerfile — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch
-- TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00002.patch
-- TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00014.patch
-- TMessagesProj/jni/prebuild/build_env.txt — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00015.patch
+- Dockerfile — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00002.patch — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00014.patch — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/jni/prebuild/build_env.txt — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00015.patch — RESOLVED by #186 (BUILD-NATIVE)
 - TMessagesProj/jni/tgnet/Defines.h — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00046.patch — RESOLVED (#187): kept PROXY_CONNECTIONS_COUNT 10 and MAX_ACCOUNT_COUNT 10; took DOWNLOAD_CONNECTIONS_COUNT 8 plus RequestFlagSmallDownload and RequestFlagDownloadByteBudget
 - TMessagesProj/jni/voip/tgcalls/ChannelManager.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00059.patch — RESOLVED (#187): accept deletion; no Nix delta; submodule tgcalls/ChannelManager.cpp byte-matches 12.10.6
 - TMessagesProj/jni/voip/tgcalls/ChannelManager.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00060.patch — RESOLVED (#187): accept deletion; no Nix delta; submodule header byte-matches 12.10.6
@@ -766,7 +766,7 @@
 - TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00135.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; submodule byte-matches 12.10.6
 - TMessagesProj/jni/voip/tgcalls/platform/PlatformInterface.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00139.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; submodule byte-matches 12.10.6
 - TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00272.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; 13.1.1 v2 edits live in submodule 1398c164
-- TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00336.patch
+- TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00336.patch — RESOLVED by #186 (BUILD-NATIVE)
 - TMessagesProj/src/main/java/org/telegram/messenger/CodeHighlighting.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00425.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00431.patch — RESOLVED (#189): Bitmap scaling and stripped-photo fallback applied; Nix deleted-media, .nomedia, and thumb-size guards kept
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00433.patch — RESOLVED (#189): AudioRecorder V2 plus 13.1.1 schedule/draft/amplitude fixes; Nix save-path, proximity, voice-enhance, and playback guards kept
@@ -796,11 +796,11 @@
 - TMessagesProj/src/main/java/org/telegram/ui/Stories/UploadingDotsSpannable.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00610.patch
 - TMessagesProj/src/main/java/org/telegram/ui/TwoStepVerificationSetupActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00617.patch
 - TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00775.patch — RESOLVED (#189): 13.1.1 strings applied including AnonymousNumber/Gift2 title; Nix AppName, search engines, proxy-call, GoToBeginning, and diagnostic strings kept; TONBalance* removed with upstream
-- TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00776.patch
-- TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00777.patch
-- TMessagesProj_AppHuawei/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00778.patch
-- TMessagesProj_AppStandalone/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00779.patch
-- TMessagesProj_AppTests/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00780.patch
+- TMessagesProj_App/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppHockeyApp/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppHuawei/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppStandalone/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppTests/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
 - TMessagesProj_AppTests/src/androidTest/kotlin/not_linked_classes.txt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00781.patch
 - TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerification.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00782.patch
 - TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerifierSettings.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00783.patch
@@ -868,7 +868,7 @@
 - TMessagesProj_AppTests/tlscheme/230.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00845.patch
 - TMessagesProj_AppTests/tlscheme/231.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00846.patch
 - TMessagesProj_AppTests/tlscheme/232.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00847.patch
-- buildSrc/src/main/kotlin/com/example/GenerateSchemeTask.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00849.patch
+- buildSrc/src/main/kotlin/com/example/GenerateSchemeTask.kt — RESOLVED by #186 (BUILD-NATIVE)
 
 ## Submodule changes
 - TMessagesProj/jni/tgcalls: None -> ['160000', 'commit', '1398c1648f52666b3249111ec3c5b531946e41e4']
@@ -1088,6 +1088,10 @@
 - [ ] Proxy / network — Not tested
 - [ ] Notification — Not tested
 - [ ] Multi-account — Not tested
+
+## Breakpad (NEEDS HUMAN, #186)
+- Breakpad stays off pending Owner decision. Official 13.1.1 (3de37c8c) builds breakpad in jni/CMakeLists.txt and implements setupNativeCrashesListener in utilities.cpp, but the only caller is the official TMessagesProj_AppHockeyApp module.
+- NixgramX has neither the HockeyApp module nor the breakpad JNI implementation, and has not linked breakpad since 58a744515. Re-adding only the CMake block would restore no functionality.
 
 ## Review gate
 Mechanical application is not semantic validation. Resolve every TODO using the official new implementation and re-weave local features. Do not revert official code, delete hooks, silence exceptions or comment out functionality to compile.
