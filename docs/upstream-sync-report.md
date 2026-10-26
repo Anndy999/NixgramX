@@ -1089,6 +1089,10 @@
 - [ ] Notification — Not tested
 - [ ] Multi-account — Not tested
 
+## Breakpad (NEEDS HUMAN, #186)
+- Breakpad stays off pending Owner decision. Official 13.1.1 (3de37c8c) builds breakpad in jni/CMakeLists.txt and implements setupNativeCrashesListener in utilities.cpp, but the only caller is the official TMessagesProj_AppHockeyApp module.
+- NixgramX has neither the HockeyApp module nor the breakpad JNI implementation, and has not linked breakpad since 58a744515. Re-adding only the CMake block would restore no functionality.
+
 ## Review gate
 Mechanical application is not semantic validation. Resolve every TODO using the official new implementation and re-weave local features. Do not revert official code, delete hooks, silence exceptions or comment out functionality to compile.
 After resolving TODOs, set docs/upstream-base.json base to the target, add its commit to synced_commits and clear pending. CI rejects pending adaptations.

@@ -1,5 +1,7 @@
-// NixgramX overlay of tgcalls 1398c164 tgcalls/group/GroupInstanceCustomImpl.cpp:
-// only the custom outgoing audio bitrate delta (bacde165/#123) is added.
+// NixgramX overlay of tgcalls 1398c164 tgcalls/group/GroupInstanceCustomImpl.cpp.
+// Adds NixgramX custom outgoing audio bitrate (as in b5656a395, originally bacde165/#123):
+// field trials, webrtcInitStr, NixGroupCallAudioBitrate, int opus min/max/start bitrate,
+// ptime 120 at 32 kbps else 10, and audio-only send bitrate = kbit * 1024.
 #include "GroupInstanceCustomImpl.h"
 #include "nixgramx/NixGroupCallAudioBitrate.h"
 
@@ -1980,10 +1982,10 @@ public:
             _outgoingAudioChannel->SetRtpTransport(_rtpTransport);
         });
 
-        const uint8_t opusMinBitrateKbps = _outgoingAudioBitrateKbit;
-        const uint8_t opusMaxBitrateKbps = _outgoingAudioBitrateKbit;
-        const uint8_t opusStartBitrateKbps = _outgoingAudioBitrateKbit;
-        const uint8_t opusPTimeMs = 120;
+        int opusMinBitrateKbps = _outgoingAudioBitrateKbit;
+        int opusMaxBitrateKbps = _outgoingAudioBitrateKbit;
+        int opusStartBitrateKbps = _outgoingAudioBitrateKbit;
+        const uint8_t opusPTimeMs = _outgoingAudioBitrateKbit == 32 ? 120 : 10;
 
         cricket::AudioCodec opusCodec = cricket::CreateAudioCodec(111, "opus", 48000, 2);
         opusCodec.AddFeedbackParam(cricket::FeedbackParam(cricket::kRtcpFbParamTransportCc));
@@ -2457,11 +2459,11 @@ public:
                 preferences.max_bitrate_bps = std::max(preferences.min_bitrate_bps, (1020 + 32) * 1000);
             }
         } else {
-            preferences.min_bitrate_bps = 32000;
+            preferences.min_bitrate_bps = _outgoingAudioBitrateKbit * 1024;
             if (resetStartBitrate) {
-                preferences.start_bitrate_bps = 32000;
+                preferences.start_bitrate_bps = _outgoingAudioBitrateKbit * 1024;
             }
-            preferences.max_bitrate_bps = 32000;
+            preferences.max_bitrate_bps = _outgoingAudioBitrateKbit * 1024;
         }
 
         settings.min_bitrate_bps = preferences.min_bitrate_bps;
