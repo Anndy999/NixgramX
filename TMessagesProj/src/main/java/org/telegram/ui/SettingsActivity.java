@@ -809,7 +809,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
 
         TLRPC.TL_attachMenuBots menuBots = MediaDataController.getInstance(UserConfig.selectedAccount).getAttachMenuBots();
-        if (menuBots != null && menuBots.bots != null && !menuBots.bots.isEmpty()) {
+        // 13.1.1: native wallet replaces the legacy @wallet side-menu bot (official has no bot row).
+        if (!getMessagesController().config.walletAvailable.get() && menuBots != null && menuBots.bots != null && !menuBots.bots.isEmpty()) {
             for (TLRPC.TL_attachMenuBot attachMenuBot : menuBots.bots) {
                 final long WALLET_BOT_ID = 1985737506L;
                 if (attachMenuBot.show_in_side_menu && attachMenuBot.bot_id == WALLET_BOT_ID) {
