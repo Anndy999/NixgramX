@@ -60,6 +60,8 @@ import org.telegram.ui.Stars.StarsController;
 import java.util.ArrayList;
 import java.util.Random;
 
+import tw.nekomimi.nekogram.NekoConfig;
+
 /**
  * The QR code of a user or a chat, after the iOS "share QR" screen with "Remove message fee":
  * - background scenes (profile colours, emoji, gifts) switch with a glowing ring wave from the tapped swatch;
@@ -1870,7 +1872,7 @@ public class QrShareView extends View {
 
     private void haptic() {
         try {
-            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+            if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
         } catch (Exception ignore) {}
     }
 

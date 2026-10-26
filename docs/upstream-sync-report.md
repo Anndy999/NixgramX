@@ -767,7 +767,7 @@
 - TMessagesProj/jni/voip/tgcalls/platform/PlatformInterface.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00139.patch
 - TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00272.patch
 - TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00336.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/CodeHighlighting.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00425.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/CodeHighlighting.java — Upstream deletion overlaps local feature/stability changes; RESOLVED by #190 (UI)
 - TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00431.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00433.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaDataController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00434.patch
@@ -777,24 +777,24 @@
 - TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00461.patch
 - TMessagesProj/src/main/java/org/telegram/tgnet/TLParseException.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00463.patch
 - TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_update.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00471.patch
-- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00473.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatActionCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00491.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00492.patch
-- TMessagesProj/src/main/java/org/telegram/ui/ChannelMonetizationLayout.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00499.patch
-- TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00500.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAttachAlert.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00509.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Components/ItemOptions.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00523.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Components/PasscodeView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00528.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Components/ProfileMusicView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00543.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Components/spoilers/SpoilersTextView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00559.patch
-- TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00560.patch
-- TMessagesProj/src/main/java/org/telegram/ui/MainTabsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00571.patch
-- TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00578.patch
-- TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00580.patch
-- TMessagesProj/src/main/java/org/telegram/ui/QrActivity.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00583.patch
-- TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00600.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Stories/UploadingDotsSpannable.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00610.patch
-- TMessagesProj/src/main/java/org/telegram/ui/TwoStepVerificationSetupActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00617.patch
+- TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatActionCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/ChannelMonetizationLayout.java — Identity/build/layout policy: explicit adaptation required; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAttachAlert.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ItemOptions.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Components/PasscodeView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Components/ProfileMusicView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Components/spoilers/SpoilersTextView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/MainTabsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/QrActivity.java — Upstream deletion overlaps local feature/stability changes; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/Stories/UploadingDotsSpannable.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
+- TMessagesProj/src/main/java/org/telegram/ui/TwoStepVerificationSetupActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; RESOLVED by #190 (UI)
 - TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00775.patch
 - TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00776.patch
 - TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00777.patch

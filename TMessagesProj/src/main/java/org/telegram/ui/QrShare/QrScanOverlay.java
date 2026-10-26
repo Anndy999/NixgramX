@@ -77,6 +77,8 @@ import org.telegram.ui.PhotoAlbumPickerActivity;
 
 import java.util.ArrayList;
 
+import tw.nekomimi.nekogram.NekoConfig;
+
 /**
  * The QR scanner of the QR screen, opened like the story camera: the scan button swells a little, then stretches over
  * the whole screen while the camera comes in; closing runs the same way back into the button.
@@ -1043,7 +1045,7 @@ public final class QrScanOverlay extends FrameLayout {
         }
         found = true;
         scanning = false;
-        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+        if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
         final boolean outlined = scanned.points.length >= 3;
         if (outlined) {
             foundPoints = scanned.points;
