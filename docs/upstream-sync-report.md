@@ -749,10 +749,10 @@
 - gradle.properties
 
 ## Conflict/adaptation files — TODO
-- Dockerfile — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch
-- TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00002.patch
-- TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00014.patch
-- TMessagesProj/jni/prebuild/build_env.txt — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00015.patch
+- Dockerfile — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/jni/prebuild/build_all.sh — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/jni/prebuild/build_env.txt — RESOLVED by #186 (BUILD-NATIVE)
 - TMessagesProj/jni/tgnet/Defines.h — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00046.patch
 - TMessagesProj/jni/voip/tgcalls/ChannelManager.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00059.patch
 - TMessagesProj/jni/voip/tgcalls/ChannelManager.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00060.patch
@@ -766,7 +766,7 @@
 - TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00135.patch
 - TMessagesProj/jni/voip/tgcalls/platform/PlatformInterface.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00139.patch
 - TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00272.patch
-- TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00336.patch
+- TMessagesProj/src/main/AndroidManifest.xml — RESOLVED by #186 (BUILD-NATIVE)
 - TMessagesProj/src/main/java/org/telegram/messenger/CodeHighlighting.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00425.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00431.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00433.patch
@@ -796,11 +796,11 @@
 - TMessagesProj/src/main/java/org/telegram/ui/Stories/UploadingDotsSpannable.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00610.patch
 - TMessagesProj/src/main/java/org/telegram/ui/TwoStepVerificationSetupActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00617.patch
 - TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00775.patch
-- TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00776.patch
-- TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00777.patch
-- TMessagesProj_AppHuawei/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00778.patch
-- TMessagesProj_AppStandalone/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00779.patch
-- TMessagesProj_AppTests/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00780.patch
+- TMessagesProj_App/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppHockeyApp/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppHuawei/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppStandalone/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj_AppTests/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
 - TMessagesProj_AppTests/src/androidTest/kotlin/not_linked_classes.txt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00781.patch
 - TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerification.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00782.patch
 - TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotVerifierSettings.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00783.patch
@@ -868,7 +868,7 @@
 - TMessagesProj_AppTests/tlscheme/230.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00845.patch
 - TMessagesProj_AppTests/tlscheme/231.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00846.patch
 - TMessagesProj_AppTests/tlscheme/232.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00847.patch
-- buildSrc/src/main/kotlin/com/example/GenerateSchemeTask.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00849.patch
+- buildSrc/src/main/kotlin/com/example/GenerateSchemeTask.kt — RESOLVED by #186 (BUILD-NATIVE)
 
 ## Submodule changes
 - TMessagesProj/jni/tgcalls: None -> ['160000', 'commit', '1398c1648f52666b3249111ec3c5b531946e41e4']
