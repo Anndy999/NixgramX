@@ -13,11 +13,7 @@
     "dc780e81ed1261c369c27870e8e0999a1eb0b600",
     "f2908b14133bbffbf7ab04f641ecb5bfaf533242"
   ],
-  "pending": {
-    "version": "13.1.1",
-    "build": "7237",
-    "commit": "3de37c8cfb039452be7398909461da6288babf15"
-  },
+  "pending": null,
   "prepared_target": {
     "version": "13.1.1",
     "build": "7237",

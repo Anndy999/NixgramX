@@ -53,10 +53,10 @@ class Upstream12103IncrementalTest(unittest.TestCase):
             "commit": "3de37c8cfb039452be7398909461da6288babf15",
         }
 
-        # 13.1.1 sync in flight: base stays 12.10.6 until Owner close-out;
-        # pending and prepared_target are exactly official 7237.
+        # 13.1.1 close-out: pending cleared; base stays 12.10.6 until Stable
+        # prep promotes prepared_target (exactly official 7237) into base.
         self.assertEqual(previous, state["base"])
-        self.assertEqual(target, state["pending"])
+        self.assertIsNone(state["pending"])
         self.assertEqual(target, state["prepared_target"])
         self.assertIn(state["base"]["commit"], state["synced_commits"])
         # 12.10.5 / 12.10.6 official commits must never drop out of synced history.
