@@ -1162,4 +1162,9 @@ public class QrShareActivity extends BaseFragment {
         }
         if (view != null) view.release();
     }
+
+    @Override
+    public boolean isActionBarCrossfadeEnabled() {
+        return false;
+    }
 }

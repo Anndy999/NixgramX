@@ -15,7 +15,7 @@ class ChannelHeaderGeometryTest(unittest.TestCase):
         action = ACTION_BAR.read_text(encoding='utf-8')
         self.assertIn('final int menuWidthWithPadding = menuWidth +', action)
         self.assertIn('Math.max(s, menuWidth)', action)
-        self.assertIn('menu != null ? menu.getMeasuredWidth() : 0', action)
+        self.assertIn('menu != null ? menu.getMeasuredWidth()', action)
 
     def test_action_mode_width_reaches_the_real_glass_path(self):
         action = ACTION_BAR.read_text(encoding='utf-8')

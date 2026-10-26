@@ -1457,7 +1457,9 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
 
         for (int i = 0; i < 2; i++) {
             if (titleTextView[0] != null && titleTextView[0].getVisibility() != GONE || subtitleTextView != null && subtitleTextView.getVisibility() != GONE) {
-                int availableWidth = isCentered() ? (width - dp(120)) : width - (menu != null ? menu.getMeasuredWidth() : 0) - dp(16) - textLeft - titleRightMargin;
+                // A closing search field keeps filling the menu during its fade-out; don't squeeze the title for it.
+                int titleMenuWidth = menu != null ? menu.getMeasuredWidth() - (isSearchFieldVisible ? 0 : menu.getClosingSearchFieldWidth()) : 0;
+                int availableWidth = isCentered() ? (width - dp(120)) : width - titleMenuWidth - dp(16) - textLeft - titleRightMargin;
                 availableWidth = Math.max(availableWidth, 0);
 
                 if (((fromBottom && i == 0) || (!fromBottom && i == 1)) && overlayTitleAnimation && titleAnimationRunning) {
@@ -2298,6 +2300,14 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     public boolean doNotDrawGlassMenu;
+    private boolean drawGlassTitle = true;
+
+    public void setDrawGlassTitle(boolean draw) {
+        if (drawGlassTitle != draw) {
+            drawGlassTitle = draw;
+            invalidate();
+        }
+    }
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
@@ -2313,7 +2323,7 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         final int t = getHeight() - (getCurrentActionBarHeight() + s) / 2 - p;
         final int b = t + s + p * 2;
 
-        if (glassDrawable != null && !glassOnlyBack) {
+        if (glassDrawable != null && !glassOnlyBack && drawGlassTitle) {
             final int menuWidthWithPadding = menuWidth + ((hasForcedMenuWidth || hasForcedMenuMinWidth) ? (menuWidth > 0 ? p : 0) : (int) (p * animatorHasMenuItems.getFloatValue()));
             final int rightOffset = lerp(menuWidthWithPadding, Math.max(menuWidthWithPadding, p + s), chatAvatarContainer == null ? 0f : 1f - animatorAvatarContainerHasAvatar.getFloatValue());
 

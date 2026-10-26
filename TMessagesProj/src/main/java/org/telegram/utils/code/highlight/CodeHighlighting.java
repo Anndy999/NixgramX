@@ -79,12 +79,10 @@ public class CodeHighlighting {
             if (smallerSize) {
                 p.setTextSize(dp(SharedConfig.fontSize - decrementSize));
             }
+            // NixgramX: keep the bubble/theme text color for code blocks instead of forcing
+            // chat_messageTextIn/Out (ported from the former org.telegram.messenger.CodeHighlighting).
             if (currentType == 2) {
                 p.setColor(0xffffffff);
-            } else if (currentType == 1) {
-                p.setColor(Theme.getColor(Theme.key_chat_messageTextOut));
-            } else {
-                p.setColor(Theme.getColor(Theme.key_chat_messageTextIn));
             }
             if (style != null) {
                 style.applyStyle(p);
