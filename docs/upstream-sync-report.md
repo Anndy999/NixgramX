@@ -749,34 +749,34 @@
 - gradle.properties
 
 ## Conflict/adaptation files — TODO
-- Dockerfile — RESOLVED by #186 (BUILD-NATIVE)
-- TMessagesProj/build.gradle — RESOLVED by #186 (BUILD-NATIVE)
-- TMessagesProj/jni/prebuild/build_all.sh — RESOLVED by #186 (BUILD-NATIVE)
-- TMessagesProj/jni/prebuild/build_env.txt — RESOLVED by #186 (BUILD-NATIVE)
-- TMessagesProj/jni/tgnet/Defines.h — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00046.patch
-- TMessagesProj/jni/voip/tgcalls/ChannelManager.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00059.patch
-- TMessagesProj/jni/voip/tgcalls/ChannelManager.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00060.patch
-- TMessagesProj/jni/voip/tgcalls/DirectConnectionChannel.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00065.patch
-- TMessagesProj/jni/voip/tgcalls/SctpDataChannelProviderInterfaceImpl.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00089.patch
-- TMessagesProj/jni/voip/tgcalls/SctpDataChannelProviderInterfaceImpl.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00090.patch
-- TMessagesProj/jni/voip/tgcalls/group/GroupAudioCapturePostProcessor.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00117.patch
-- TMessagesProj/jni/voip/tgcalls/group/GroupFrameTransformer.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00119.patch
-- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00122.patch
-- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00123.patch
-- TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00135.patch
-- TMessagesProj/jni/voip/tgcalls/platform/PlatformInterface.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00139.patch
-- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00272.patch
-- TMessagesProj/src/main/AndroidManifest.xml — RESOLVED by #186 (BUILD-NATIVE)
+- Dockerfile — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00002.patch — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00014.patch — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/jni/prebuild/build_env.txt — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00015.patch — RESOLVED by #186 (BUILD-NATIVE)
+- TMessagesProj/jni/tgnet/Defines.h — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00046.patch — RESOLVED (#187): kept PROXY_CONNECTIONS_COUNT 10 and MAX_ACCOUNT_COUNT 10; took DOWNLOAD_CONNECTIONS_COUNT 8 plus RequestFlagSmallDownload and RequestFlagDownloadByteBudget
+- TMessagesProj/jni/voip/tgcalls/ChannelManager.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00059.patch — RESOLVED (#187): accept deletion; no Nix delta; submodule tgcalls/ChannelManager.cpp byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/ChannelManager.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00060.patch — RESOLVED (#187): accept deletion; no Nix delta; submodule header byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/DirectConnectionChannel.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00065.patch — RESOLVED (#187): accept deletion; no Nix delta; submodule header byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/SctpDataChannelProviderInterfaceImpl.cpp — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00089.patch — RESOLVED (#187): accept deletion; no Nix delta; submodule source byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/SctpDataChannelProviderInterfaceImpl.h — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00090.patch — RESOLVED (#187): accept deletion; no Nix delta; submodule header byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/group/GroupAudioCapturePostProcessor.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00117.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; submodule byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/group/GroupFrameTransformer.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00119.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; submodule byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00122.patch — RESOLVED (#187): accept deletion of the dead in-tree TU; SSRC guard is in submodule 1398c164; customAudioBitrate is NEEDS HUMAN (submodule patch)
+- TMessagesProj/jni/voip/tgcalls/group/GroupInstanceCustomImpl.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00123.patch — RESOLVED (#187): accept deletion; submodule header has no customAudioBitrate — NEEDS HUMAN to add it in the submodule
+- TMessagesProj/jni/voip/tgcalls/group/StreamingMediaContext.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00135.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; submodule byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/platform/PlatformInterface.h — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00139.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; submodule byte-matches 12.10.6
+- TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00272.patch — RESOLVED (#187): accept deletion; Nix delta is trailing whitespace only; 13.1.1 v2 edits live in submodule 1398c164
+- TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00336.patch — RESOLVED by #186 (BUILD-NATIVE)
 - TMessagesProj/src/main/java/org/telegram/messenger/CodeHighlighting.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00425.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00431.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00433.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaDataController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00434.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00440.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/UserObject.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00447.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/voip/VoipAudioManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00460.patch
-- TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00461.patch
-- TMessagesProj/src/main/java/org/telegram/tgnet/TLParseException.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00463.patch
-- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_update.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00471.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/voip/VoipAudioManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00460.patch — RESOLVED (#187): took LE Audio setCommunicationDevice routing; kept AudioManager null guards, including on the new entry points
+- TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00461.patch — RESOLVED (#187): applied download-budget sendRequest and Updates deserialize; kept proxy/WebProxy paths and the commented dumpUnparsedMessage call
+- TMessagesProj/src/main/java/org/telegram/tgnet/TLParseException.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00463.patch — RESOLVED (#187): kept BuildConfig.DEBUG and also skip TL_rpc_result constructor 0xf35c6d01
+- TMessagesProj/src/main/java/org/telegram/tgnet/tl/TL_update.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00471.patch — RESOLVED (#187): no remaining Nix delta; applied the five wallet update classes; result equals official 13.1.1
 - TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00473.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatActionCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00491.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00492.patch
