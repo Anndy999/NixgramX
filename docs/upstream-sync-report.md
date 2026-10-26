@@ -768,11 +768,11 @@
 - TMessagesProj/jni/voip/tgcalls/v2/InstanceV2ReferenceImpl.cpp — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00272.patch
 - TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00336.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/CodeHighlighting.java — Upstream deletion overlaps local feature/stability changes; docs/upstream-sync-todo/00425.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00431.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00433.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/MediaDataController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00434.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00440.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/UserObject.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00447.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00431.patch — RESOLVED (#189): Bitmap scaling and stripped-photo fallback applied; Nix deleted-media, .nomedia, and thumb-size guards kept
+- TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00433.patch — RESOLVED (#189): AudioRecorder V2 plus 13.1.1 schedule/draft/amplitude fixes; Nix save-path, proximity, voice-enhance, and playback guards kept
+- TMessagesProj/src/main/java/org/telegram/messenger/MediaDataController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00434.patch — RESOLVED (#189): TON-address markdown and rich-quote drafts applied; Nix sticker limits, Neko markdown, and draft apply() kept; CodeHighlighting import points at utils class
+- TMessagesProj/src/main/java/org/telegram/messenger/PasskeysController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00440.patch — RESOLVED (#189): @RequiresApi moved onto create/login; Nix fork clientData/origin and NekoXConfig app id kept
+- TMessagesProj/src/main/java/org/telegram/messenger/UserObject.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00447.patch — RESOLVED (#189): getBotStatus added; zalgo filter and local peer color/premium helpers kept
 - TMessagesProj/src/main/java/org/telegram/messenger/voip/VoipAudioManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00460.patch
 - TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00461.patch
 - TMessagesProj/src/main/java/org/telegram/tgnet/TLParseException.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00463.patch
@@ -795,7 +795,7 @@
 - TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00600.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Stories/UploadingDotsSpannable.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00610.patch
 - TMessagesProj/src/main/java/org/telegram/ui/TwoStepVerificationSetupActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00617.patch
-- TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00775.patch
+- TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00775.patch — RESOLVED (#189): 13.1.1 strings applied including AnonymousNumber/Gift2 title; Nix AppName, search engines, proxy-call, GoToBeginning, and diagnostic strings kept; TONBalance* removed with upstream
 - TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00776.patch
 - TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00777.patch
 - TMessagesProj_AppHuawei/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00778.patch
