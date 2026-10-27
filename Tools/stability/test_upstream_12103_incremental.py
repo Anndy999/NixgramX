@@ -14,7 +14,8 @@ class Upstream12103IncrementalTest(unittest.TestCase):
         self.assertIn("TLObject response = factory.create();", source)
         self.assertNotIn("SparseArray<Class>", source)
         self.assertNotIn("newInstance()", source)
-        self.assertEqual(20, source.count("classStore.put("))
+        # 13.1.1 (7237) official delta moved the 7 TL_update* registrations out.
+        self.assertEqual(13, source.count("classStore.put("))
 
     def test_r8_and_audio_player_official_delta(self):
         rules = (ROOT / "TMessagesProj/proguard-rules.pro").read_text(encoding="utf-8")
@@ -27,9 +28,9 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_version_and_identity(self):
         props = (ROOT / "gradle.properties").read_text(encoding="utf-8")
 
-        self.assertIn("APP_VERSION_CODE=7112", props)
-        self.assertIn("APP_VERSION_NAME=12.10.6", props)
-        self.assertIn("NIXGRAMX_VERSION_NAME=12.10.6", props)
+        self.assertIn("APP_VERSION_CODE=7237", props)
+        self.assertIn("APP_VERSION_NAME=13.1.1", props)
+        self.assertIn("NIXGRAMX_VERSION_NAME=13.1.1", props)
         # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
         # on every release. Assert the invariant, not a frozen value: the key
         # must be declared exactly once and hold an integer.
@@ -41,21 +42,27 @@ class Upstream12103IncrementalTest(unittest.TestCase):
     def test_upstream_state_is_complete(self):
         state = json.loads((ROOT / "docs/upstream-base.json").read_text(encoding="utf-8"))
 
-        target = {
+        previous = {
             "version": "12.10.6",
             "build": "7112",
             "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
         }
+        target = {
+            "version": "13.1.1",
+            "build": "7237",
+            "commit": "3de37c8cfb039452be7398909461da6288babf15",
+        }
 
-        # 12.10.6 Stable close-out (1355): base/prepared_target match official 7112.
-        self.assertIsNone(state["pending"])
+        # 13.1.1 Stable prep: prepared_target promoted into base; pending stays null.
         self.assertEqual(target, state["base"])
-        self.assertEqual(state["base"], state["prepared_target"])
+        self.assertIsNone(state["pending"])
+        self.assertEqual(target, state["prepared_target"])
         self.assertIn(state["base"]["commit"], state["synced_commits"])
-        # 12.10.5 official commit must never drop out of synced history.
+        # Prior official commits must never drop out of synced history.
+        self.assertIn(previous["commit"], state["synced_commits"])
         self.assertIn("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["synced_commits"])
-        # 12.10.6 official commit must be recorded in synced history.
         self.assertIn("f2908b14133bbffbf7ab04f641ecb5bfaf533242", state["synced_commits"])
+
 
 if __name__ == "__main__":
     unittest.main()

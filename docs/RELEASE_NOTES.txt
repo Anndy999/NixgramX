@@ -1,3 +1,14 @@
+NixgramX Stable - Telegram 13.1.1 (1356)
+
+- Follow upstream Telegram 13.1.1 (7237).
+- Android 8.1–10 的解锁验证适配新接口.
+- Native wallet: hide legacy wallet bot when native wallet is available.
+- QR login / settings follow official layout.
+- Nix code-block colors kept.
+- AppTests module intentionally not imported (not in the build).
+
+Device: NOT TESTED.
+
 NixgramX Stable - Telegram 12.10.6 (1355)
 
 - Follow upstream Telegram 12.10.6 (7112).
