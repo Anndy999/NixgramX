@@ -1,0 +1,10 @@
+# Verbatim official Telegram 13.1.1 files and generated upstream-sync patches keep
+# their upstream whitespace; exempt them from `git diff --check` instead of editing them.
+docs/upstream-sync-todo/*.patch -whitespace
+TMessagesProj/jni/gram-wallet/wallet-engine.patch -whitespace
+TMessagesProj/jni/prebuild/include/wallet-engine/** -whitespace
+TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecordingSession.java -whitespace
+TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecorderNative.java -whitespace
+TMessagesProj/src/main/java/org/telegram/utils/recorder/audio/AudioRecorderDiagnostics.java -whitespace
+TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletDiamondView.java -whitespace
+TMessagesProj/src/main/java/org/telegram/ui/Wallet/WalletCardProjection.java -whitespace

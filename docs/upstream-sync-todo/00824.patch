@@ -1,0 +1,28 @@
+diff --git a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_payments_CurrencyRates.kt b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_payments_CurrencyRates.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..40847d2fa1459e2a45bb5cd9b5cd6d552b952188
+--- /dev/null
++++ b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_payments_CurrencyRates.kt
+@@ -0,0 +1,22 @@
++package org.telegram.tgnet.model.generated
++
++import kotlin.UInt
++import kotlin.collections.List
++import org.telegram.tgnet.OutputSerializedData
++import org.telegram.tgnet.model.TlGen_Object
++import org.telegram.tgnet.model.TlGen_Vector
++
++public sealed class TlGen_payments_CurrencyRates : TlGen_Object {
++  public data class TL_payments_currencyRates(
++    public val rates: List<TlGen_CurrencyRate>,
++  ) : TlGen_payments_CurrencyRates() {
++    public override fun serializeToStream(stream: OutputSerializedData) {
++      stream.writeInt32(MAGIC.toInt())
++      TlGen_Vector.serialize(stream, rates)
++    }
++
++    public companion object {
++      public const val MAGIC: UInt = 0xBBCCE4C2U
++    }
++  }
++}

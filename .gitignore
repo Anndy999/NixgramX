@@ -19,3 +19,6 @@ nixgramx-release-signing.txt
 **/nixgramx-release-signing.txt
 signing/*.env
 *.keystore.credentials
+
+__pycache__/
+*.pyc

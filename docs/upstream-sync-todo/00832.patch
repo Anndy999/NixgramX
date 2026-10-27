@@ -1,0 +1,32 @@
+diff --git a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_HolderDc.kt b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_HolderDc.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..4b0e26c131304cb120320eb8d8c026c1d0132003
+--- /dev/null
++++ b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_wallet_HolderDc.kt
+@@ -0,0 +1,26 @@
++package org.telegram.tgnet.model.generated
++
++import kotlin.Byte
++import kotlin.Int
++import kotlin.UInt
++import kotlin.collections.List
++import org.telegram.tgnet.OutputSerializedData
++import org.telegram.tgnet.model.TlGen_Object
++import org.telegram.tgnet.model.TlGen_Vector
++
++public sealed class TlGen_wallet_HolderDc : TlGen_Object {
++  public data class TL_wallet_holderDc(
++    public val dc: Int,
++    public val public_key: List<Byte>,
++  ) : TlGen_wallet_HolderDc() {
++    public override fun serializeToStream(stream: OutputSerializedData) {
++      stream.writeInt32(MAGIC.toInt())
++      stream.writeInt32(dc)
++      stream.writeByteArray(public_key.toByteArray())
++    }
++
++    public companion object {
++      public const val MAGIC: UInt = 0xF9D612EFU
++    }
++  }
++}
