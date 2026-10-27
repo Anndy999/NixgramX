@@ -30,7 +30,7 @@ class Upstream12103IncrementalTest(unittest.TestCase):
 
         self.assertIn("APP_VERSION_CODE=7237", props)
         self.assertIn("APP_VERSION_NAME=13.1.1", props)
-        self.assertIn("NIXGRAMX_VERSION_NAME=12.10.6", props)
+        self.assertIn("NIXGRAMX_VERSION_NAME=13.1.1", props)
         # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
         # on every release. Assert the invariant, not a frozen value: the key
         # must be declared exactly once and hold an integer.
@@ -53,13 +53,13 @@ class Upstream12103IncrementalTest(unittest.TestCase):
             "commit": "3de37c8cfb039452be7398909461da6288babf15",
         }
 
-        # 13.1.1 close-out: pending cleared; base stays 12.10.6 until Stable
-        # prep promotes prepared_target (exactly official 7237) into base.
-        self.assertEqual(previous, state["base"])
+        # 13.1.1 Stable prep: prepared_target promoted into base; pending stays null.
+        self.assertEqual(target, state["base"])
         self.assertIsNone(state["pending"])
         self.assertEqual(target, state["prepared_target"])
         self.assertIn(state["base"]["commit"], state["synced_commits"])
-        # 12.10.5 / 12.10.6 official commits must never drop out of synced history.
+        # Prior official commits must never drop out of synced history.
+        self.assertIn(previous["commit"], state["synced_commits"])
         self.assertIn("dc780e81ed1261c369c27870e8e0999a1eb0b600", state["synced_commits"])
         self.assertIn("f2908b14133bbffbf7ab04f641ecb5bfaf533242", state["synced_commits"])
 
