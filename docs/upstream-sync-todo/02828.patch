@@ -1,0 +1,17 @@
+diff --git a/TMessagesProj/jni/twidget/widget-sandbox/packages/android/widget-sandbox/src/main/AndroidManifest.xml b/TMessagesProj/jni/twidget/widget-sandbox/packages/android/widget-sandbox/src/main/AndroidManifest.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..2c1d8f21f497348af64f5576fd9ade0b09061376
+--- /dev/null
++++ b/TMessagesProj/jni/twidget/widget-sandbox/packages/android/widget-sandbox/src/main/AndroidManifest.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
++    <!-- No permissions: the library never touches the network itself, and
++         WebSettings.setBlockNetworkLoads(true) is legal without INTERNET. -->
++    <application>
++        <!-- Safe Browsing would make the renderer WebView talk to Google on its own. -->
++        <meta-data
++            android:name="android.webkit.WebView.EnableSafeBrowsing"
++            android:value="false" />
++    </application>
++</manifest>

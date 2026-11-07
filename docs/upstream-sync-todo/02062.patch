@@ -1,0 +1,31 @@
+diff --git a/TMessagesProj/jni/twidget/widget-sandbox/apps/android/demo/src/main/AndroidManifest.xml b/TMessagesProj/jni/twidget/widget-sandbox/apps/android/demo/src/main/AndroidManifest.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..db7ce48f0b8f9b7798c73f5d85e69775e593eee5
+--- /dev/null
++++ b/TMessagesProj/jni/twidget/widget-sandbox/apps/android/demo/src/main/AndroidManifest.xml
+@@ -0,0 +1,25 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
++    <!-- The demo app itself talks to the canary on the Mac (plain http). The
++         widgets must not — which the attack runner verifies with this very
++         permission present, as a real messenger would have it. -->
++    <uses-permission android:name="android.permission.INTERNET" />
++
++    <application
++        android:allowBackup="false"
++        android:label="Widget sandbox"
++        android:supportsRtl="true"
++        android:usesCleartextTraffic="true"
++        android:theme="@style/Theme.TwidgetDemo">
++        <activity
++            android:name=".MainActivity"
++            android:exported="true"
++            android:configChanges="orientation|screenSize|uiMode"
++            android:screenOrientation="portrait">
++            <intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>
++        </activity>
++    </application>
++</manifest>

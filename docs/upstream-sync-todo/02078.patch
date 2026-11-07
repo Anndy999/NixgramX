@@ -1,0 +1,8 @@
+diff --git a/TMessagesProj/jni/twidget/widget-sandbox/apps/android/renderer-blitz/src/main/AndroidManifest.xml b/TMessagesProj/jni/twidget/widget-sandbox/apps/android/renderer-blitz/src/main/AndroidManifest.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b2d3ea123526d400738f87fcb9891f3421426ef9
+--- /dev/null
++++ b/TMessagesProj/jni/twidget/widget-sandbox/apps/android/renderer-blitz/src/main/AndroidManifest.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

@@ -1,0 +1,9 @@
+diff --git a/TMessagesProj/jni/twidget/twidget/tools/android-demo/build.gradle b/TMessagesProj/jni/twidget/twidget/tools/android-demo/build.gradle
+new file mode 100644
+index 0000000000000000000000000000000000000000..5b7ccba7c566afb5057eaea1b10b99b083851fe4
+--- /dev/null
++++ b/TMessagesProj/jni/twidget/twidget/tools/android-demo/build.gradle
+@@ -0,0 +1,3 @@
++plugins {
++    id 'com.android.application' version '8.7.3' apply false
++}

@@ -1,0 +1,25 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/Cells/SharedLinkCell.java b/TMessagesProj/src/main/java/org/telegram/ui/Cells/SharedLinkCell.java
+index bc066b88a939ee928097c869c5dca2e9daa88323..0ad1e0bf2a03c7f02122b3ba9f14ae8eca93b970 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/SharedLinkCell.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/SharedLinkCell.java
+@@ -63,7 +63,19 @@ import java.util.Locale;
+ import java.util.Stack;
+ import java.util.concurrent.atomic.AtomicReference;
+ 
+-public class SharedLinkCell extends FrameLayout {
++public class SharedLinkCell extends FrameLayout implements Theme.Colorable {
++
++    @Override
++    public void updateColors() {
++        try {
++            if (titleTextPaint != null) {
++                titleTextPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
++                invalidate();
++            }
++        } catch (Exception e) {
++            FileLog.e(e);
++        }
++    }
+     private final static int SPOILER_TYPE_LINK = 0,
+             SPOILER_TYPE_DESCRIPTION = 1,
+             SPOILER_TYPE_DESCRIPTION2 = 2;

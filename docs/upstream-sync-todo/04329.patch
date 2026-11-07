@@ -1,0 +1,26 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/Components/chat/layouts/ChatActivityChannelButtonsLayout.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/chat/layouts/ChatActivityChannelButtonsLayout.java
+index e2ef297a29c6db8156694ca3e092cf9900b20c69..46a94af5ca5d6ab9016c70f1d3df9a0d8f32599e 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/chat/layouts/ChatActivityChannelButtonsLayout.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/chat/layouts/ChatActivityChannelButtonsLayout.java
+@@ -34,7 +34,7 @@ import me.vkryl.android.animator.BoolAnimator;
+ import me.vkryl.android.animator.FactorAnimator;
+ 
+ @SuppressLint("ViewConstructor")
+-public class ChatActivityChannelButtonsLayout extends FrameLayout implements FactorAnimator.Target {
++public class ChatActivityChannelButtonsLayout extends FrameLayout implements FactorAnimator.Target, Theme.Colorable {
+     public static final int BUTTON_SEARCH = 0;
+     public static final int BUTTON_GIFT = 1;
+     public static final int BUTTON_DIRECT = 2;
+@@ -86,9 +86,11 @@ public class ChatActivityChannelButtonsLayout extends FrameLayout implements Fac
+         addView(container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.CENTER_VERTICAL));
+     }
+ 
++    /** also called on every theme update (Theme.Colorable) */
++    @Override
+     public void updateColors() {
+         for (ButtonHolder holder : buttonHolders) {
+-            if (holder != null) {
++            if (holder != null && holder.button != null) {
+                 holder.button.updateColors();
+             }
+         }

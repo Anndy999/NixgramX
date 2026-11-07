@@ -1,0 +1,18 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/Components/Switch.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/Switch.java
+index f157911a0e58a23d8b1bf27d8f599727962c9fbc..da60afd91821c768445d8c2df8d5cff874d622f9 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/Switch.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/Switch.java
+@@ -38,7 +38,12 @@ import org.telegram.ui.Cells.BaseCell;
+ 
+ import me.vkryl.android.animator.BoolAnimator;
+ 
+-public class Switch extends View {
++public class Switch extends View implements Theme.Colorable {
++
++    @Override
++    public void updateColors() {
++        colorSet = 0; // the ripple color is re-read from the theme on the next press
++    }
+     private final BoolAnimator animatorIconVisibility = new BoolAnimator(this, CubicBezierInterpolator.EASE_OUT_QUINT, 380L, true);
+ 
+     private RectF rectF;

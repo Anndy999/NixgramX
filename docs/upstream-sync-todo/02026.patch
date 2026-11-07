@@ -1,0 +1,24 @@
+diff --git a/TMessagesProj/jni/twidget/twidget/tools/android-demo/settings.gradle b/TMessagesProj/jni/twidget/twidget/tools/android-demo/settings.gradle
+new file mode 100644
+index 0000000000000000000000000000000000000000..b875c90741017409d90ff0ff6478f16a2c6bcc54
+--- /dev/null
++++ b/TMessagesProj/jni/twidget/twidget/tools/android-demo/settings.gradle
+@@ -0,0 +1,18 @@
++pluginManagement {
++    repositories {
++        google()
++        mavenCentral()
++        gradlePluginPortal()
++    }
++}
++
++dependencyResolutionManagement {
++    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
++    repositories {
++        google()
++        mavenCentral()
++    }
++}
++
++rootProject.name = 'twidget-android-demo'
++include ':app'

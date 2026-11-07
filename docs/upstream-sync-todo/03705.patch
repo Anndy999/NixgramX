@@ -1,0 +1,14 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+index 4ed7e6491cefa3bc19611e1f7db2cd41d67e8f04..ca821813f7de19064ee4510e61ed438d1566b5b4 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+@@ -42,6 +42,9 @@ public class BuildVars {
+ 
+     // works only on official app ids, disable on your forks
+     public static boolean SUPPORTS_PASSKEYS = true;
++    // the second main tab: News, or Contacts as before them
++
++    public static boolean SUPPORTS_FPNV = true;
+ 
+     static {
+         if (ApplicationLoader.applicationContext != null) {

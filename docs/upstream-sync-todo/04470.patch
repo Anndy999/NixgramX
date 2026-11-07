@@ -1,0 +1,13 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/SecretMediaViewer.java b/TMessagesProj/src/main/java/org/telegram/ui/SecretMediaViewer.java
+index 635b933a9b51c116b94c9ee4d7958aa58259e301..5e211b78f8fda539b8a9f93b66a3fa91c6f38602 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/SecretMediaViewer.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/SecretMediaViewer.java
+@@ -1514,7 +1514,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
+                 if (f.exists()) {
+                     preparePlayer(f);
+                 } else {
+-                    File file = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
++                    File file = messageObject.isLivePhoto() ? FileLoader.getInstance(currentAccount).getPathToAttach(document, null, true) : FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
+                     File encryptedFile = new File(file.getAbsolutePath() + ".enc");
+                     if (encryptedFile.exists()) {
+                         file = encryptedFile;

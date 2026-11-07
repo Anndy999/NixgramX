@@ -1,0 +1,15 @@
+diff --git a/buildSrc/src/main/kotlin/org/telegram/tlrpc/schema/TlSchemaParamType.kt b/buildSrc/src/main/kotlin/org/telegram/tlrpc/schema/TlSchemaParamType.kt
+index 74a149763aa8a01032947f7f29fe38e3d15764af..d520e2e65ffc5a186d901a7d335dbf88f21727a1 100644
+--- a/buildSrc/src/main/kotlin/org/telegram/tlrpc/schema/TlSchemaParamType.kt
++++ b/buildSrc/src/main/kotlin/org/telegram/tlrpc/schema/TlSchemaParamType.kt
+@@ -10,7 +10,9 @@ sealed class TlSchemaParamType {
+         ): Primary()
+ 
+         data class Object(
+-            val name: String
++            val name: String,
++            // bare type (`agent.settings`): name is the boxed type, this is the constructor predicate
++            val bareConstructor: String? = null
+         ) : Primary()
+ 
+         data object X : Primary()

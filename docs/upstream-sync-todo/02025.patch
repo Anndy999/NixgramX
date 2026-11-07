@@ -1,0 +1,9 @@
+diff --git a/TMessagesProj/jni/twidget/twidget/tools/android-demo/gradle.properties b/TMessagesProj/jni/twidget/twidget/tools/android-demo/gradle.properties
+new file mode 100644
+index 0000000000000000000000000000000000000000..3426868cfd395482f1bc59bc7b37875058728d0b
+--- /dev/null
++++ b/TMessagesProj/jni/twidget/twidget/tools/android-demo/gradle.properties
+@@ -0,0 +1,3 @@
++org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8
++android.useAndroidX=false
++android.nonTransitiveRClass=true

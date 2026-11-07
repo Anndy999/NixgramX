@@ -1,0 +1,16 @@
+diff --git a/TMessagesProj/jni/twidget/widget-sandbox/packages/android/widget-sandbox/src/androidTest/AndroidManifest.xml b/TMessagesProj/jni/twidget/widget-sandbox/packages/android/widget-sandbox/src/androidTest/AndroidManifest.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..fee46614bca4c5111443aee67e108f36d85f8d6d
+--- /dev/null
++++ b/TMessagesProj/jni/twidget/widget-sandbox/packages/android/widget-sandbox/src/androidTest/AndroidManifest.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
++    <application android:usesCleartextTraffic="true">
++        <!-- A window for the renderer WebView: WebView needs one to lay out. -->
++        <activity
++            android:name="org.telegram.widgetsandbox.TestActivity"
++            android:exported="false"
++            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
++    </application>
++</manifest>
