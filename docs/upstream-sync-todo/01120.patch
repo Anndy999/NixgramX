@@ -1,0 +1,20 @@
+diff --git a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_Chat.kt b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_Chat.kt
+index 591e01a8350797820cbb8ea0864b883e1c94cd4c..1512dba0afffe97e28895ff6e48055e329d185e1 100644
+--- a/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_Chat.kt
++++ b/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_Chat.kt
+@@ -227,6 +227,7 @@ public sealed class TlGen_Chat : TlGen_Object {
+     public val monoforum: Boolean,
+     public val forum_tabs: Boolean,
+     public val in_news: Boolean,
++    public val forum_sidebar: Boolean,
+     public val id: Long,
+     public val access_hash: Long?,
+     public val title: String,
+@@ -309,6 +310,7 @@ public sealed class TlGen_Chat : TlGen_Object {
+         if (linked_community_id != null) result = result or 1048576U
+         if (in_news) result = result or 2097152U
+         if (pinned_msg_id != null) result = result or 4194304U
++        if (forum_sidebar) result = result or 8388608U
+         return result
+       }
+ 

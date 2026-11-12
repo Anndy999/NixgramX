@@ -1,0 +1,22 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ProfileChannelCell.java b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ProfileChannelCell.java
+index 2284eed4b322600db22e9f9a75fcd3310cf7692d..8fac46926592f9ee00328146daed9c5e87b07390 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ProfileChannelCell.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ProfileChannelCell.java
+@@ -42,6 +42,7 @@ import org.telegram.ui.Stories.StoriesListPlaceProvider;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.Comparator;
++import java.util.HashSet;
+ 
+ public class ProfileChannelCell extends FrameLayout implements Theme.Colorable {
+ 
+@@ -415,5 +416,9 @@ public class ProfileChannelCell extends FrameLayout implements Theme.Colorable {
+         subscribersView.setBackground(Theme.createRoundRectDrawable(dp(9f), dp(9f), Theme.multAlpha(headerColor, .1f)));
+         headerView.setTextColor(headerColor);
+     }
++    @Override
++    public void addColorKeys(HashSet<Integer> colors) {
++        colors.add(Theme.key_windowBackgroundWhiteBlueHeader);
++    }
+ 
+ }

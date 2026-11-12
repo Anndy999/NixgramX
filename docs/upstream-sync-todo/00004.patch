@@ -1,0 +1,12 @@
+diff --git a/TMessagesProj/jni/prebuild/build_all.sh b/TMessagesProj/jni/prebuild/build_all.sh
+index 93b910a35218a66cf83442356994c32f3fdb4e9b..b7fc1e1a04cb028de178fc3815ca74156278813d 100755
+--- a/TMessagesProj/jni/prebuild/build_all.sh
++++ b/TMessagesProj/jni/prebuild/build_all.sh
+@@ -30,7 +30,6 @@ build_scripts=(
+     build_wallet_engine.sh
+     build_tdlib.sh
+     build_wamr.sh
+-    build_prisma.sh
+ )
+ 
+ for script in "${build_scripts[@]}"; do

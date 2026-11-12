@@ -1,0 +1,15 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ChatBackgroundDrawable.java b/TMessagesProj/src/main/java/org/telegram/ui/ChatBackgroundDrawable.java
+index 63b8d7e4f3f80cdca24881209e82c237831a140a..d9162e7272acd5a574e6d875bf7379af220760d0 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ChatBackgroundDrawable.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatBackgroundDrawable.java
+@@ -256,9 +256,7 @@ public class ChatBackgroundDrawable extends Drawable {
+     }
+ 
+     public void onDetachedFromWindow(View view) {
+-        if (!attachedViews.contains(view)) {
+-            attachedViews.remove(view);
+-        }
++        attachedViews.remove(view);
+         if (isAttached() && !attached) {
+             attached = true;
+             imageReceiver.onAttachedToWindow();

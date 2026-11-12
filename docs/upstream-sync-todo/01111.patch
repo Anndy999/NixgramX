@@ -1,0 +1,13 @@
+diff --git a/TMessagesProj_App/build.gradle b/TMessagesProj_App/build.gradle
+index c581f3deb95aa96f7602161e3be8dc3922b81965..daff2057a28fde0da17f06a19750431d410f8416 100644
+--- a/TMessagesProj_App/build.gradle
++++ b/TMessagesProj_App/build.gradle
+@@ -179,7 +179,7 @@ android {
+             cmake {
+                 version '3.22.1'
+                 arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-23' // , '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+-                targets 'tmessages.49'
++                targets 'tmessages.49', 'twidget'
+             }
+         }
+     }
