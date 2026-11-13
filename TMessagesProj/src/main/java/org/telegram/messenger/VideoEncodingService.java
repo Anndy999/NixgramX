@@ -58,12 +58,6 @@ public class VideoEncodingService extends Service implements NotificationCenter.
         return null;
     }
 
-    @Override
-    public void onTimeout(int startId, int fgsType) {
-        stopForeground(STOP_FOREGROUND_REMOVE);
-        stopSelf(startId);
-    }
-
     public void onDestroy() {
         super.onDestroy();
         instance = null;
