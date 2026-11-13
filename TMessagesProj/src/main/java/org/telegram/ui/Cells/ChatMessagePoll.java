@@ -95,6 +95,8 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import me.vkryl.core.BitwiseUtils;
+import tw.nekomimi.nekogram.NekoConfig;
+
 class ChatMessagePoll {
 
     private final ChatMessageCell cell;
@@ -143,6 +145,9 @@ class ChatMessagePoll {
     }
 
     void setMessageContentIfPoll(final MessageObject messageObject, boolean messageIdChanged) {
+        if (messageObject.messageOwner == null) {
+            return;
+        }
         if (cell.timerParticles == null) {
             cell.timerParticles = new TimerParticles();
         }
@@ -249,7 +254,16 @@ class ChatMessagePoll {
         if (cell.pollVoted) {
             messageObject.checkedVotes.clear();
         }
-        CharSequence questionText = new SpannableStringBuilder(title.text);
+        TLRPC.TL_messageMediaPoll mediaPoll = null;
+        if (m instanceof TLRPC.TL_messageMediaPoll media) {
+            mediaPoll = media;
+        }
+        CharSequence questionText;
+        if (messageObject.messageOwner.translated && mediaPoll != null && mediaPoll.poll.translatedQuestion != null && !mediaPoll.poll.translatedQuestion.isEmpty()) {
+            questionText = new SpannableStringBuilder(mediaPoll.poll.translatedQuestion);
+        } else {
+            questionText = new SpannableStringBuilder(title.text);
+        }
         questionText = Emoji.replaceEmoji(questionText, Theme.chat_audioTitlePaint.getFontMetricsInt(), false);
         if (title.entities != null) {
             questionText = MessageObject.replaceAnimatedEmoji(questionText, title.entities, Theme.chat_audioTitlePaint.getFontMetricsInt(), true);
@@ -357,7 +371,7 @@ class ChatMessagePoll {
         int maxVote = 0;
         if (!animateAnswer && cell.pollVoteInProgress && cell.vibrateOnPollVote) {
             try {
-                cell.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+                if (!NekoConfig.disableVibration.Bool()) cell.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
             } catch (Exception ignored) {}
         }
         animateAnswer = cell.attachedToWindow && (cell.pollVoteInProgress || cell.pollUnvoteInProgress);
@@ -445,7 +459,12 @@ class ChatMessagePoll {
                         }
                     }
                 }
-                CharSequence answerText = new SpannableStringBuilder(pollAnswer.text.text);
+                CharSequence answerText;
+                if (messageObject.messageOwner.translated && pollAnswer.translatedText != null && !pollAnswer.translatedText.isEmpty()) {
+                    answerText = new SpannableStringBuilder(pollAnswer.translatedText);
+                } else {
+                    answerText = new SpannableStringBuilder(pollAnswer.text.text);
+                }
                 answerText = Emoji.replaceEmoji(answerText, Theme.chat_audioTitlePaint.getFontMetricsInt(), false, null, DynamicDrawableSpan.ALIGN_BOTTOM, 1.0f, emojisCount);
                 if (pollAnswer.text.entities != null) {
                     answerText = MessageObject.replaceAnimatedEmoji(answerText, pollAnswer.text.entities, Theme.chat_audioPerformerPaint.getFontMetricsInt(), true, 1.2f, emojisCount);

@@ -49,6 +49,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
 
+import tw.nekomimi.nekogram.filters.ReactionFilter;
+
 class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
 
     private final ChatMessageCell cell;
@@ -221,6 +223,8 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
                     sb.append(formatString("AccDescrMusicInfo", R.string.AccDescrMusicInfo, cell.currentMessageObject.getMusicAuthor(), cell.currentMessageObject.getMusicTitle()));
                     sb.append(", ");
                     sb.append(LocaleController.formatDuration((int) cell.currentMessageObject.getDuration()));
+                    sb.append("・");
+                    sb.append(AndroidUtilities.formatFileSize(cell.documentAttach.size));
                 } else if (cell.currentMessageObject.isVoice() || cell.isRoundVideo) {
                     sb.append(", ");
                     sb.append(LocaleController.formatDuration((int) cell.currentMessageObject.getDuration()));
@@ -302,15 +306,16 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
                     sb.append(formatPluralString("AccDescrNumberOfReplies", cell.getRepliesCount()));
                 }
                 if (cell.currentMessageObject.messageOwner.reactions != null && cell.currentMessageObject.messageOwner.reactions.results != null) {
-                    if (cell.currentMessageObject.messageOwner.reactions.results.size() == 1) {
-                        TLRPC.ReactionCount reaction = cell.currentMessageObject.messageOwner.reactions.results.get(0);
+                    var visibleReactionCounts = ReactionFilter.getReactionCounts(cell.currentAccount, cell.currentMessageObject.getDialogId(), cell.currentMessageObject.messageOwner.reactions);
+                    if (visibleReactionCounts.size() == 1) {
+                        TLRPC.ReactionCount reaction = visibleReactionCounts.get(0);
                         String emoticon = reaction.reaction instanceof TLRPC.TL_reactionEmoji ? ((TLRPC.TL_reactionEmoji) reaction.reaction).emoticon : "";
                         if (reaction.count == 1) {
                             sb.append("\n");
                             boolean isMe = false;
                             String userName = "";
                             if (cell.currentMessageObject.messageOwner.reactions.recent_reactions != null && cell.currentMessageObject.messageOwner.reactions.recent_reactions.size() == 1) {
-                                TLRPC.MessagePeerReaction recentReaction = cell.currentMessageObject.messageOwner.reactions.recent_reactions.get(0);
+                                TLRPC.MessagePeerReaction recentReaction = ReactionFilter.getFirstReaction(cell.currentAccount, cell.currentMessageObject.getDialogId(), cell.currentMessageObject.messageOwner.reactions);
                                 if (recentReaction != null) {
                                     TLRPC.User user = MessagesController.getInstance(cell.currentAccount).getUser(MessageObject.getPeerId(recentReaction.peer_id));
                                     isMe = UserObject.isUserSelf(user);
@@ -328,11 +333,11 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
                             sb.append("\n");
                             sb.append(formatPluralString("AccDescrNumberOfPeopleReactions", reaction.count, emoticon));
                         }
-                    } else {
+                    } else if (!visibleReactionCounts.isEmpty()) {
                         sb.append(getString("Reactions", R.string.Reactions)).append((": "));
-                        final int count = cell.currentMessageObject.messageOwner.reactions.results.size();
+                        final int count = visibleReactionCounts.size();
                         for (int i = 0; i < count; ++i) {
-                            TLRPC.ReactionCount reactionCount = cell.currentMessageObject.messageOwner.reactions.results.get(i);
+                            TLRPC.ReactionCount reactionCount = visibleReactionCounts.get(i);
                             String emoticon = reactionCount.reaction instanceof TLRPC.TL_reactionEmoji ? ((TLRPC.TL_reactionEmoji) reactionCount.reaction).emoticon : "";
                             if (reactionCount != null) {
                                 sb.append(emoticon).append(" ").append(reactionCount.count + "");
@@ -430,6 +435,10 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
 
             if ((cell.currentMessageObject.isVoice() || cell.currentMessageObject.isRoundVideo() || cell.currentMessageObject.isMusic()) && MediaController.getInstance().isPlayingMessage(cell.currentMessageObject)) {
                 cell.seekBarAccessibilityDelegate.onInitializeAccessibilityNodeInfoInternal(info);
+            }
+            //smallest ids should be added at first,because talkback can focus on it not always in correct order
+            if (cell.forwardedNameLayout[1] != null) {
+                info.addChild(cell, FORWARD);
             }
 
             if (cell.useTranscribeButton && cell.transcribeButton != null) {
@@ -903,6 +912,7 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
             cell.performAccessibilityAction(action, arguments);
         } else {
             if (action == AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS) {
+                cell.currentFocusedVirtualView = virtualViewId;
                 cell.sendAccessibilityEventForVirtualView(virtualViewId, AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED);
             } else if (action == AccessibilityNodeInfo.ACTION_CLICK) {
                 if (virtualViewId == PROFILE) {

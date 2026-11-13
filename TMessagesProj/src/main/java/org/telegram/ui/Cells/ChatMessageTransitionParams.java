@@ -28,6 +28,8 @@ import org.telegram.ui.Components.EmptyStubSpan;
 import java.util.ArrayList;
 import java.util.HashSet;
 
+import xyz.nextalone.nagram.NaConfig;
+
 public class ChatMessageTransitionParams {
 
     private final ChatMessageCell cell;
@@ -127,6 +129,8 @@ public class ChatMessageTransitionParams {
     public boolean animateDrawingSideMenuEnabled;
 
     public boolean animateMessageText;
+    /** Translation swaps reveal incoming glyphs after geometry starts; outgoing glyphs stay absent. */
+    public boolean animateTranslationText;
     ArrayList<MessageObject.TextLayoutBlock> animateOutTextBlocks;
     public ArrayList<MessageObject.TextLayoutBlock> lastDrawingTextBlocks;
     private int lastDrawingTextWidth;
@@ -318,7 +322,7 @@ public class ChatMessageTransitionParams {
         lastDrawingSideMenuEnabled = cell.isSideMenuEnabled;
         lastDrawingTextBlocks = cell.currentMessageObject != null ? cell.currentMessageObject.textLayoutBlocks : null;
         lastDrawingTextWidth = cell.currentMessageObject != null ? cell.currentMessageObject.textWidth : 0;
-        lastDrawingEdited = cell.edited;
+        lastDrawingEdited = cell.edited || cell.ayuDeleted;
         lastDrawingRichLayout = cell.currentMessageObject != null ? cell.currentMessageObject.richLayout : null;
 
         lastDrawingCaptionX = cell.captionX;
@@ -394,7 +398,7 @@ public class ChatMessageTransitionParams {
         lastForwardNameWidth = cell.forwardedNameWidth;
         lastBackgroundLeft = cell.getCurrentBackgroundLeft();
         if (cell.currentBackgroundDrawable != null) {
-            lastBackgroundRight = cell.currentBackgroundDrawable.getBounds().right;
+            lastBackgroundRight = cell.getCurrentBackgroundRight();
         }
         lastTextXOffset = cell.currentMessageObject != null ? cell.currentMessageObject.textXOffset : 0;
 
@@ -423,7 +427,7 @@ public class ChatMessageTransitionParams {
         lastDrawingExpandedQuotes = cell.getPrimaryMessageObject() != null ? cell.getPrimaryMessageObject().expandedQuotes : null;
         lastDrawingExpandedExplanation = cell.currentMessageObject != null && cell.currentMessageObject.expandedExplanation;
 
-        lastDrawnTranslated = cell.currentMessageObject != null && cell.currentMessageObject.translated;
+        lastDrawnTranslated = cell.currentMessageObject != null && cell.currentMessageObject.isTranslated();
         lastDrawnTitleLayout = cell.titleLayout;
     }
 
@@ -450,9 +454,10 @@ public class ChatMessageTransitionParams {
         }
 
         animateMessageText = false;
+        animateTranslationText = cell.currentMessageObject.isTranslated() != lastDrawnTranslated;
         if (cell.currentMessageObject.textLayoutBlocks != lastDrawingTextBlocks) {
             boolean sameText = true;
-            if (cell.currentMessageObject.textWidth != lastDrawingTextWidth && lastDrawingSideMenuEnabled != cell.isSideMenuEnabled) {
+            if (cell.currentMessageObject.textWidth != lastDrawingTextWidth) {
                 sameText = false;
             }
             if (cell.currentMessageObject.textLayoutBlocks != null && lastDrawingTextBlocks != null && cell.currentMessageObject.textLayoutBlocks.size() == lastDrawingTextBlocks.size()) {
@@ -472,10 +477,10 @@ public class ChatMessageTransitionParams {
                 sameText = false;
             }
             if (!sameText) {
+                // Fade incoming glyphs only. Never keep outgoing blocks: two layouts at
+                // the same textX/textY is the EN/ZH overlay.
                 animateMessageText = true;
-                animateOutTextBlocks = lastDrawingTextBlocks;
-                animateOutTextXOffset = lastTextXOffset;
-                animateOutAnimateEmoji = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, cell, animateOutAnimateEmoji, lastDrawingTextBlocks, true);
+                animateOutTextBlocks = null;
                 cell.animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, cell, cell.animatedEmojiStack, cell.currentMessageObject.textLayoutBlocks);
                 changed = true;
             } else {
@@ -531,14 +536,24 @@ public class ChatMessageTransitionParams {
             CharSequence oldText = lastDrawnReplyTextLayout != null ? lastDrawnReplyTextLayout.getText() : null;
             if (!TextUtils.equals(newText, oldText)) {
                 animateFromReplyTextHeight = lastDrawingReplyTextHeight;
-                animateReplyTextLayout = lastDrawnReplyTextLayout;
-                animateReplyTextOffset = lastReplyTextXOffset;
-                animateOutAnimateEmojiReply = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, cell, false, animateOutAnimateEmojiReply, true, lastDrawnReplyTextLayout);
+                animateReplyTextLayout = null;
                 changed = true;
             }
         }
-        if (cell.edited && !lastDrawingEdited && cell.timeLayout != null) {
-            String editedStr = getString("EditedMessage", R.string.EditedMessage);
+        if ((((cell.edited || cell.ayuDeleted) && !lastDrawingEdited) || (cell.currentMessageObject.isTranslated() && !cell.lastTranslated)) && cell.timeLayout != null) {
+            String customStr = NaConfig.INSTANCE.getCustomEditedMessage().String();
+            String customStrFin = customStr.equals("") ? getString(R.string.EditedMessage) : customStr;
+            String deletedStr = NaConfig.INSTANCE.getCustomDeletedMark().String();
+            String deletedStrFin = deletedStr.equals("") ? getString(R.string.DeletedMessage) : deletedStr;
+            String editedStr;
+            if (cell.edited && !cell.ayuDeleted){
+                editedStr = customStrFin;
+            } else if (!cell.edited) {
+                editedStr = deletedStrFin;
+            } else {
+                // it's both edited and deleted
+                editedStr = customStrFin + " " + deletedStrFin;
+            }
             CharSequence text = cell.timeLayout.getText();
             int i = text.toString().indexOf(editedStr);
             if (i >= 0) {
@@ -562,7 +577,7 @@ public class ChatMessageTransitionParams {
                 changed = true;
             }
             cell.accessibilityText = null;
-        } else if (!cell.edited && lastDrawingEdited && cell.timeLayout != null) {
+        } else if (((!(cell.edited || cell.ayuDeleted) && lastDrawingEdited) || (!cell.currentMessageObject.isTranslated() && cell.lastTranslated)) && cell.timeLayout != null) {
             animateTimeLayout = lastTimeLayout;
             animateEditedWidthDiff = cell.timeWidth - lastTimeWidth;
             animateEditedEnter = true;
@@ -664,8 +679,7 @@ public class ChatMessageTransitionParams {
                 (oldCaption != null && !oldCaption.equals(currentCaption))
             ) {
                 animateReplaceCaptionLayout = true;
-                animateOutCaptionLayout = lastDrawingCaptionLayout;
-                animateOutAnimateEmoji = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, cell, null, animateOutCaptionLayout == null ? null : animateOutCaptionLayout.textLayoutBlocks);
+                animateOutCaptionLayout = null;
                 cell.animatedEmojiStack = AnimatedEmojiSpan.update(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, cell, cell.animatedEmojiStack, cell.captionLayout == null ? null : cell.captionLayout.textLayoutBlocks);
                 if (lastDrawingSideMenuEnabled != cell.isSideMenuEnabled || lastDrawingSummarized != summarized) {
                     moveCaption = true;
@@ -895,7 +909,7 @@ public class ChatMessageTransitionParams {
             changed = true;
         }
 
-        final boolean translated = cell.currentMessageObject != null && cell.currentMessageObject.translated;
+        final boolean translated = cell.currentMessageObject != null && cell.currentMessageObject.isTranslated();
         if (translated != lastDrawnTranslated) {
             if (cell.titleLayout != null && lastDrawnTitleLayout != null) {
                 animateTitleLayout = lastDrawnTitleLayout;
@@ -940,6 +954,7 @@ public class ChatMessageTransitionParams {
         oldProgress = 0f;
         newProgress = 1f;
         animateMessageText = false;
+        animateTranslationText = false;
         animateRichLayout = false;
         animateDrawingSideMenuEnabled = false;
         animateDrawNameLayout = false;

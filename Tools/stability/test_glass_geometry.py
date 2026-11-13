@@ -61,7 +61,10 @@ public class GlassGeometryTest {
     def test_forum_header_uses_uniform_radius(self):
         action = (ROOT / 'TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java').read_text(encoding='utf-8')
         chat = (ROOT / 'TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java').read_text(encoding='utf-8')
-        renderer = (DRAWABLE.parent / 'BlurredBackgroundDrawableRenderNode.java').read_text(encoding='utf-8')
+        # Telegram 13.2.x deleted BlurredBackgroundDrawableRenderNode; its render-node path is now
+        # BlurredBackgroundDrawable.ImplRenderNode, which must keep outline and shader radii apart.
+        drawable = DRAWABLE.read_text(encoding='utf-8')
+        renderer = drawable[drawable.index('    private final class ImplRenderNode extends Impl'):]
         self.assertIn('ChatObject.isForum(currentChat)', chat)
         self.assertIn('glassDrawable.setRadius(dp(23));', action)
         self.assertNotIn('glassDrawable.setRadius(dp(18.33f), dp(23), dp(23), dp(18.33f))', action)
