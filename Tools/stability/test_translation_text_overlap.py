@@ -1,4 +1,10 @@
-"""Guard translation swaps against drawing stale outgoing message text."""
+"""Guard translation swaps against drawing stale outgoing message text.
+
+After the official 13.2.2 ChatMessageCell split, the positioned
+``drawAnimatedEmojiMessageText`` overload is package-private (no ``private``
+modifier). Assertions still target the same translation-offset contract in
+``drawMessageText``, the message emoji pass, and the caption text/emoji passes.
+"""
 
 from pathlib import Path
 import unittest
@@ -51,9 +57,11 @@ class TranslationTextOverlapTest(unittest.TestCase):
         receive the very same translation draw offset as the incoming text glyphs;
         otherwise animated emoji visibly detach from the translated text mid-swap.
         """
+        # The no-arg-position pass is still private; the positioned overload is
+        # package-private after the official split. Match the signature itself.
         emoji_pass = self._slice(
-            "    private void drawAnimatedEmojiMessageText(Canvas canvas, float alpha) {",
-            "\n    private void drawAnimatedEmojiMessageText(float textX, float textY, Canvas canvas,",
+            "void drawAnimatedEmojiMessageText(Canvas canvas, float alpha) {",
+            "void drawAnimatedEmojiMessageText(float textX, float textY, Canvas canvas,",
         )
         self.assertIn(INCOMING_OFFSET_CALL, emoji_pass)
         self.assertIn("textY + incomingEmojiOffsetY", emoji_pass)
