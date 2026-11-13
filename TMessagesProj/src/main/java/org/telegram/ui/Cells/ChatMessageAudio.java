@@ -103,7 +103,9 @@ class ChatMessageAudio {
         cell.setMessageObjectInternal(messageObject);
 
         cell.totalHeight = dp(82) + cell.namesOffset;
-        if (dp(76) + durationWidth >= cell.backgroundWidth - cell.timeWidth - dp(12)) {
+        boolean canDrawTime = cell.currentMessagesGroup == null || cell.currentPosition == null || cell.currentPosition.last;
+        boolean noCaption = TextUtils.isEmpty(messageObject.caption);
+        if (canDrawTime && noCaption && dp(76) + durationWidth >= cell.backgroundWidth - cell.timeWidth - dp(12)) {
             cell.totalHeight += dp(14);
         }
 
