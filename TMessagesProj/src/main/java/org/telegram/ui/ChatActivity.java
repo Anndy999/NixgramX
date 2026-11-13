@@ -4543,6 +4543,12 @@ public class ChatActivity extends BaseFragment implements
             protected boolean onAvatarClick() {
                 if (isTitleCentered()) {
                     // Telegram 13.2.x removed the action bar text-formatting item (formatting lives in the selection menu)
+                    // NixgramX: with text selected, tapping the centered title opens that selection format menu instead
+                    View emojiButton = chatActivityEnterView != null ? chatActivityEnterView.getEmojiButton() : null;
+                    if (emojiButton instanceof ChatActivityEnterViewAnimatedIconView && ((ChatActivityEnterViewAnimatedIconView) emojiButton).isFormatMode()) {
+                        emojiButton.performClick();
+                        return true;
+                    }
                     if (headerItem != null) {
                         if (attachItem != null && chatActivityEnterView.hasText() && TextUtils.isEmpty(chatActivityEnterView.getSlowModeTimer()) && (currentChat == null || ChatObject.canSendPlain(currentChat))) {
                             attachItem.createView().performClick();
