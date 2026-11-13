@@ -1043,7 +1043,7 @@
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/SessionCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00334.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/SharedLinkCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00341.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/StickerEmojiCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00348.patch
-- TMessagesProj/src/main/java/org/telegram/ui/Cells/TextCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00353.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/TextCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00353.patch — RESOLVED (#213): took official 13.2.2 setCompactLayout / getDefaultImageLeft / compact getOffsetFromImage / applyColorKeys; kept Nix Switch 38×22, setTextAndIcon(resId==0 → GONE + dp(7) padding), setTextAndCheckAndIcon(CharSequence)
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/TextDetailCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00359.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/TextDetailSettingsCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00360.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/UserCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00376.patch
