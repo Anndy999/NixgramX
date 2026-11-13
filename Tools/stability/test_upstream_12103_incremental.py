@@ -27,9 +27,10 @@ class Upstream12103IncrementalTest(unittest.TestCase):
 
     def test_version_and_identity(self):
         props = (ROOT / "gradle.properties").read_text(encoding="utf-8")
+        # APP_VERSION_* tracks the official Telegram base (13.2.2 / 7303); NIXGRAMX_VERSION_* is the fork version.
 
-        self.assertIn("APP_VERSION_CODE=7237", props)
-        self.assertIn("APP_VERSION_NAME=13.1.1", props)
+        self.assertIn("APP_VERSION_CODE=7303", props)
+        self.assertIn("APP_VERSION_NAME=13.2.2", props)
         self.assertIn("NIXGRAMX_VERSION_NAME=13.1.1", props)
         # NIXGRAMX_VERSION_CODE is the fork distribution version and is bumped
         # on every release. Assert the invariant, not a frozen value: the key
