@@ -36,17 +36,31 @@ import org.telegram.ui.ActionBar.Theme;
 
 public class PagerSlidingTabStrip extends HorizontalScrollView implements Theme.Colorable {
 
+    /**
+     * Re-apply tab colours from the current palette. Glyph / ripple colours are baked into
+     * the child views at construction and only re-read from {@code setSelected()}; a theme
+     * switch does not change the selected index, so without this the previous palette sits
+     * on the new surface. Colour truth lives in {@link TextTab#setSelected} / icon
+     * {@code setSelected} via {@link #resolveGlyphColor(float)} — not in this loop.
+     */
     @Override
     public void updateColors() {
         try {
             if (tabsContainer == null) {
                 return;
             }
-            for (int i = 0; i < tabsContainer.getChildCount(); ++i) {
-                final View child = tabsContainer.getChildAt(i);
-                // the tabs re-read their (glass) colors in setSelected
-                child.setSelected(child.isSelected());
+            final int childCount = tabsContainer.getChildCount();
+            if (childCount == 0) {
+                return;
             }
+            // the tabs re-read their (glass) colors in setSelected; clamp so a stale index never selects nothing
+            final int selectedIndex = Math.max(0, Math.min(currentPosition, childCount - 1));
+            for (int i = 0; i < childCount; i++) {
+                final View child = tabsContainer.getChildAt(i);
+                child.setSelected(i == selectedIndex);
+                child.invalidate();
+            }
+            invalidate();
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -394,30 +408,6 @@ public class PagerSlidingTabStrip extends HorizontalScrollView implements Theme.
         if (background != null) {
             Theme.setSelectorDrawableColor(background, resolveRippleColor(selected), true);
         }
-    }
-
-    /**
-     * Re-apply tab colours from the current palette. Glyph / ripple colours are baked into
-     * the child views at construction and only re-read from {@code setSelected()}; a theme
-     * switch does not change the selected index, so without this the previous palette sits
-     * on the new surface. Colour truth lives in {@link TextTab#setSelected} / icon
-     * {@code setSelected} via {@link #resolveGlyphColor(float)} — not in this loop.
-     */
-    public void updateColors() {
-        if (tabsContainer == null) {
-            return;
-        }
-        final int childCount = tabsContainer.getChildCount();
-        if (childCount == 0) {
-            return;
-        }
-        final int selectedIndex = Math.max(0, Math.min(currentPosition, childCount - 1));
-        for (int i = 0; i < childCount; i++) {
-            View child = tabsContainer.getChildAt(i);
-            child.setSelected(i == selectedIndex);
-            child.invalidate();
-        }
-        invalidate();
     }
 
     public void onSizeChanged(int paramInt1, int paramInt2, int paramInt3, int paramInt4) {
