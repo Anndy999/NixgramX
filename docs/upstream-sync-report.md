@@ -1009,15 +1009,15 @@
 - gradle.properties
 
 ## Conflict/adaptation files — TODO
-- TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch
-- TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00004.patch
-- TMessagesProj/proguard-rules.pro — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00072.patch
-- TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00073.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00092.patch
+- TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch — RESOLVED (#205): added buildFeatures.aidl, cmake targets tmessages.49+twidget, firebase-bom 34.19.0 + firebase-pnv as official; kept Nix identity/signing/version/API wiring, Nix firebase-messaging/crashlytics pins, credentials 1.6.0, android-27 cmake platform; firebase-appindexing stays dropped
+- TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00004.patch — RESOLVED (#205): dropped build_prisma.sh (prisma now built from source via CMake add_subdirectory); kept Nix list without build_wamr.sh
+- TMessagesProj/proguard-rules.pro — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00072.patch — RESOLVED (#205): added official twidget keep rules; kept Nix broad org.telegram.messenger.* keep (official narrowing not taken: needs R8/device check against Nix reflection hooks) and ThickLanguageIdentifier rule
+- TMessagesProj/src/main/AndroidManifest.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00073.patch — RESOLVED (#205): added WidgetEngineService (:widgets, isolatedProcess, not exported) and BubbleActivity configChanges; LocationSharingService already location-only; ACCESS_BACKGROUND_LOCATION kept until its callers (AlertsCreator / ChatAttachAlertLocationLayout / LocationActivity, other issues) drop the request
+- TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00092.patch — RESOLVED (#205): added SUPPORTS_FPNV, set false for NixgramX (needs own Firebase PNV setup — NEEDS HUMAN); kept Nix SUPPORTS_PASSKEYS logic
 - TMessagesProj/src/main/java/org/telegram/messenger/CaptchaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00093.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/FileUploadOperation.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00108.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/FilesMigrationService.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00109.patch
-- TMessagesProj/src/main/java/org/telegram/messenger/FirebasePhoneNumberVerificationHelper.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00110.patch
+- TMessagesProj/src/main/java/org/telegram/messenger/FirebasePhoneNumberVerificationHelper.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00110.patch — DEFERRED (#205 → #209): new official file depends on ConnectionsManager.RequestException (#209) and is only called from LoginActivity (#209); adding it here would not compile
 - TMessagesProj/src/main/java/org/telegram/messenger/GoogleLocationProvider.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00111.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00119.patch
 - TMessagesProj/src/main/java/org/telegram/messenger/MessageObject.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00121.patch
@@ -1130,12 +1130,12 @@
 - TMessagesProj/src/main/java/org/telegram/ui/bots/ChannelAffiliateProgramsFragment.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00981.patch
 - TMessagesProj/src/main/java/org/telegram/ui/iv/RichEditorToolbar.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/01011.patch
 - TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01110.patch
-- TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01111.patch
-- TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01112.patch
-- TMessagesProj_AppHuawei/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01113.patch
-- TMessagesProj_AppHuawei/src/main/java/org/telegram/messenger/HuaweiLocationProvider.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01114.patch
-- TMessagesProj_AppStandalone/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01115.patch
-- TMessagesProj_AppStandalone/src/main/java/org/telegram/messenger/SMSJobsNotification.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01116.patch
+- TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01111.patch — RESOLVED (#205): not applicable — module absent from NixgramX (merged into TMessagesProj), as in 13.1.1 #186
+- TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01112.patch — RESOLVED (#205): not applicable — module absent from NixgramX, as in 13.1.1 #186
+- TMessagesProj_AppHuawei/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01113.patch — RESOLVED (#205): not applicable — module absent from NixgramX, as in 13.1.1 #186
+- TMessagesProj_AppHuawei/src/main/java/org/telegram/messenger/HuaweiLocationProvider.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01114.patch — RESOLVED (#205): not applicable — Huawei module absent from NixgramX
+- TMessagesProj_AppStandalone/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01115.patch — RESOLVED (#205): not applicable — module absent from NixgramX, as in 13.1.1 #186
+- TMessagesProj_AppStandalone/src/main/java/org/telegram/messenger/SMSJobsNotification.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01116.patch — RESOLVED (#205): not applicable — Standalone module absent from NixgramX
 - TMessagesProj_AppTests/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01117.patch
 - TMessagesProj_AppTests/src/androidTest/kotlin/not_linked_classes.txt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01118.patch
 - TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated/TlGen_BotInlineMessage.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01119.patch
@@ -1160,11 +1160,11 @@
 - TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/utils/twidget/WidgetClientTest.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01138.patch
 - TMessagesProj_AppTests/tlscheme/232.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01139.patch
 - TMessagesProj_AppTests/tlscheme/233.json — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01140.patch
-- build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01141.patch
-- buildSrc/src/main/kotlin/com/example/GenerateSchemeTask.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01142.patch
-- buildSrc/src/main/kotlin/org/telegram/tlrpc/SchemeCodeGen.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01143.patch
-- buildSrc/src/main/kotlin/org/telegram/tlrpc/SchemeJsonParser.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01144.patch
-- buildSrc/src/main/kotlin/org/telegram/tlrpc/schema/TlSchemaParamType.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01145.patch
+- build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01141.patch — RESOLVED (#205): no change needed — Nix plugins block already pins google-services 4.5.0 and firebase-crashlytics 3.0.8 (official buildscript bump)
+- buildSrc/src/main/kotlin/com/example/GenerateSchemeTask.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01142.patch — RESOLVED (#205): not applicable — AppTests TL codegen absent from NixgramX buildSrc (AppTests not imported), as in 13.1.1 #186
+- buildSrc/src/main/kotlin/org/telegram/tlrpc/SchemeCodeGen.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01143.patch — RESOLVED (#205): not applicable — tlrpc codegen absent from NixgramX buildSrc (AppTests not imported)
+- buildSrc/src/main/kotlin/org/telegram/tlrpc/SchemeJsonParser.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01144.patch — RESOLVED (#205): not applicable — tlrpc codegen absent from NixgramX buildSrc (AppTests not imported)
+- buildSrc/src/main/kotlin/org/telegram/tlrpc/schema/TlSchemaParamType.kt — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01145.patch — RESOLVED (#205): not applicable — tlrpc codegen absent from NixgramX buildSrc (AppTests not imported)
 
 ## Submodule changes
 - TMessagesProj/jni/tgcalls: ['160000', 'commit', '1398c1648f52666b3249111ec3c5b531946e41e4'] -> ['160000', 'commit', '545f5ae599f8282e1ae3f38aaff166d179d75703']
