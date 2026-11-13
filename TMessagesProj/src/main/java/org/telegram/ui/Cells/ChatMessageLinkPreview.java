@@ -60,6 +60,9 @@ import org.telegram.ui.Components.URLSpanBotCommand;
 import org.telegram.ui.Components.spoilers.SpoilerEffect;
 import org.telegram.ui.Stories.recorder.DominantColors;
 
+import tw.nekomimi.nekogram.helpers.MessageHelper;
+import xyz.nextalone.nagram.NaConfig;
+
 class ChatMessageLinkPreview {
 
     private final ChatMessageCell cell;
@@ -174,7 +177,7 @@ class ChatMessageLinkPreview {
             float rad = (float) Math.floor(SharedConfig.bubbleRadius / (cell.currentMessageObject.isSponsored() ? 2f : 3f));
             cell.linkLine
                 .offsetEmoji(0, drawPhotoImageBefore ? (1f - cell.isSmallImage()) * (dp(18) + cell.photoImage.getImageHeight() + (cell.siteNameLayout != null ? cell.siteNameLayout.getLineBottom(cell.siteNameLayout.getLineCount() - 1) : 0)) : 0)
-                .drawBackground(canvas, AndroidUtilities.rectTmp, rad, rad, rad, alpha);
+                .drawBackground(canvas, AndroidUtilities.rectTmp, rad, rad, rad, alpha, false, !NaConfig.INSTANCE.getMessageColoredBackground().Bool());
 
             int rippleColor = cell.linkLine.getBackgroundColor();
             if (selector == null) {
@@ -939,7 +942,8 @@ class ChatMessageLinkPreview {
                         }
                     } else if (cell.drawPhotoImage && (cell.documentAttachType == cell.DOCUMENT_ATTACH_TYPE_GIF || cell.documentAttachType == cell.DOCUMENT_ATTACH_TYPE_VIDEO || authorLayout == null && cell.titleLayout == null && cell.descriptionLayout == null && cell.siteNameLayout == null)) {
                         if (cell.delegate != null) {
-                            cell.delegate.didPressImage(cell, cell.lastTouchX, cell.lastTouchY, true);
+                            boolean isWebP = cell.currentMessageObject.getDocumentName() != null && cell.currentMessageObject.getDocumentName().toLowerCase().endsWith(".webp");
+                            cell.delegate.didPressImage(cell, cell.lastTouchX, cell.lastTouchY, isWebP);
                         }
                     } else if (cell.currentMessageObject != null && !cell.currentMessageObject.preview) {
                         TLRPC.WebPage webPage = MessageObject.getMedia(cell.currentMessageObject.messageOwner).webpage;
@@ -949,7 +953,15 @@ class ChatMessageLinkPreview {
                             }
                         } else if (webPage != null) {
                             if (cell.delegate != null) {
-                                cell.delegate.didPressWebPage(cell, webPage, webPage.url, MessageObject.getMedia(cell.currentMessageObject.messageOwner).safe);
+                                if (cell.drawPhotoImage && cell.photoImage.isInsideImage(x, y)) {
+                                    cell.delegate.didPressImage(cell, cell.lastTouchX, cell.lastTouchY, false);
+                                } else {
+                                    if (webPage.type.equals("document") && !TextUtils.isEmpty(MessageHelper.getPathToMessage(cell.currentMessageObject))) {
+                                        cell.delegate.didPressImage(cell, cell.lastTouchX, cell.lastTouchY, false); // Open the locally downloaded document instead of opening the browser to download it again
+                                    } else {
+                                        cell.delegate.didPressWebPage(cell, webPage, webPage.url, MessageObject.getMedia(cell.currentMessageObject.messageOwner).safe);
+                                    }
+                                }
                             } else {
                                 Browser.openUrl(cell.getContext(), webPage.url);
                             }
