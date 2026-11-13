@@ -29,7 +29,6 @@ build_scripts=(
     build_tlottie.sh
     build_wallet_engine.sh
     build_tdlib.sh
-    build_prisma.sh
 )
 
 for script in "${build_scripts[@]}"; do

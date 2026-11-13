@@ -44,6 +44,9 @@ public class BuildVars {
     // CREDENTIAL_MANAGER_SET_ORIGIN. Google Password Manager / telegram.org assetlinks will
     // fail on custom package+signature; Bitwarden/KeePassDX can work if the user trusts this app.
     public static boolean SUPPORTS_PASSKEYS = Build.VERSION.SDK_INT >= 34;
+    // Telegram 13.2.x: Firebase phone number verification. Official default is true, but it needs
+    // the official Firebase project; NixgramX keeps it off until its own Firebase setup is approved.
+    public static boolean SUPPORTS_FPNV = false;
 
     static {
         APP_ID = BuildConfig.APP_ID;

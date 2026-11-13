@@ -68,6 +68,11 @@ class EmojiPanelThemeRefreshTest(unittest.TestCase):
     def test_update_colors_pushes_refresh_into_both_tab_strips(self):
         source = EMOJI_VIEW.read_text(encoding='utf-8')
         update = body(source, '    public void updateColors() {')
+        # Telegram 13.2.x splits EmojiView.updateColors() into a try-wrapped dispatcher
+        # that delegates to updateColorsInternal(); the refresh must live on that path.
+        self.assertIn('updateColorsInternal();', update,
+                      'updateColors() must keep delegating to updateColorsInternal()')
+        update += body(source, '    private void updateColorsInternal() {')
         self.assertIn('typeTabs.updateColors()', update,
                       'bottom 表情符号/GIF/贴纸 labels live in typeTabs, not in tabIcons')
         self.assertIn('emojiTabs.updateColors()', update,
