@@ -43,7 +43,6 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.TranslateController;
 import org.telegram.messenger.browser.Browser;
-import org.telegram.messenger.utils.RectFMergeBounding;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_keyboard;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -51,6 +50,7 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.ChatMessageCell;
+import org.telegram.ui.Cells.ChatMessageTransitionParams;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
@@ -63,10 +63,11 @@ import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
 import org.telegram.ui.Components.blur3.ViewGroupPartRenderer;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSource;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceBitmap;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceWrapped;
+import org.telegram.utils.glass.GlassEngine;
+import org.telegram.utils.glass.source.GlassSource;
+import org.telegram.utils.glass.source.GlassSourceBitmap;
+import org.telegram.utils.glass.source.GlassSourceRenderNode;
+import org.telegram.utils.glass.source.GlassSourceWrapped;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.Components.chat.WallpaperBitmapProvider;
 import org.telegram.ui.Components.chat.layouts.ChatActivityFadeView;
@@ -78,6 +79,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.WeakHashMap;
 import java.util.function.Supplier;
+
+import me.vkryl.core.BitwiseUtils;
 
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
@@ -112,7 +115,7 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
     protected class ScrimFrameLayout extends SizeNotifierFrameLayout {
 
         private final WallpaperBitmapProvider wallpaperBitmapProvider = new WallpaperBitmapProvider();
-        private final BlurredBackgroundSourceWrapped glassBackgroundSourceWallpaper = new BlurredBackgroundSourceWrapped();
+        private final GlassSourceWrapped glassBackgroundSourceWallpaper = new GlassSourceWrapped();
 
         public ScrimFrameLayout(Context context) {
             super(context);
@@ -121,7 +124,7 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         @Override
         public void onUpdateBackgroundDrawable(Drawable drawable) {
             super.onUpdateBackgroundDrawable(drawable);
-            BlurredBackgroundSource source = wallpaperBitmapProvider.updateSourceFromBackgroundViewDrawable(drawable);
+            GlassSource source = wallpaperBitmapProvider.updateSourceFromBackgroundViewDrawable(drawable);
             glassBackgroundSourceWallpaper.setSource(source);
             updateGlassBackgroundSourceSize();
         }
@@ -133,8 +136,8 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         }
 
         private void updateGlassBackgroundSourceSize() {
-            BlurredBackgroundSource source = glassBackgroundSourceWallpaper.getSource();
-            if (source instanceof BlurredBackgroundSourceBitmap bitmapSource) {
+            GlassSource source = glassBackgroundSourceWallpaper.getSource();
+            if (source instanceof GlassSourceBitmap bitmapSource) {
                 bitmapSource.setParentSize(getMeasuredWidth(), getMeasuredHeight(), 0);
             }
         }
@@ -150,28 +153,32 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         if (actionBar == null) {
             return;
         }
-        BlurredBackgroundSource source;
+        GlassSource source;
         if (container instanceof ScrimFrameLayout scrimFrameLayout) {
             source = scrimFrameLayout.glassBackgroundSourceWallpaper;
         } else {
-            BlurredBackgroundSourceWrapped sourceWallpaper = new BlurredBackgroundSourceWrapped();
+            GlassSourceWrapped sourceWallpaper = new GlassSourceWrapped();
             sourceWallpaper.setSource(new WallpaperBitmapProvider().updateSourceFromBackgroundViewDrawable(Theme.getCachedWallpaper()));
             source = sourceWallpaper;
         }
         BlurredBackgroundDrawableViewFactory wallpaperDrawableFactory = new BlurredBackgroundDrawableViewFactory(source);
         ViewPositionWatcher viewPositionWatcher = new ViewPositionWatcher(container);
         wallpaperDrawableFactory.setSourceRootView(viewPositionWatcher, container);
+        wallpaperDrawableFactory.setGlassEngine(glassEngine);
         BlurredBackgroundDrawableViewFactory actionBarDrawableFactory = wallpaperDrawableFactory;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SharedConfig.chatBlurEnabled()) {
             boolean liquidGlassEnabled = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS);
-            BlurredBackgroundSourceRenderNode contentGlassSource = new BlurredBackgroundSourceRenderNode(source);
+            GlassSourceRenderNode contentGlassSource = new GlassSourceRenderNode(source);
             DownscaleScrollableNoiseSuppressor contentGlassNoiseSuppressor = new DownscaleScrollableNoiseSuppressor();
             contentGlassSource.setUnderSource(source);
             contentGlassSource.setScrollableNoiseSuppressor(contentGlassNoiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
             actionBarDrawableFactory = new BlurredBackgroundDrawableViewFactory(contentGlassSource);
             actionBarDrawableFactory.setSourceRootView(viewPositionWatcher, container);
+            // 13.2.2: drawable positions come from the fragment's GlassEngine; the capture padding is the factory outset.
+            actionBarDrawableFactory.setGlassEngine(glassEngine);
+            actionBarDrawableFactory.setOutset(liquidGlassEnabled ? dp(8) : dp(48));
             actionBarDrawableFactory.setLiquidGlassEffectAllowed(liquidGlassEnabled);
-            setupContentGlassSource(container, listView, contentGlassSource, contentGlassNoiseSuppressor, liquidGlassEnabled ? dp(8) : dp(48));
+            setupContentGlassSource(container, listView, contentGlassSource, contentGlassNoiseSuppressor);
         }
         actionBar.setAddToContainer(false);
         actionBar.setCastShadows(false);
@@ -191,8 +198,11 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
-    private void setupContentGlassSource(@NonNull ViewGroup container, @NonNull RecyclerListView listView, @NonNull BlurredBackgroundSourceRenderNode source, @NonNull DownscaleScrollableNoiseSuppressor noiseSuppressor, int capturePadding) {
-        ContentGlassSourceUpdater updater = new ContentGlassSourceUpdater(container, listView, source, noiseSuppressor, capturePadding);
+    private void setupContentGlassSource(@NonNull ViewGroup container, @NonNull RecyclerListView listView, @NonNull GlassSourceRenderNode source, @NonNull DownscaleScrollableNoiseSuppressor noiseSuppressor) {
+        ContentGlassSourceUpdater updater = new ContentGlassSourceUpdater(container, listView, source, noiseSuppressor);
+        glassEngine.addNoiseSuppressor(noiseSuppressor);
+        glassEngine.addScrolledView(listView);
+        glassEngine.setGlassInvalidationListener(updater::onGlassInvalidated);
         View.OnLayoutChangeListener updateListener = (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> updater.requestUpdate();
         container.addOnLayoutChangeListener(updateListener);
         listView.addOnLayoutChangeListener(updateListener);
@@ -203,7 +213,6 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
                 updater.requestUpdate();
             }
         });
-        source.setOnDrawablesRelativePositionChangeListener(updater::requestUpdate);
         updater.requestUpdate();
     }
 
@@ -211,19 +220,15 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
     private final class ContentGlassSourceUpdater {
 
         private final ViewGroup container;
-        private final BlurredBackgroundSourceRenderNode source;
+        private final GlassSourceRenderNode source;
         private final DownscaleScrollableNoiseSuppressor noiseSuppressor;
-        private final int capturePadding;
-        private final ArrayList<RectF> positions = new ArrayList<>();
-        private final ArrayList<RectF> positionsMerged = new ArrayList<>();
         private final IBlur3Capture capture;
         private boolean updateScheduled;
 
-        private ContentGlassSourceUpdater(@NonNull ViewGroup container, @NonNull RecyclerListView listView, @NonNull BlurredBackgroundSourceRenderNode source, @NonNull DownscaleScrollableNoiseSuppressor noiseSuppressor, int capturePadding) {
+        private ContentGlassSourceUpdater(@NonNull ViewGroup container, @NonNull RecyclerListView listView, @NonNull GlassSourceRenderNode source, @NonNull DownscaleScrollableNoiseSuppressor noiseSuppressor) {
             this.container = container;
             this.source = source;
             this.noiseSuppressor = noiseSuppressor;
-            this.capturePadding = capturePadding;
             this.capture = new ViewGroupPartRenderer(listView, container, listView::drawChild);
         }
 
@@ -238,13 +243,22 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
             });
         }
 
+        private void onGlassInvalidated(int flags) {
+            update(BitwiseUtils.hasFlag(flags, GlassEngine.FLAG_INVALIDATED_POSITIONS));
+        }
+
         private void update() {
+            update(true);
+        }
+
+        private void update(boolean positionsChanged) {
             if (container.getWidth() == 0 || container.getHeight() == 0) {
                 return;
             }
-            int count = source.getVisiblePositions(positions, 0, capturePadding);
-            count = RectFMergeBounding.mergeOverlapping(positions, count, positionsMerged);
-            noiseSuppressor.setupRenderNodes(positionsMerged, count);
+            if (positionsChanged) {
+                // Visible glass drawables (with outset), merged — tracked by GlassEngine since 13.2.2.
+                noiseSuppressor.setupRenderNodes(glassEngine.getAllVisibleDrawablesWithDisplayListPositionsMerged());
+            }
             if (noiseSuppressor.invalidateResultRenderNodes(capture, container.getWidth(), container.getHeight())) {
                 source.invalidateDisplayListForDrawables();
                 actionBar.invalidate();
@@ -1104,7 +1118,7 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
     }
 
     private void animateCellChange(@NonNull ChatMessageCell messageCell) {
-        ChatMessageCell.TransitionParams params = messageCell.getTransitionParams();
+        ChatMessageTransitionParams params = messageCell.getTransitionParams();
         if (!params.supportChangeAnimation()) {
             return;
         }
