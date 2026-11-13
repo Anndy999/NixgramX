@@ -1105,7 +1105,7 @@
 - TMessagesProj/src/main/java/org/telegram/ui/IdenticonActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00802.patch — RESOLVED (#214)
 - TMessagesProj/src/main/java/org/telegram/ui/LanguageSelectActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00806.patch — RESOLVED (#214)
 - TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00807.patch — RESOLVED (#214)
-- TMessagesProj/src/main/java/org/telegram/ui/LocationActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00810.patch — RESOLVED (#214)
+- TMessagesProj/src/main/java/org/telegram/ui/LocationActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00810.patch — RESOLVED (#214); place markers NOT restored: 13.2.2 removed the whole venue pipeline (BaseLocationAdapter bot venue search searchPlacesWithQuery/setDelegate(did,…), LocationActivityAdapter places list, MapOverlayView info windows, searchAreaButton); no venue data source remains, restoring = reverting official across 3 files incl. shared ChatAttachAlertLocationLayout path → accepted drop (follow official); OSM layer names + attribution kept
 - TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00811.patch — RESOLVED (#209): took official FPNV flow + theme refresh; kept Nix disabled Play Integrity/SafetyNet, no auto passkey on show, NekoXConfig credentials, moreButtonView; requestFpnv() only when BuildVars.SUPPORTS_FPNV; FPNV fallbacks call Nix requestPasskey(false, false)
 - TMessagesProj/src/main/java/org/telegram/ui/MainTabsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00813.patch — RESOLVED (#214)
 - TMessagesProj/src/main/java/org/telegram/ui/MessageSeenView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00816.patch — RESOLVED (#212)
@@ -1115,12 +1115,12 @@
 - TMessagesProj/src/main/java/org/telegram/ui/PeerColorActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00830.patch — RESOLVED (#210): took official color-source glass (capture pipeline removed upstream, so Nix list hash dropped); kept Nix local peer color and non-premium changes
 - TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00834.patch
 - TMessagesProj/src/main/java/org/telegram/ui/PrivacyUsersActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00843.patch — RESOLVED (#214)
-- TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00844.patch — RESOLVED (#214)
+- TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00844.patch — RESOLVED (#214); header glass idle redraw-skip NOT reconnected: capture now includes topView, header photos/gooey avatar and SharedMediaLayout.capturePages(), none hashable without new hash APIs in #211/#215 files → captureCalculateHash() explicitly unsupported() (= official), accepted regression, re-check scroll/idle smoothness on device
 - TMessagesProj/src/main/java/org/telegram/ui/ProxyListActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00848.patch — RESOLVED (#214)
 - TMessagesProj/src/main/java/org/telegram/ui/ReactionsDoubleTapManageActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00855.patch — RESOLVED (#212)
 - TMessagesProj/src/main/java/org/telegram/ui/SecretMediaViewer.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00862.patch
 - TMessagesProj/src/main/java/org/telegram/ui/SelectAnimatedEmojiDialog.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00864.patch — RESOLVED (#212)
-- TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00869.patch — RESOLVED (#214)
+- TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00869.patch — RESOLVED (#214); Nix wallet entry id 27→28 (official 13.2.2 HeaderSettings uses 27); ids are local to SettingsActivity.onClick, no other users of 27
 - TMessagesProj/src/main/java/org/telegram/ui/StatisticActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00885.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Stories/DialogStoriesCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00887.patch
 - TMessagesProj/src/main/java/org/telegram/ui/Stories/PeerStoriesView.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00893.patch
@@ -1312,6 +1312,8 @@
 - [ ] Proxy / network — Not tested
 - [ ] Notification — Not tested
 - [ ] Multi-account — Not tested
+- [ ] Profile header glass (13.2.2 recaptures every frame, Nix idle-skip dropped, #214) — Not tested
+- [ ] Location page: no venue markers on map in 13.2.2 (accepted drop, #214); OSM layers/attribution — Not tested
 
 ## Review gate
 Mechanical application is not semantic validation. Resolve every TODO using the official new implementation and re-weave local features. Do not revert official code, delete hooks, silence exceptions or comment out functionality to compile.
