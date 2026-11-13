@@ -1129,7 +1129,7 @@
 - TMessagesProj/src/main/java/org/telegram/ui/UserInfoActivity.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00938.patch
 - TMessagesProj/src/main/java/org/telegram/ui/bots/ChannelAffiliateProgramsFragment.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00981.patch
 - TMessagesProj/src/main/java/org/telegram/ui/iv/RichEditorToolbar.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/01011.patch
-- TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01110.patch
+- TMessagesProj/src/main/res/values/strings.xml — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01110.patch — RESOLVED (#216): added all 56 official new keys in official order; took official UnbanUserMonoforum text fix; kept all Nix keys and the 8 keys official removed (still possibly referenced by unadapted TODO files); no other locales touched
 - TMessagesProj_App/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01111.patch
 - TMessagesProj_AppHockeyApp/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01112.patch
 - TMessagesProj_AppHuawei/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/01113.patch
