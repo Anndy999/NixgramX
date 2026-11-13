@@ -1176,6 +1176,10 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             if (statusDrawable != null) {
                 statusDrawable.setColor(getThemedColor(Theme.key_profile_verifiedBackground));
             }
+            // NixgramX: the status is drawn as telegramLogoView's right drawable (no emojiStatusView), so redraw it there
+            if (telegramLogoView != null) {
+                telegramLogoView.invalidate();
+            }
         } catch (Exception e) {
             FileLog.e(e);
         }
