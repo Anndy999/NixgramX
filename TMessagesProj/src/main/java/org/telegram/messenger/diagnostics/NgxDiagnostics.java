@@ -39,6 +39,11 @@ public final class NgxDiagnostics {
     private static NgxDiagnosticWriter writer;
     private static File zipDir;
     private static volatile boolean lastCapturing;
+    private static final java.util.concurrent.atomic.AtomicLong captureGeneration = new java.util.concurrent.atomic.AtomicLong();
+
+    public static long captureGeneration() {
+        return captureGeneration.get();
+    }
 
     private NgxDiagnostics() {}
 
@@ -112,6 +117,7 @@ public final class NgxDiagnostics {
         try {
             boolean started = CORE.capture();
             if (started) {
+                captureGeneration.incrementAndGet();
                 lastCapturing = true;
                 persistLine(lastLine());
                 notifyChanged();
