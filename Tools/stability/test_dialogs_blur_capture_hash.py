@@ -27,6 +27,10 @@ class DialogsBlurCaptureHashTest(unittest.TestCase):
         self.assertNotIn('iBlur3Capture = (canvas, position) ->', source)
 
     def test_on_scrolled_does_not_recapture_on_zero_delta(self):
+        # 13.2.2: the list is registered with GlassEngine.addScrolledView; onScrolled no longer
+        # invalidates the blur itself, so a zero-delta scroll cannot force a recapture
         source = DIALOGS.read_text(encoding='utf-8')
-        self.assertIn('if (fragmentView != null && (dx != 0 || dy != 0))', source)
+        self.assertIn('glassEngine.addScrolledView(viewPage.listView)', source)
+        self.assertNotIn('blur3_InvalidateBlur', source)
+        self.assertIn('private void invalidateBlurCaptures(int flags)', source)
         self.assertIn('findFirstVisibleItemPosition()', source)
