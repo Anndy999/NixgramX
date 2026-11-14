@@ -6323,7 +6323,8 @@ public class ChatActivityEnterView extends FrameLayout implements
 
         @Override
         public InputConnection onCreateInputConnection(EditorInfo editorInfo) {
-            final InputConnection ic = super.onCreateInputConnection(editorInfo);
+            final InputConnection ic = org.telegram.messenger.diagnostics.InputTextDiagnostics.wrap(
+                    super.onCreateInputConnection(editorInfo), this);
             if (ic == null) {
                 return null;
             }
