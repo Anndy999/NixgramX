@@ -164,14 +164,8 @@ public class DebugSettingsActivity extends UniversalFragment {
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader("App"));
-        if (!BuildVars.DEBUG_VERSION) {
-            items.add(UItem.asCheck(ID_LOGS, getString(R.string.DebugMenuEnableLogs)).setChecked(BuildVars.LOGS_ENABLED));
-        }
-        if (BuildVars.DEBUG_PRIVATE_VERSION || ApplicationLoader.isStandaloneBuild() || ApplicationLoader.isBetaBuild()) {
-            items.add(UItem.asButton(ID_CHECK_APP_UPDATE, getString(R.string.DebugMenuCheckAppUpdate)));
-        }
+        items.add(UItem.asButton(ID_CLEAN_APP_UPDATE, getString(R.string.DebugMenuCleanAppUpdate)));
         if (BuildVars.DEBUG_PRIVATE_VERSION) {
-            items.add(UItem.asButton(ID_CLEAN_APP_UPDATE, "Clean app update"));
             items.add(UItem.asButton(ID_SHARE_DEVICE_INFO, "Share device info"));
             items.add(UItem.asButton(ID_PERFORMANCE_CLASS, "Force performance class"));
         }
