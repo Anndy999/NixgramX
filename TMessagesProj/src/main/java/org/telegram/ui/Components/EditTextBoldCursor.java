@@ -932,11 +932,14 @@ public class EditTextBoldCursor extends EditTextEffects {
         ignoreBottomCount = 1;
         canvas.save();
         canvas.translate(0, topPadding);
+        int diagnosticSaveCount = org.telegram.messenger.diagnostics.InputTextDiagnostics.saveCount(canvas);
         try {
             drawInMaim = true;
             super.onDraw(canvas);
             drawInMaim = false;
         } catch (Exception e) {
+            org.telegram.messenger.diagnostics.InputTextDiagnostics.drawFailure(
+                    e, canvas, diagnosticSaveCount, drawInMaim);
             if (BuildVars.DEBUG_PRIVATE_VERSION) {
                 throw new RuntimeException(e);
             }
