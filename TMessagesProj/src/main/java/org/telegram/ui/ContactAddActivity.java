@@ -1033,7 +1033,7 @@ public class ContactAddActivity extends BaseFragment implements NotificationCent
         try {
             super.onThemeColorsChanged();
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

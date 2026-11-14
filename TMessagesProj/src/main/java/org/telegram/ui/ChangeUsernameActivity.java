@@ -880,13 +880,13 @@ public class ChangeUsernameActivity extends BaseFragment {
                 MeasureSpec.makeMeasureSpec(dp(50), MeasureSpec.EXACTLY)
             );
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 field.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

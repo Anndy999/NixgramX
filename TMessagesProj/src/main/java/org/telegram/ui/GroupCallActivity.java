@@ -10833,7 +10833,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             setSubItemColors(permissionItem, items);
             setSubItemColors(recordItem, items);
             setSubItemColors(screenItem, items);
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

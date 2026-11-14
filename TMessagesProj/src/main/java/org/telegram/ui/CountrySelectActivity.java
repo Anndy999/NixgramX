@@ -624,7 +624,7 @@ public class CountrySelectActivity extends BaseFragment {
                     listView.getFastScroll().invalidate();
                 }
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

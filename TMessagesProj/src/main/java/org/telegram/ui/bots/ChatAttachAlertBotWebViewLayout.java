@@ -1314,13 +1314,13 @@ public class ChatAttachAlertBotWebViewLayout extends ChatAttachAlert.AttachAlert
                 canvas.drawLine(0, y, getWidth() * loadProgress, y, bluePaint);
             }
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 bluePaint.setColor(getThemedColor(Theme.key_featuredStickers_addButton));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

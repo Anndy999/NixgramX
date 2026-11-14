@@ -6333,7 +6333,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
             super.onThemeColorsChanged();
             descriptionDelegateThemeColors();
             updateThemeColorsExtra();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

@@ -1145,7 +1145,7 @@ class ChatMessagePoll {
             }
         }
 
-        
+
         if (action == MotionEvent.ACTION_DOWN) {
             mediaPressedIndex = PollAttachedMediaPack.INDEX_NONE;
             if (contentDrawable != null && contentDrawable.isHasMedia() && contentDrawable.getBounds().contains(x, y)) {

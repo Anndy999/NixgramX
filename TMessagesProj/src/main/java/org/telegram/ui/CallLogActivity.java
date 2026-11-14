@@ -667,13 +667,13 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 				return item;
 			}
 		}
-	
+
 	    @Override
 	    public void updateColors() {
 	        try {
-    	        button.setProgressColor(Theme.getColor(Theme.key_featuredStickers_buttonProgress));
-    	        invalidate();
-	    
+                button.setProgressColor(Theme.getColor(Theme.key_featuredStickers_buttonProgress));
+                invalidate();
+
 	        } catch (Exception e) {
 	            FileLog.e(e);
 	        }
@@ -1931,14 +1931,14 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 
     private void cellDelegateThemeColors() {
         if (listView != null) {
-        	int count = listView.getChildCount();
-        	for (int a = 0; a < count; a++) {
-        		View child = listView.getChildAt(a);
-        		if (child instanceof CallCell) {
-        			CallCell cell = (CallCell) child;
-        			cell.profileSearchCell.update(0);
-        		}
-        	}
+                int count = listView.getChildCount();
+                for (int a = 0; a < count; a++) {
+                        View child = listView.getChildAt(a);
+                        if (child instanceof CallCell) {
+                                CallCell cell = (CallCell) child;
+                                cell.profileSearchCell.update(0);
+                        }
+                }
         }
     }
 

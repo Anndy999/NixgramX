@@ -261,7 +261,7 @@ public class GroupCallTextCell extends FrameLayout implements Theme.Colorable {
         try {
             dividerPaint.setColor(Theme.getColor(Theme.key_voipgroup_actionBar));
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

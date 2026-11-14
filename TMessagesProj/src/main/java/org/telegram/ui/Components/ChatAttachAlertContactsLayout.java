@@ -1236,7 +1236,7 @@ public class ChatAttachAlertContactsLayout extends ChatAttachAlert.AttachAlertLa
     public void updateColors() {
         try {
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

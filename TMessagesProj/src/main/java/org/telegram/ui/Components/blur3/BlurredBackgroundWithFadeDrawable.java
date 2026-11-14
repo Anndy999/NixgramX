@@ -285,7 +285,7 @@ public class BlurredBackgroundWithFadeDrawable extends Drawable implements Theme
         try {
             drawable.updateColors();
             invalidateSelf();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

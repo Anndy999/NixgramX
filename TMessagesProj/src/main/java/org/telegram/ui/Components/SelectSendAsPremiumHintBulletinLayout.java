@@ -43,7 +43,7 @@ public class SelectSendAsPremiumHintBulletinLayout extends Bulletin.MultiLineLay
                 imageView.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
             }
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

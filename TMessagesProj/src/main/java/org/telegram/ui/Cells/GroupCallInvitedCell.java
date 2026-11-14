@@ -155,7 +155,7 @@ public class GroupCallInvitedCell extends FrameLayout implements Theme.Colorable
                 }
             }
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

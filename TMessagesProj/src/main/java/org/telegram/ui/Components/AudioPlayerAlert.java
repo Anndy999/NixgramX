@@ -543,7 +543,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
 
         playerShadow = new View(context);
         ThemeBind.backgroundColor(playerShadow, Theme.key_dialogShadowLine, resourcesProvider);
-        
+
         playerLayout = new FrameLayout(context) {
             @Override
             protected void onLayout(boolean changed, int left, int top, int right, int bottom) {

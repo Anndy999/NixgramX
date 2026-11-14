@@ -261,14 +261,14 @@ public class NotificationPermissionDialog extends BottomSheet implements Notific
         protected boolean verifyDrawable(@NonNull Drawable who) {
             return who == textDrawable || super.verifyDrawable(who);
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 fillPaint.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
                 strokePaint.setColor(Theme.getColor(Theme.key_dialogBackground));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

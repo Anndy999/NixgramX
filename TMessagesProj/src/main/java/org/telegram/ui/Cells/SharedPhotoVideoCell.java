@@ -440,7 +440,7 @@ public class SharedPhotoVideoCell extends FrameLayout implements Theme.Colorable
         try {
             backgroundPaint.setColor(Theme.getColor(Theme.key_sharedMedia_photoPlaceholder));
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

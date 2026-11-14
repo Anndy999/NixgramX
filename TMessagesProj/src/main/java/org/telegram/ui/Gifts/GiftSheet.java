@@ -3397,7 +3397,7 @@ public class GiftSheet extends BottomSheetWithRecyclerListView implements Notifi
     public void onThemeColorsChanged() {
         try {
             super.onThemeColorsChanged(); // background / navigation bar: setBackgroundColorKey / fixNavigationBarKey
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

@@ -1649,7 +1649,7 @@ public class ChatEditTypeActivity extends BaseFragment implements NotificationCe
             if (inviteLinkBottomSheet != null) {
                 inviteLinkBottomSheet.updateColors();
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

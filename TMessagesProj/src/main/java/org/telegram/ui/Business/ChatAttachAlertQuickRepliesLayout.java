@@ -817,7 +817,7 @@ public class ChatAttachAlertQuickRepliesLayout extends ChatAttachAlert.AttachAle
     public void updateColors() {
         try {
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

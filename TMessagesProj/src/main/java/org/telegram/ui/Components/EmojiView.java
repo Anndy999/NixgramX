@@ -1143,7 +1143,7 @@ public class EmojiView extends FrameLayout implements
                 shadowView.setVisibility(factor > 0 ? VISIBLE : INVISIBLE);
             }
         }
-    
+
         private int colorsGeneration = ThemeBind.generation();
 
         @Override
@@ -1151,7 +1151,7 @@ public class EmojiView extends FrameLayout implements
             try {
                 searchEditText.setCursorColor(getThemedColor(Theme.key_featuredStickers_addedIcon));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -3919,7 +3919,7 @@ public class EmojiView extends FrameLayout implements
                 premiumButtonView.setVisibility(lockShow ? View.VISIBLE : View.GONE);
             }
         }
-    
+
         private int colorsGeneration = ThemeBind.generation();
 
         @Override
@@ -3934,7 +3934,7 @@ public class EmojiView extends FrameLayout implements
                     addButtonView.invalidate();
                 }
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -4327,7 +4327,7 @@ public class EmojiView extends FrameLayout implements
                 removeButtonView.setVisibility(state == BUTTON_STATE_REMOVE ? View.VISIBLE : View.GONE);
             }
         }
-    
+
         private int colorsGeneration = ThemeBind.generation();
 
         @Override
@@ -4350,7 +4350,7 @@ public class EmojiView extends FrameLayout implements
                     }
                 }
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -9358,7 +9358,7 @@ public class EmojiView extends FrameLayout implements
                 progressView.setVisibility(loadingState ? VISIBLE : GONE);
             }
         }
-    
+
         private int colorsGeneration = ThemeBind.generation();
 
         @Override
@@ -9366,7 +9366,7 @@ public class EmojiView extends FrameLayout implements
             try {
                 progressView.setProgressColor(getThemedColor(Theme.key_progressCircle));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

@@ -5733,7 +5733,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 lastOptionsItemColor = optionsColor;
                 optionsItem.setIconColor(optionsColor);
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

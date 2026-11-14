@@ -1780,7 +1780,7 @@ public class ManageLinksActivity extends BaseFragment implements NotificationCen
         try {
             super.onThemeColorsChanged();
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

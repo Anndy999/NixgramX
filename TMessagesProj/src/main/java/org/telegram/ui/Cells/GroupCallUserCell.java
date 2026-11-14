@@ -1137,7 +1137,7 @@ public class GroupCallUserCell extends FrameLayout implements Theme.Colorable {
                 fullAboutTextView.setTextColor(statusTextView[fullAboutStatus].getTextColor());
             }
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

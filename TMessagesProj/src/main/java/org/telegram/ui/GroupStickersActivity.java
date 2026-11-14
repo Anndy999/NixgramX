@@ -1058,7 +1058,7 @@ public class GroupStickersActivity extends BaseFragment implements NotificationC
                 canvas.drawLine(AndroidUtilities.dp(20), getHeight() - 1, getWidth() - getPaddingRight(), getHeight() - 1, Theme.dividerPaint);
             }
         }
-    
+
         @Override
         public void updateColors() {
             try {
@@ -1066,7 +1066,7 @@ public class GroupStickersActivity extends BaseFragment implements NotificationC
                 editText.setCursorColor(Theme.getColor(Theme.key_chat_messagePanelCursor));
                 editText.setHandlesColor(Theme.getColor(Theme.key_chat_TextSelectionCursor));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

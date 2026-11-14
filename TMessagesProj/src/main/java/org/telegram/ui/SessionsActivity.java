@@ -1252,7 +1252,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                 MediaDataController.getInstance(currentAccount).loadStickersByEmojiOrName(AndroidUtilities.STICKERS_PLACEHOLDER_PACK_NAME, false, set == null);
             }
         }
-    
+
         private int lastButtonColor, lastButtonPressedColor;
 
         @Override
@@ -1266,7 +1266,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                     buttonTextView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(24), color, pressedColor));
                 }
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

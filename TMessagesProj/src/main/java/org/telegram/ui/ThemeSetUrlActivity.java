@@ -685,7 +685,7 @@ public class ThemeSetUrlActivity extends BaseFragment implements NotificationCen
             if (linkField != null) {
                 ThemeBind.cursorColor(linkField, Theme.key_windowBackgroundWhiteBlackText);
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

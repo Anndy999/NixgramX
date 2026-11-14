@@ -2113,14 +2113,14 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
                 AndroidUtilities.rectTmp.set(0, 0, getMeasuredWidth() * progressT.set(this.progress), getMeasuredHeight());
                 canvas.drawRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(3), AndroidUtilities.dp(3), in);
             }
-        
+
             @Override
             public void updateColors() {
                 try {
                     in.setColor(Theme.getColor(Theme.key_switchTrackChecked));
                     out.setColor(Theme.multAlpha(Theme.getColor(Theme.key_switchTrackChecked), .2f));
                     invalidate();
-            
+
                 } catch (Exception e) {
                     FileLog.e(e);
                 }
@@ -3327,7 +3327,7 @@ public class CacheControlActivity extends BaseFragment implements NotificationCe
             }
             deldegagteThemeColors();
             applyThemeColorsHook();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

@@ -2303,7 +2303,7 @@ public class AIEditorAlert extends BottomSheetWithRecyclerListView implements No
         protected CharSequence getTitle() {
             return editing != null ? getString(R.string.AIEditorEditStyle) : getString(R.string.AIEditorNewStyle);
         }
-    
+
         private int themedGrayColor;
         @Override
         public void onThemeColorsChanged() {
@@ -2315,7 +2315,7 @@ public class AIEditorAlert extends BottomSheetWithRecyclerListView implements No
                     setBackgroundColor(themedGray);
                     buttonContainer.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { Theme.multAlpha(themedGray, 0.0f), themedGray, themedGray }));
                 }
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -2628,7 +2628,7 @@ public class AIEditorAlert extends BottomSheetWithRecyclerListView implements No
         protected CharSequence getTitle() {
             return tone == null ? "" : tone.title;
         }
-    
+
         private int themedGrayColor;
         @Override
         public void onThemeColorsChanged() {
@@ -2640,7 +2640,7 @@ public class AIEditorAlert extends BottomSheetWithRecyclerListView implements No
                     setBackgroundColor(themedGray);
                     buttonContainer.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { Theme.multAlpha(themedGray, 0.0f), themedGray, themedGray }));
                 }
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -2659,7 +2659,7 @@ public class AIEditorAlert extends BottomSheetWithRecyclerListView implements No
                 setBackgroundColor(themedGray);
                 buttonContainer.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { Theme.multAlpha(themedGray, 0.0f), themedGray, themedGray }));
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

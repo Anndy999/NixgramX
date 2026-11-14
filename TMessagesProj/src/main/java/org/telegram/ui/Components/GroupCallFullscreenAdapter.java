@@ -571,13 +571,13 @@ public class GroupCallFullscreenAdapter extends RecyclerListView.SelectionAdapte
         public boolean isRemoving(RecyclerListView listView) {
             return listView.getChildAdapterPosition(this) == RecyclerView.NO_POSITION;
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 backgroundPaint.setColor(Theme.getColor(Theme.key_voipgroup_listViewBackground));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

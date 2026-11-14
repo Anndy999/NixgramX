@@ -7228,14 +7228,14 @@ public class PassportActivity extends BaseFragment implements NotificationCenter
             canvas.drawRect(0, 0, start, getMeasuredHeight(), paint2);
             canvas.drawRect(start, 0, getMeasuredWidth(), getMeasuredHeight(), paint);
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 paint.setColor(Theme.getColor(Theme.key_login_progressInner));
                 paint2.setColor(Theme.getColor(Theme.key_login_progressOuter));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

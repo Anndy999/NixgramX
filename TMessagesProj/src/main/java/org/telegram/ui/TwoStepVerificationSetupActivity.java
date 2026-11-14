@@ -2174,7 +2174,7 @@ public class TwoStepVerificationSetupActivity extends BaseFragment {
             if (floatingButtonIcon != null) {
                 floatingButtonIcon.setColor(Theme.getColor(Theme.key_chats_actionIcon));
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

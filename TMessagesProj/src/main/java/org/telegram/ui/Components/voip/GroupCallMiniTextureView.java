@@ -1810,13 +1810,13 @@ public class GroupCallMiniTextureView extends FrameLayout implements GroupCallSt
             avatarImageReceiver.onDetachedFromWindow();
             backgroundImageReceiver.onDetachedFromWindow();
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 paint.setColor(ColorUtils.blendARGB(Theme.getColor(Theme.key_voipgroup_listeningText), Theme.getColor(Theme.key_voipgroup_speakingText), speakingProgress));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

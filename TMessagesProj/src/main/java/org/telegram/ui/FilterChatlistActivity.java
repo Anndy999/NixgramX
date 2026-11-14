@@ -928,13 +928,13 @@ frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT
                 path.addRoundRect(AndroidUtilities.rectTmp, radii, Path.Direction.CW);
                 canvas.drawPath(path, paint);
             }
-        
+
             @Override
             public void updateColors() {
                 try {
                     paint.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
                     invalidate();
-            
+
                 } catch (Exception e) {
                     FileLog.e(e);
                 }

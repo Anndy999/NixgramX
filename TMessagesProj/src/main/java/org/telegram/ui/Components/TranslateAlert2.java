@@ -1547,13 +1547,13 @@ public class TranslateAlert2 extends BottomSheet implements NotificationCenter.N
             super.onDetachedFromWindow();
             Bulletin.removeDelegate(this);
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 bgPaint.setColor(getThemedColor(Theme.key_dialogBackground));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

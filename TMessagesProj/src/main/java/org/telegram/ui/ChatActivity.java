@@ -8977,8 +8977,8 @@ public class ChatActivity extends BaseFragment implements
         ThemeBind.textColor(bottomOverlayText, Theme.key_chat_secretChatStatusText, getResourceProvider());
         bottomOverlayText.setPadding(dp(24), 0, dp(24), 0);
         bottomOverlay.addView(bottomOverlayText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER));
-        
-        
+
+
         bottomChannelButtonsLayout = new ChatActivityChannelButtonsLayout(context, resourceProvider, blurredBackgroundButtonsColorProvider, glassBackgroundDrawableFactory) {
             @Override
             public void setVisibility(int visibility) {
@@ -12155,7 +12155,7 @@ public class ChatActivity extends BaseFragment implements
                 heightMeasureSpec
             );
         }
-    
+
         private Drawable appliedBackground;
         private int appliedColor;
         private boolean appliedDark;
@@ -51366,7 +51366,7 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
             selectedBackgroundDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

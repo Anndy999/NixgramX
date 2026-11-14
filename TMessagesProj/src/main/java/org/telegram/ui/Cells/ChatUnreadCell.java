@@ -98,7 +98,7 @@ public class ChatUnreadCell extends FrameLayout implements Theme.Colorable {
                 imageView.setColorFilter(new PorterDuffColorFilter(arrowColor, PorterDuff.Mode.MULTIPLY));
             }
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

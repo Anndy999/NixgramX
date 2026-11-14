@@ -1096,7 +1096,7 @@ public class GroupCreateFinalActivity extends BaseFragment implements Notificati
             super.onThemeColorsChanged();
             // editTextContainer background: ThemeBind.fillBackground at creation
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

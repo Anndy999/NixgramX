@@ -2000,7 +2000,7 @@ public class BotPreviewsEditContainer extends FrameLayout implements Theme.Color
         try {
             setBackgroundColor(Theme.blendOver( Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider), Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider), 0.04f) ));
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

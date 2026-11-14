@@ -995,7 +995,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         public int selectorDrawableColor;
         public Drawable selectorDrawable;
         public PollButtonDrawable pollButtonDrawable;
-        
+
         AvatarDrawable avatarDrawable;
         ImageReceiver avatarImageReceiver;
 
@@ -23594,7 +23594,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public float getEventX(MotionEvent event) {
         return event.getX();
     }
-    
+
     public float getEventY(MotionEvent event) {
         return event.getY() - starsPriceTopPadding - topicSeparatorTopPadding - suggestionOfferTopPadding;
     }
@@ -24631,7 +24631,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 "telegram_livestream".equals(type) || "telegram_channel_boost".equals(type) || "telegram_group_boost".equals(type) ||
                 "telegram_aicomposetone".equals(type);
     }
-    
+
     public boolean getPollAddButtonBounds(Rect bounds) {
         if (poll != null && poll.addButtonDrawable != null && poll.allowAdding) {
             bounds.set(poll.addButtonDrawable.getBounds());

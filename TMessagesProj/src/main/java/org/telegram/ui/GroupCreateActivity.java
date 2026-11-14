@@ -1893,7 +1893,7 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
             super.onThemeColorsChanged();
             cellDelegateThemeColors();
             updateThemeColorsExtra();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

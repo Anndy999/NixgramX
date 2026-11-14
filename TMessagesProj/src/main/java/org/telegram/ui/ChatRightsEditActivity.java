@@ -2717,7 +2717,7 @@ public class ChatRightsEditActivity extends BaseFragment implements Notification
         try {
             super.onThemeColorsChanged();
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

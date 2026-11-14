@@ -2115,14 +2115,14 @@ public class FilterCreateActivity extends BaseFragment {
                 (lastInvite != null && TextUtils.isEmpty(lastInvite.title) ? "\n\n" + lastInvite.url : "")
             );
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 paint.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
                 revokedPaint.setColor(Theme.getColor(Theme.key_color_red));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

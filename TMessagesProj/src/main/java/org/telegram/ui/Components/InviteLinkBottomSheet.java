@@ -1315,7 +1315,7 @@ public class InviteLinkBottomSheet extends BottomSheet {
             }
         }
 
-    
+
         private int lastImageColor1, lastImageColor2;
 
         @Override

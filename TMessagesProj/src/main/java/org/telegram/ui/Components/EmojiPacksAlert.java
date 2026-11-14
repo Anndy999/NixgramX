@@ -2184,7 +2184,7 @@ public class EmojiPacksAlert extends BottomSheet implements NotificationCenter.N
                 containerView.invalidate();
             }
             // addButtonView / removeButtonView backgrounds: ThemeBind.selectorBackground at creation
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

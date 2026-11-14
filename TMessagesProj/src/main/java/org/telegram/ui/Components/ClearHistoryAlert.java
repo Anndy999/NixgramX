@@ -480,7 +480,7 @@ public class ClearHistoryAlert extends BottomSheet {
                 lastShadowColor = shadowColor;
                 shadowDrawable.setColorFilter(new PorterDuffColorFilter(shadowColor, PorterDuff.Mode.MULTIPLY));
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

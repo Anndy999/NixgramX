@@ -740,7 +740,7 @@ public class ChatMessageTransitionParams {
                 changed = true;
             }
         }
-        
+
         if (cell.mediaOffsetY != lastMediaOffsetY) {
             animateFromMediaOffsetY = lastMediaOffsetY;
             animateMediaOffsetY = true;

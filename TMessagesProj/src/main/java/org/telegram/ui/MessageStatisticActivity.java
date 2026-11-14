@@ -1220,7 +1220,7 @@ public class MessageStatisticActivity extends BaseFragment implements Notificati
             super.onThemeColorsChanged();
             if (avatarContainer != null) avatarContainer.setTitleColors(Theme.getColor(Theme.key_player_actionBarTitle, getResourceProvider()), Theme.getColor(Theme.key_player_actionBarSubtitle, getResourceProvider()));
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

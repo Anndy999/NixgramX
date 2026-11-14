@@ -3207,7 +3207,7 @@ public class ChatAttachAlertPollLayout extends ChatAttachAlert.AttachAlertLayout
             checkboxPaint.setColor(getThemedColor(Theme.key_telegram_color));
             updateAddOptionColors();
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

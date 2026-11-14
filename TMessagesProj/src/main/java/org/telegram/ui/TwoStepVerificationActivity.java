@@ -1320,7 +1320,7 @@ public class TwoStepVerificationActivity extends BaseFragment implements Notific
             if (radialProgressView != null) {
                 radialProgressView.setProgressColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

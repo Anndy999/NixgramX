@@ -954,9 +954,9 @@ public class FolderBottomSheet extends BottomSheetWithRecyclerListView {
             info.setClassName("android.widget.Button");
             info.setContentDescription(text.getText() + (lastCount > 0 ? ", " + formatPluralString("Chats", lastCount) : ""));
         }
-    
+
         private int lastButtonColor;
-    
+
         private boolean lastButtonDark = Theme.isCurrentThemeDark();
 
         @Override
@@ -1491,7 +1491,7 @@ public class FolderBottomSheet extends BottomSheetWithRecyclerListView {
                 countText.setText(count > 0 ? "+" + count : "", animated);
                 invalidate();
             }
-        
+
             @Override
             public void updateColors() {
                 if (paint == null || selectedTextPaint == null || selectedPaint == null) {

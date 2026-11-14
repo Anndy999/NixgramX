@@ -486,7 +486,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 postInvalidateOnAnimation();
             }
         }
-    
+
         private int colorsGeneration = ThemeBind.generation();
 
         @Override
@@ -495,7 +495,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 paint.setColor(Theme.getColor(Theme.key_login_progressInner));
                 paint2.setColor(Theme.getColor(Theme.key_login_progressOuter));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

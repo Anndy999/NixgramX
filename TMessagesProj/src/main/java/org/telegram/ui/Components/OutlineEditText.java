@@ -57,7 +57,7 @@ public class OutlineEditText extends OutlineTextContainerView implements Theme.C
         super.updateColors();
         try {
             invalidate();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

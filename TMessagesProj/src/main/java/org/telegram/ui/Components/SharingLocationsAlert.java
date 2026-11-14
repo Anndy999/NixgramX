@@ -338,7 +338,7 @@ public class SharingLocationsAlert extends BottomSheet implements NotificationCe
                 lastShadowColor = shadowColor;
                 shadowDrawable.setColorFilter(new PorterDuffColorFilter(shadowColor, PorterDuff.Mode.MULTIPLY));
             }
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

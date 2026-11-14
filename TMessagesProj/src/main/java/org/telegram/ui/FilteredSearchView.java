@@ -1934,7 +1934,7 @@ public class FilteredSearchView extends FrameLayout implements Theme.Colorable, 
     public void updateColors() {
         try {
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

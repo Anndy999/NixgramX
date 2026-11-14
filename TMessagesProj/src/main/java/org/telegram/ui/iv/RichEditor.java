@@ -2669,7 +2669,7 @@ public class RichEditor extends BaseFragment implements NotificationCenter.Notif
             if (formattingLayout3 != null) formattingLayout3.setBackground(withShadow(Theme.createRoundRectDrawable(dp(22), getThemedColor(Theme.key_windowBackgroundWhite))));
             if (formattingLayout1 != null) formattingLayout1.setBackground(withShadow(Theme.createRoundRectDrawable(dp(22), getThemedColor(Theme.key_windowBackgroundWhite))));
             if (sendButton != null) sendButton.setBackground(withShadow(Theme.createRoundRectDrawable(dp(22), getThemedColor(Theme.key_chat_messagePanelSend))));
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

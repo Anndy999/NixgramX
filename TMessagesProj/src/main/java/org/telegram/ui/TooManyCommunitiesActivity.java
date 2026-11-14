@@ -685,7 +685,7 @@ public class TooManyCommunitiesActivity extends BaseFragment {
             super.onThemeColorsChanged();
             cellDelegateThemeColors();
             updateShadowSectionColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

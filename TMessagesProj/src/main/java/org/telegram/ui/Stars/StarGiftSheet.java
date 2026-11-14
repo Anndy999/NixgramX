@@ -8255,7 +8255,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             super.onDetachedFromWindow();
             userImageReceiver.onDetachedFromWindow();
         }
-    
+
         private int colorsGeneration = ThemeBind.generation();
 
         @Override
@@ -8264,7 +8264,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 arrowPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText7));
                 arrowPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText7));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -8343,7 +8343,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             fromUserImageReceiver.onDetachedFromWindow();
             toUserImageReceiver.onDetachedFromWindow();
         }
-    
+
         private int colorsGeneration = ThemeBind.generation();
 
         @Override
@@ -8351,7 +8351,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             try {
                 arrowPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText7));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }
