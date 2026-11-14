@@ -2928,7 +2928,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 ThemeBind.cursorColor(descriptionTextView, Theme.key_windowBackgroundWhiteBlackText);
             }
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

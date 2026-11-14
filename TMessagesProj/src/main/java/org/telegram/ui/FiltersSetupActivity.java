@@ -264,13 +264,13 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
             info.setText(addButton.getText());
             info.setClassName("android.widget.Button");
         }
-    
+
         @Override
         public void updateColors() {
             try {
                 addButton.setProgressColor(Theme.getColor(Theme.key_featuredStickers_buttonProgress));
                 invalidate();
-        
+
             } catch (Exception e) {
                 FileLog.e(e);
             }

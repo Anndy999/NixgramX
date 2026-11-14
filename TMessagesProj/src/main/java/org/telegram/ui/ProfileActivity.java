@@ -17643,7 +17643,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             themeDelegateThemeColors();
             updateThemeColorsExtra();
             applyProfileHeaderColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

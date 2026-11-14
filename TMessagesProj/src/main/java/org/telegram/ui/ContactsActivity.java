@@ -1451,7 +1451,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
             super.onThemeColorsChanged();
             cellDelegateThemeColors();
             applyThemeColorsHook();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }

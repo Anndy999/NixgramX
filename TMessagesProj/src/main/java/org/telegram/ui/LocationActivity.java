@@ -3160,7 +3160,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
         try {
             super.onThemeColorsChanged();
             cellDelegateThemeColors();
-    
+
         } catch (Exception e) {
             FileLog.e(e);
         }
