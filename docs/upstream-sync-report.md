@@ -1008,7 +1008,7 @@
 - TMessagesProj/src/main/res/values/ids.xml
 - gradle.properties
 
-## Conflict/adaptation files — TODO
+## Conflict/adaptation files — source adaptations completed
 - TMessagesProj/build.gradle — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00001.patch — RESOLVED (#205): added buildFeatures.aidl, cmake targets tmessages.49+twidget, firebase-bom 34.19.0 + firebase-pnv as official; kept Nix identity/signing/version/API wiring, Nix firebase-messaging/crashlytics pins, credentials 1.6.0, android-27 cmake platform; firebase-appindexing stays dropped
 - TMessagesProj/jni/prebuild/build_all.sh — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00004.patch — RESOLVED (#205): dropped build_prisma.sh (prisma now built from source via CMake add_subdirectory); kept Nix list without build_wamr.sh
 - TMessagesProj/proguard-rules.pro — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00072.patch — RESOLVED (#205): added official twidget keep rules; kept Nix broad org.telegram.messenger.* keep (official narrowing not taken: needs R8/device check against Nix reflection hooks) and ThickLanguageIdentifier rule
@@ -1035,7 +1035,7 @@
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/AccountSelectCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00253.patch — RESOLVED (#213 remaining cells): official ThemeBind; retained EmojiTextView
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/AdminedChannelCell.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00255.patch — RESOLVED (#213 remaining cells): official ThemeBind/Colorable and avatar palette hash refresh; no prior Nix source delta
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/ChannelRecommendationsCell.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00264.patch — RESOLVED (#213 remaining cells): official service paint/background theme refresh; no prior Nix source delta
-- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00270.patch
+- TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00270.patch — RESOLVED (#213, PR223): official component extraction with retained Nix hooks; independent fixed-head review and overlaid Java compilation recorded in PR223; device not tested
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/DialogsRequestedEmptyCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00288.patch — RESOLVED (#213 remaining cells): official ThemeBind/weak observer; retained Nix updateSticker-on-attach and existing observer removal fix
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/MentionCell.java — Three-way conflict or unsupported change: keep local file; adapt upstream delta; docs/upstream-sync-todo/00317.patch — RESOLVED (#213 remaining cells): official ThemeBind including fixed-dark clear; retained EmojiTextView/help handling
 - TMessagesProj/src/main/java/org/telegram/ui/Cells/ProfileChannelCell.java — Identity/build/layout policy: explicit adaptation required; docs/upstream-sync-todo/00325.patch — RESOLVED (#213 remaining cells): official addColorKeys; retained Nix linked-channel fetch entry
@@ -1324,3 +1324,10 @@ PR waiting for review. No auto merge, no release, no APK publication.
 - supersedes previous upstream PR #203; inspect and port any useful reviewer adaptations before merging.
 
 CI run: https://github.com/Anndy999/NixgramX/actions/runs/43144809798 (actual results in job summary).
+
+## Integration closeout
+All 156 source-adaptation rows now have implementation records. PR223 already contained ChatMessageCell adaptation and independent review; this closeout corrects its missing report marker. The fourteen omitted Cells were completed in PR233. PR234 restores the Nix debug-menu entry policy after the official page migration. PR226 and PR229 passed their scoped independent static reviews before integration.
+
+This closes source adaptation, not Android verification. Full integrated Android compilation, APK assembly and device checks remain NOT TESTED at this closeout. No input-bug fix or Beta publication is claimed. The translated-input diagnostic patch remains a separate integration step.
+
+Known device checks include Profile capture performance, widget time geometry, poll translation, and the missing former system-bold restart hint. Font-cache invalidation remains present.
