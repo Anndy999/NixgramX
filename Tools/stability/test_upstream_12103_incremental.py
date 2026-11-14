@@ -44,17 +44,17 @@ class Upstream12103IncrementalTest(unittest.TestCase):
         state = json.loads((ROOT / "docs/upstream-base.json").read_text(encoding="utf-8"))
 
         previous = {
-            "version": "12.10.6",
-            "build": "7112",
-            "commit": "f2908b14133bbffbf7ab04f641ecb5bfaf533242",
-        }
-        target = {
             "version": "13.1.1",
             "build": "7237",
             "commit": "3de37c8cfb039452be7398909461da6288babf15",
         }
+        target = {
+            "version": "13.2.2",
+            "build": "7303",
+            "commit": "21f7d109da6ab3506c9e9577f98c6a38771ab335",
+        }
 
-        # 13.1.1 Stable prep: prepared_target promoted into base; pending stays null.
+        # Reviewed source adaptation promotes prepared_target; pending stays null.
         self.assertEqual(target, state["base"])
         self.assertIsNone(state["pending"])
         self.assertEqual(target, state["prepared_target"])
