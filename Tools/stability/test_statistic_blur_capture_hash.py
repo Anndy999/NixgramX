@@ -1,4 +1,5 @@
-"""Statistics glass capture must hash and must not recapture on an idle frame."""
+"""Statistics glass follows Telegram 13.2.x simple glass: one capture through
+BaseFragmentSimpleGlass, invalidated by GlassEngine (no manual recapture pipeline)."""
 import unittest
 from pathlib import Path
 
@@ -7,19 +8,18 @@ STATISTIC = ROOT / 'TMessagesProj/src/main/java/org/telegram/ui/StatisticActivit
 
 
 class StatisticBlurCaptureHashTest(unittest.TestCase):
-    def test_statistic_capture_forwards_child_hashes(self):
+    def test_statistic_uses_simple_glass_capture(self):
         source = STATISTIC.read_text(encoding='utf-8')
-        self.assertIn('iBlur3Capture = new IBlur3Capture()', source)
-        self.assertIn('public void captureCalculateHash(IBlur3Hash builder, RectF position)', source)
-        self.assertIn('cap = listBlur3Capture', source)
-        self.assertIn('cap = boostLayout.iBlur3Capture', source)
-        self.assertIn('cap = monetizationLayout.iBlur3Capture', source)
-        self.assertIn('cap.captureCalculateHash(builder, position)', source)
-        self.assertNotIn('iBlur3Capture = (canvas, position) ->', source)
+        self.assertIn('getBaseSimpleGlass().setCapture(', source)
+        self.assertIn('glassEngine.addScrolledView(recyclerListView)', source)
 
-    def test_dispatch_draw_skips_idle_recapture(self):
+    def test_no_legacy_manual_recapture_pipeline(self):
         source = STATISTIC.read_text(encoding='utf-8')
-        self.assertIn('if (blurCapturesDirty)', source)
-        self.assertIn('blurCapturesDirty = false', source)
-        self.assertIn('(dx != 0 || dy != 0)', source)
-        self.assertEqual(source.count('(dx != 0 || dy != 0)'), 3)
+        # the 12.x/13.1 pipeline (and Nix's idle-skip on top of it) is gone with official
+        self.assertNotIn('blur3_InvalidateBlur', source)
+        self.assertNotIn('blurCapturesDirty', source)
+        self.assertNotIn('scrollableViewNoiseSuppressor.onScrolled', source)
+
+
+if __name__ == '__main__':
+    unittest.main()
