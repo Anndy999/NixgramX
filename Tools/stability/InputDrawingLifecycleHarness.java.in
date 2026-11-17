@@ -1,0 +1,241 @@
+// Host-only fixture. Product method bodies are inserted unchanged by the Python runner.
+// Canvas, layout, animation, superclass drawing and callback clock below are test doubles.
+import java.lang.reflect.Field;
+import java.util.*;
+
+public class InputDrawingLifecycleHarness {
+    static String failure = "none";
+    static void fault(String at) {
+        if (failure.equals(at)) throw new IllegalStateException("injected " + at);
+    }
+    static void check(boolean value, String message) {
+        if (!value) throw new AssertionError(message);
+    }
+    static class Canvas {
+        static final int ALL_SAVE_FLAG = 31;
+        List<float[]> stack = new ArrayList<>();
+        float x, y, clip;
+        int save() { int count = getSaveCount(); stack.add(new float[]{x, y, clip}); return count; }
+        int saveLayerAlpha(int a, int b, int c, int d, int e, int f) { return save(); }
+        int getSaveCount() { return stack.size() + 1; }
+        void restore() { float[] state = stack.remove(stack.size() - 1); x = state[0]; y = state[1]; clip = state[2]; }
+        void restoreToCount(int count) { while (getSaveCount() > count) restore(); }
+        void translate(float a, float b) { x += a; y += b; }
+        void clipRect(float a, float b, float c, float d) { clip++; }
+        void clipRect(Rect r) { clip++; }
+        void clipPath(Path p) { clip++; }
+        void clipPath(Path p, Object op) { clip++; }
+    }
+    static class NoClipCanvas extends Canvas {
+        Canvas canvas;
+        int save() { return canvas.save(); }
+        int getSaveCount() { return canvas.getSaveCount(); }
+        void restore() { canvas.restore(); }
+        void restoreToCount(int count) { canvas.restoreToCount(count); }
+        void translate(float a, float b) { canvas.translate(a, b); }
+    }
+    static class Rect {
+        int left = 0, top = 0, right = 100, bottom = 100;
+        void set(int l, int t, int r, int b) { left=l; top=t; right=r; bottom=b; }
+        int centerY() { return (top+bottom)/2; }
+    }
+    static class Path {
+        static class Direction { static final Object CW = new Object(); }
+        void rewind() {}
+        void addRect(float l, float t, float r, float b, Object d) {}
+    }
+    static class Region { static class Op { static final Object DIFFERENCE = new Object(); } }
+    static class Paint { int getColor() { return 0; } }
+    static class SystemClock { static long uptimeMillis() { return 0; } }
+    static class Gravity { static final int TOP=48, VERTICAL_GRAVITY_MASK=112; }
+    static class GradientDrawable {
+        Rect getBounds() { return new Rect(); }
+        void setBounds(Rect r) {}
+    }
+    static class BuildVars { static boolean DEBUG_PRIVATE_VERSION; }
+    static class AndroidUtilities { static int dp(int n) { return n; } }
+    static class InputTextDiagnostics {
+        static int saveCount(Canvas c) { return c.getSaveCount(); }
+        static void drawFailure(Exception e, Canvas c, int count, boolean flag) {}
+    }
+    interface Spannable extends CharSequence {
+        TextStyleSpan[] getSpans(int a, int b, Class<TextStyleSpan> type);
+        int getSpanStart(TextStyleSpan span);
+        int getSpanEnd(TextStyleSpan span);
+    }
+    static class TextStyleSpan { boolean isSpoiler() { return true; } }
+    static class SpoilerText implements Spannable {
+        public int length() { return 12; }
+        public char charAt(int i) { return 'x'; }
+        public CharSequence subSequence(int a, int b) { return "fixture"; }
+        public TextStyleSpan[] getSpans(int a, int b, Class<TextStyleSpan> type) { return new TextStyleSpan[]{new TextStyleSpan()}; }
+        public int getSpanStart(TextStyleSpan span) { return 2; }
+        public int getSpanEnd(TextStyleSpan span) { return 8; }
+    }
+    static class Layout {
+        CharSequence getText() { return new SpoilerText(); }
+        int getLineForOffset(int offset) { return 0; }
+        int getLineCount() { return 1; }
+    }
+    static class QuoteBlock {
+        void draw(Canvas c, int a, int b, int color, float alpha, Paint p) { fault("quote"); }
+    }
+    static class SpoilerEffect {
+        boolean insideQuote;
+        boolean ripple;
+        Rect getBounds() { return new Rect(); }
+        boolean hasRipplePath() { return ripple; }
+        void getRipplePath(Path p) {}
+        void setColor(int c) {}
+        void draw(Canvas c) { fault("spoiler"); }
+        void setOnRippleEndCallback(Runnable r) {}
+        void startRipple(float x, float y, float r, boolean hide) {}
+    }
+    static class AnimatedEmojiSpan {
+        static void release(Object o, Object e) {}
+        static void drawAnimatedEmojis(Canvas c, Layout l, Object e, int a, List<SpoilerEffect> s, int b, int d, int f, float alpha, Object filter) { fault("emoji"); }
+    }
+    static class FakeEditText {
+        public int mScrollY = 37;
+        int superCalls;
+        protected void onDraw(Canvas c) {
+            superCalls++;
+            if (failure.equals("super") || failure.equals("ripple") && superCalls == 2) {
+                c.save(); c.translate(9, 11); c.save();
+                throw new IllegalStateException("injected superclass");
+            }
+            getExtendedPaddingTop(); getExtendedPaddingBottom();
+        }
+        protected void onAttachedToWindow() {}
+        protected void onDetachedFromWindow() {}
+        int getScrollX() { return 0; }
+        int getScrollY() { return mScrollY; }
+        int getPaddingLeft() { return 3; }
+        int getPaddingRight() { return 3; }
+        int getPaddingTop() { return 2; }
+        int getExtendedPaddingTop() { return 5; }
+        int getExtendedPaddingBottom() { return 5; }
+        int getWidth() { return 100; }
+        int getHeight() { return 100; }
+        int getMeasuredWidth() { return 100; }
+        int getMeasuredHeight() { return 100; }
+        int computeVerticalScrollOffset() { return 0; }
+        int computeVerticalScrollExtent() { return 100; }
+        Paint getPaint() { return new Paint(); }
+        Layout getLayout() { return new Layout(); }
+    }
+    static class EffectsProbe extends FakeEditText {
+        boolean wrapCanvasToFixClipping, clipToPadding=true, drawAnimatedEmojiDrawables=true;
+        NoClipCanvas wrappedCanvas;
+        int selStart=10, selEnd=10, quoteColor=0;
+        float offsetY, lastRippleX, lastRippleY;
+        boolean isSpoilersRevealed, postedSpoilerTimeout;
+        Object animatedEmojiDrawables=new Object(), animatedEmojiColorFilter;
+        List<SpoilerEffect> spoilers=new ArrayList<>();
+        List<QuoteBlock> quoteBlocks=new ArrayList<>();
+        Rect rect=new Rect(); Path path=new Path();
+        /* TIMEOUT_CONSTANT */
+        Map<Runnable, Long> queue=new HashMap<>(); long now;
+        /* TIMEOUT_CALLBACK */
+        void removeCallbacks(Runnable r) { queue.remove(r); }
+        void postDelayed(Runnable r, int delay) { queue.put(r, now+delay); }
+        void post(Runnable r) { queue.put(r, now); }
+        void advance(long delta) {
+            now+=delta;
+            for (Runnable r : new ArrayList<>(queue.keySet())) if(queue.get(r)<=now) { queue.remove(r); r.run(); }
+        }
+        void updateAnimatedEmoji(boolean force) { if (!force) fault("updateEmoji"); }
+        void invalidateQuotes(boolean force) {}
+        void invalidateSpoilers() {}
+        void setSpoilersRevealed(boolean revealed, boolean notify) { isSpoilersRevealed=revealed; }
+        /* EFFECTS_DRAW */
+        /* EFFECTS_LIFECYCLE */
+    }
+    static class BoldProbe extends EffectsProbe {
+        boolean ellipsizeByGradient, drawInMaim;
+        int ellipsizeWidth=2, scrollY, ignoreTopCount, ignoreBottomCount;
+        Field mScrollYField, mShowCursorField;
+        Object cursorDrawable, editor;
+        boolean cursorDrawn=true, allowDrawCursor=true;
+        int cursorSize=20, lineSpacingExtra=0;
+        float cursorWidth=1;
+        java.lang.reflect.Method getVerticalOffsetMethod;
+        GradientDrawable gradientDrawable=new GradientDrawable();
+        int getGravity() { return Gravity.TOP; }
+        int getTotalPaddingTop() { return 5; }
+        int getSelectionStart() { return 0; }
+        int dp(float n) { return (int)n; }
+        boolean isFocused() { return true; }
+        void updateCursorPosition() { fault("cursor-position"); }
+        void drawCursor(Canvas c, GradientDrawable d) { fault("cursor-draw"); }
+        /* BOLD_PADDING */
+        /* BOLD_CURSOR_PATH */
+        BoldProbe() throws Exception { mScrollYField=FakeEditText.class.getField("mScrollY"); }
+        void drawHint(Canvas c) { if (failure.equals("hint")) {c.save(); c.translate(7,8); fault("hint");} }
+        /* BOLD_DRAW_PREFIX */
+    }
+    static void assertCanvas(Canvas c) {
+        check(c.getSaveCount()==1, "Canvas saveCount="+c.getSaveCount());
+        check(c.x==0 && c.y==0 && c.clip==0, "Canvas transform/clip not restored");
+    }
+    public static void main(String[] args) throws Exception {
+        if (args[0].equals("draw")) {
+            failure=args[1]; BuildVars.DEBUG_PRIVATE_VERSION=Boolean.parseBoolean(args[2]);
+            boolean direct=args[3].equals("effects");
+            EffectsProbe v=direct ? new EffectsProbe() : new BoldProbe();
+            v.wrapCanvasToFixClipping=Boolean.parseBoolean(args[4]);
+            v.quoteBlocks.add(new QuoteBlock());
+            SpoilerEffect spoiler=new SpoilerEffect(); spoiler.ripple=true; v.spoilers.add(spoiler);
+            if (!direct) ((BoldProbe)v).ellipsizeByGradient=Boolean.parseBoolean(args[5]);
+            Canvas c=new Canvas(); boolean threw=false;
+            try {v.onDraw(c);} catch (RuntimeException e) {threw=true;}
+            check(threw==(!failure.equals("none") && (direct || BuildVars.DEBUG_PRIVATE_VERSION || failure.equals("hint"))), "exception policy changed");
+            assertCanvas(c);
+            check(v.mScrollY==37, "scrollY not restored="+v.mScrollY);
+            if (!direct) {
+                BoldProbe b=(BoldProbe)v;
+                check(!b.drawInMaim, "drawing flag stuck");
+                check(b.ignoreTopCount==0 && b.ignoreBottomCount==0,"padding suppression stuck");
+                check(b.getExtendedPaddingTop()==5 && b.getExtendedPaddingBottom()==5,"next frame padding changed");
+            }
+            // A subsequent non-faulted frame must not inherit the injected state.
+            failure="none";v.superCalls=0;v.onDraw(c);assertCanvas(c);
+        } else if (args[0].equals("cursor")) {
+            failure=args[1];BuildVars.DEBUG_PRIVATE_VERSION=Boolean.parseBoolean(args[2]);
+            BoldProbe v=new BoldProbe();if(Boolean.parseBoolean(args[3])) v.cursorDrawable=new Object();
+            Canvas c=new Canvas();boolean threw=false;
+            try {v.drawCursorPath(c);} catch(RuntimeException e) {threw=true;}
+            check(threw==(!failure.equals("none") && BuildVars.DEBUG_PRIVATE_VERSION),"cursor exception policy");
+            assertCanvas(c);
+            failure="none";v.cursorDrawn=true;v.drawCursorPath(c);assertCanvas(c);
+        } else {
+            EffectsProbe e=new EffectsProbe();
+            String scenario=args[1];
+            e.isSpoilersRevealed=!scenario.equals("hidden");
+            if(scenario.equals("inside")) e.selStart=e.selEnd=4;
+            if (!scenario.equals("noPending")) e.checkSpoilerTimeout();
+            boolean shouldSchedule=e.isSpoilersRevealed && !scenario.equals("inside");
+            check(e.queue.size()==(shouldSchedule&&!scenario.equals("noPending")?1:0), "initial scheduling");
+            e.onDetachedFromWindow(); check(e.queue.isEmpty(), "detach left callback");
+            check(!e.postedSpoilerTimeout, "detach left pending flag");
+            e.advance(EffectsProbe.SPOILER_TIMEOUT*2L);
+            if (shouldSchedule) check(e.isSpoilersRevealed, "detached timeout fired");
+            e.onAttachedToWindow();e.onAttachedToWindow();
+            check(e.queue.size()==(shouldSchedule?1:0), "reattach scheduling missing/duplicated");
+            e.checkSpoilerTimeout();
+            check(e.queue.size()==(shouldSchedule?1:0), "selection recheck duplicated callback");
+            if (shouldSchedule) {
+                if(scenario.equals("moveInside")) {
+                    e.selStart=e.selEnd=4;e.checkSpoilerTimeout();
+                    check(e.queue.isEmpty()&&!e.postedSpoilerTimeout,"selection did not cancel");
+                    e.advance(EffectsProbe.SPOILER_TIMEOUT);check(e.isSpoilersRevealed,"selection hid spoiler");
+                } else {
+                    e.advance(EffectsProbe.SPOILER_TIMEOUT-1);check(e.isSpoilersRevealed,"timeout too early");
+                    e.advance(1);check(!e.isSpoilersRevealed&&!e.postedSpoilerTimeout,"timeout did not hide");
+                    check(e.queue.isEmpty(),"timeout callback remained");
+                }
+            }
+        }
+        System.out.println("PASS "+String.join(" ",args));
+    }
+}

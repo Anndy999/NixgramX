@@ -908,6 +908,15 @@ public class EditTextBoldCursor extends EditTextEffects {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        final int saveCount = canvas.getSaveCount();
+        try {
+            drawWithCursor(canvas);
+        } finally {
+            canvas.restoreToCount(saveCount);
+        }
+    }
+
+    private void drawWithCursor(Canvas canvas) {
         drawHint(canvas);
 
         if (ellipsizeByGradient) {
@@ -930,31 +939,39 @@ public class EditTextBoldCursor extends EditTextEffects {
         }
         ignoreTopCount = 1;
         ignoreBottomCount = 1;
-        canvas.save();
+        final int textSaveCount = canvas.save();
         canvas.translate(0, topPadding);
         int diagnosticSaveCount = org.telegram.messenger.diagnostics.InputTextDiagnostics.saveCount(canvas);
+        final boolean wasDrawingMain = drawInMaim;
         try {
             drawInMaim = true;
             super.onDraw(canvas);
-            drawInMaim = false;
         } catch (Exception e) {
             org.telegram.messenger.diagnostics.InputTextDiagnostics.drawFailure(
                     e, canvas, diagnosticSaveCount, drawInMaim);
             if (BuildVars.DEBUG_PRIVATE_VERSION) {
                 throw new RuntimeException(e);
             }
-        }
-        if (mScrollYField != null && scrollY != Integer.MAX_VALUE) {
+        } finally {
+            drawInMaim = wasDrawingMain;
+            ignoreTopCount = 0;
+            ignoreBottomCount = 0;
             try {
-                mScrollYField.set(this, scrollY);
-            } catch (Exception e) {
-                if (BuildVars.DEBUG_PRIVATE_VERSION) {
-                    throw new RuntimeException(e);
+                if (mScrollYField != null && scrollY != Integer.MAX_VALUE) {
+                    try {
+                        mScrollYField.set(this, scrollY);
+                    } catch (Exception e) {
+                        if (BuildVars.DEBUG_PRIVATE_VERSION) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                 }
+            } finally {
+                canvas.restoreToCount(textSaveCount);
             }
         }
-        canvas.restore();
         if (cursorDrawable == null) {
+            final int cursorSaveCount = canvas.getSaveCount();
             try {
                 boolean showCursor;
                 if (mShowCursorField != null && editor != null) {
@@ -999,9 +1016,12 @@ public class EditTextBoldCursor extends EditTextEffects {
                 if (BuildVars.DEBUG_PRIVATE_VERSION) {
                     throw new RuntimeException(exception);
                 }
+            } finally {
+                canvas.restoreToCount(cursorSaveCount);
             }
         } else {
             if (cursorDrawn && allowDrawCursor) {
+                final int cursorSaveCount = canvas.getSaveCount();
                 try {
                     canvas.save();
                     int voffsetCursor = 0;
@@ -1037,6 +1057,8 @@ public class EditTextBoldCursor extends EditTextEffects {
                     if (BuildVars.DEBUG_PRIVATE_VERSION) {
                         throw new RuntimeException(exception);
                     }
+                } finally {
+                    canvas.restoreToCount(cursorSaveCount);
                 }
             }
         }

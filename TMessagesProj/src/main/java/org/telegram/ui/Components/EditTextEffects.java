@@ -142,6 +142,7 @@ public class EditTextEffects extends EditText {
         super.onDetachedFromWindow();
 
         removeCallbacks(spoilerTimeout);
+        postedSpoilerTimeout = false;
         AnimatedEmojiSpan.release(this, animatedEmojiDrawables);
     }
 
@@ -154,6 +155,8 @@ public class EditTextEffects extends EditText {
         super.onAttachedToWindow();
         updateAnimatedEmoji(true);
         invalidateQuotes(false);
+        // A reused editor gets a fresh timeout; detaching canceled the old callback.
+        checkSpoilerTimeout();
     }
 
     @Override
@@ -310,6 +313,15 @@ public class EditTextEffects extends EditText {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        final int saveCount = canvas.getSaveCount();
+        try {
+            drawWithEffects(canvas);
+        } finally {
+            canvas.restoreToCount(saveCount);
+        }
+    }
+
+    private void drawWithEffects(Canvas canvas) {
         canvas.save();
         if (clipToPadding && getScrollY() != 0) {
             canvas.clipRect(-AndroidUtilities.dp(3), getScrollY() - super.getExtendedPaddingTop() - offsetY, getMeasuredWidth(), getMeasuredHeight() + getScrollY() + super.getExtendedPaddingBottom() - offsetY);
