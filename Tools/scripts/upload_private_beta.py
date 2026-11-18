@@ -20,7 +20,7 @@ from pathlib import Path
 from sys import argv
 
 from pyrogram import Client
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ChatType, ParseMode
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ABI = "arm64-v8a"
@@ -276,7 +276,9 @@ async def main():
         with contextlib.suppress(ValueError):
             chat_id = int(chat_id)
         # Resolve chat for send only — do not log id/username/title/full target.
-        await client.get_chat(chat_id)
+        chat = await client.get_chat(chat_id)
+        if chat.type in (ChatType.CHANNEL, ChatType.SUPERGROUP) and chat.username:
+            raise SystemExit("FATAL: private beta target resolves to a public chat")
         print("Private Telegram target resolved successfully.", flush=True)
         msg = await client.send_document(
             chat_id=chat_id,

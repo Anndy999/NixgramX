@@ -2,18 +2,13 @@ name: Private Beta Test
 
 on:
   workflow_dispatch:
-    inputs:
-      recipient_certificate:
-        description: Base64-encoded public CMS recipient certificate
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
   private-beta:
-    name: Build encrypted private Beta arm64
+    name: Build and deliver private Beta arm64
     if: github.actor == github.repository_owner && github.ref_name == 'diagnostic/private-beta-13.2.2'
     runs-on: ubuntu-latest
     timeout-minutes: 100
@@ -24,7 +19,7 @@ jobs:
       CCACHE_MAXSIZE: "10G"
       NATIVE_TARGET: arm64-v8a
       NIXGRAMX_CHANNEL: beta
-      NIXGRAMX_VERSION_CODE: '1358'
+      NIXGRAMX_VERSION_CODE: '1359'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,6 +53,7 @@ jobs:
         with:
           packages: 'build-tools;36.0.0 ndk;27.2.12479018 platforms;android-35 platforms;android-37.0 cmake;3.31.6'
       - name: Assemble signed Beta arm64 APK
+        id: build
         env:
           COMMIT_ID: ${{ github.sha }}
           TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID }}
@@ -72,13 +68,13 @@ jobs:
           sudo apt-get install --no-install-recommends --yes nasm
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
           export BUILD_TIMESTAMP="$(date +%s)"
+          echo "timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
           if [ "$(awk '/MemTotal/ {print $2}' /proc/meminfo)" -ge 12582912 ]; then
             sed -i 's/^org\.gradle\.jvmargs=.*/org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=2G -XX:+UseParallelGC -Dfile.encoding=UTF-8/' gradle.properties
           fi
           ./gradlew TMessagesProj:assembleStaging
-      - name: Verify APK and encrypt for delivery
-        env:
-          RECIPIENT_CERTIFICATE: ${{ inputs.recipient_certificate }}
+      - name: Verify signed APK and startup assets
+        id: apk
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -86,16 +82,34 @@ jobs:
           test "${#apks[@]}" -eq 1
           PRIVATE_BETA_APK="${apks[0]}"
           python3 Tools/stability/verify_generated_apk_assets.py "$PRIVATE_BETA_APK"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$PRIVATE_BETA_APK"
-          cert="$(mktemp)"
-          trap 'rm -f "$cert"' EXIT
-          printf '%s' "$RECIPIENT_CERTIFICATE" | base64 --decode > "$cert"
-          openssl x509 -in "$cert" -noout -checkend 0
-          openssl cms -encrypt -binary -aes-256-gcm -in "$PRIVATE_BETA_APK" -outform DER -out "$RUNNER_TEMP/NixgramX-private-beta-arm64.apk.cms" "$cert"
-      - name: Upload encrypted APK only
-        uses: actions/upload-artifact@v7
+          build_tools="$ANDROID_HOME/build-tools/36.0.0"
+          signing_info="$("$build_tools/apksigner" verify --print-certs "$PRIVATE_BETA_APK")"
+          printf '%s\n' "$signing_info" | grep -Fx 'Signer #1 certificate SHA-256 digest: 52548159979141626ee5b407b84ee70a3344ed91297f5fbe8e91df8f0c29a31c'
+          apk_info="$("$build_tools/aapt" dump badging "$PRIVATE_BETA_APK")"
+          printf '%s\n' "$apk_info" | grep -F "package: name='app.nixgramx.android' versionCode='$NIXGRAMX_VERSION_CODE' versionName='13.2.2-beta-${GITHUB_SHA:0:7}'"
+          printf '%s\n' "$apk_info" | grep -Fx "native-code: 'arm64-v8a'"
+          echo "path=$PRIVATE_BETA_APK" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v7
         with:
-          name: NixgramX-private-beta-encrypted
-          path: ${{ runner.temp }}/NixgramX-private-beta-arm64.apk.cms
-          retention-days: 1
-          if-no-files-found: error
+          python-version: '3.12'
+      - name: Send APK to private Telegram test target
+        env:
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_HASH: ${{ secrets.APP_HASH }}
+          HELPER_BOT_TOKEN: ${{ secrets.HELPER_BOT_TOKEN }}
+          HELPER_BOT_PRIVATE_TARGET: ${{ secrets.HELPER_BOT_PRIVATE_TARGET }}
+          HELPER_BOT_TARGET: ${{ secrets.HELPER_BOT_TARGET }}
+          HELPER_BOT_CANARY_TARGET: ${{ secrets.HELPER_BOT_CANARY_TARGET }}
+          COMMIT_ID: ${{ github.sha }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          BUILD_TIMESTAMP: ${{ steps.build.outputs.timestamp }}
+          PRIVATE_BETA_APK: ${{ steps.apk.outputs.path }}
+          RELEASE_NOTES: |
+            - 书签和历史消息页面随视图生命周期清理玻璃效果监听与渲染资源。
+            - 批量删除历史消息时分批查询媒体路径，并用事务删除消息和编辑记录。
+            - 修正后备推送定时器的服务启动类型并清理旧定时器。
+            - 修复输入框绘制异常时的状态恢复，并补录 Android 14+ 的替换文本诊断。
+        run: |
+          set -euo pipefail
+          python -m pip install -r Tools/scripts/requirements.txt
+          python Tools/scripts/upload_private_beta.py "$HELPER_BOT_TOKEN"
