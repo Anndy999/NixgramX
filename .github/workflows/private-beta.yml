@@ -83,14 +83,14 @@ jobs:
           shopt -s nullglob
           apks=(TMessagesProj/build/outputs/apk/staging/*-arm64-v8a.apk)
           test "${#apks[@]}" -eq 1
-          apk="${apks[0]}"
-          python3 Tools/stability/verify_generated_apk_assets.py "$apk"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk"
+          PRIVATE_BETA_APK="${apks[0]}"
+          python3 Tools/stability/verify_generated_apk_assets.py "$PRIVATE_BETA_APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$PRIVATE_BETA_APK"
           cert="$(mktemp)"
           trap 'rm -f "$cert"' EXIT
           printf '%s' "$RECIPIENT_CERTIFICATE" | base64 --decode > "$cert"
           openssl x509 -in "$cert" -noout -checkend 0
-          openssl cms -encrypt -binary -aes-256-gcm -in "$apk" -outform DER -out "$RUNNER_TEMP/NixgramX-private-beta-arm64.apk.cms" "$cert"
+          openssl cms -encrypt -binary -aes-256-gcm -in "$PRIVATE_BETA_APK" -outform DER -out "$RUNNER_TEMP/NixgramX-private-beta-arm64.apk.cms" "$cert"
       - name: Upload encrypted APK only
         uses: actions/upload-artifact@v7
         with:
