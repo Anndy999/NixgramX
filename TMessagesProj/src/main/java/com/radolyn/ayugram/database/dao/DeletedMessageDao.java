@@ -28,6 +28,9 @@ public interface DeletedMessageDao {
     @Query("SELECT mediaPath FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId = :messageId LIMIT 1")
     String getMediaPath(long userId, long dialogId, int messageId);
 
+    @Query("SELECT DISTINCT mediaPath FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId IN (:messageIds) AND mediaPath IS NOT NULL AND mediaPath <> ''")
+    List<String> getMediaPaths(long userId, long dialogId, List<Integer> messageIds);
+
     @Transaction
     @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND :startId <= messageId AND messageId <= :endId ORDER BY messageId LIMIT :limit")
     List<DeletedMessageFull> getMessages(long userId, long dialogId, long startId, long endId, int limit);

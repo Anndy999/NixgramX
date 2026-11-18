@@ -15,6 +15,7 @@ import android.text.TextUtils;
 import com.radolyn.ayugram.AyuConstants;
 import com.radolyn.ayugram.AyuUtils;
 import com.radolyn.ayugram.database.AyuData;
+import com.radolyn.ayugram.database.AyuDatabase;
 import com.radolyn.ayugram.database.dao.DeletedMessageDao;
 import com.radolyn.ayugram.database.dao.EditedMessageDao;
 import com.radolyn.ayugram.database.entities.DeletedMessage;
@@ -31,7 +32,9 @@ import org.telegram.tgnet.TLRPC;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import tw.nekomimi.nekogram.utils.FileUtil;
@@ -346,21 +349,21 @@ public class AyuMessagesController {
             return;
         }
 
-        List<String> mediaPaths = new ArrayList<>();
-
-        for (int messageId : messageIds) {
-            var msg = getMessage(userId, dialogId, messageId);
-            if (msg == null) {
-                continue;
+        // Leave room for the account and dialog parameters on SQLite with a 999-bind limit.
+        final int batchSize = 900;
+        List<Integer> ids = new ArrayList<>(new LinkedHashSet<>(messageIds));
+        Set<String> mediaPaths = new LinkedHashSet<>();
+        AyuDatabase database = AyuData.getDatabase();
+        DeletedMessageDao deletedMessages = database.deletedMessageDao();
+        EditedMessageDao editedMessages = database.editedMessageDao();
+        database.runInTransaction(() -> {
+            for (int start = 0; start < ids.size(); start += batchSize) {
+                List<Integer> batch = ids.subList(start, Math.min(start + batchSize, ids.size()));
+                mediaPaths.addAll(deletedMessages.getMediaPaths(userId, dialogId, batch));
+                deletedMessages.deleteMessages(userId, dialogId, batch);
+                editedMessages.deleteByDialogIdAndMessageIds(userId, dialogId, batch);
             }
-
-            if (!TextUtils.isEmpty(msg.message.mediaPath)) {
-                mediaPaths.add(msg.message.mediaPath);
-            }
-        }
-
-        deletedMessageDao.deleteMessages(userId, dialogId, messageIds);
-        editedMessageDao.deleteByDialogIdAndMessageIds(userId, dialogId, messageIds);
+        });
 
         for (String mediaPath : mediaPaths) {
             var p = new File(mediaPath);
