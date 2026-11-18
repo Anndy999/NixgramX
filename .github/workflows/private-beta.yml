@@ -24,6 +24,7 @@ jobs:
       CCACHE_MAXSIZE: "10G"
       NATIVE_TARGET: arm64-v8a
       NIXGRAMX_CHANNEL: beta
+      NIXGRAMX_VERSION_CODE: '1358'
     steps:
       - uses: actions/checkout@v7
         with:
