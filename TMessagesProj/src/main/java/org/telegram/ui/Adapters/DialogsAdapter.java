@@ -1381,10 +1381,12 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
 
     public void setIsTransitionSupport() {
         this.isTransitionSupport = true;
+        if (diffPending) updateList(null);
     }
 
     public void setCollapsedView(boolean collapsedView, RecyclerListView listView) {
         this.collapsedView = collapsedView;
+        if (diffPending) updateList(null);
         for (int i = 0; i < listView.getChildCount(); i++) {
             if (listView.getChildAt(i) instanceof DialogCell) {
                 ((DialogCell) listView.getChildAt(i)).collapsed = collapsedView;

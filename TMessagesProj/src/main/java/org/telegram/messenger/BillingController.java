@@ -57,7 +57,9 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
     @Nullable
     public static ProductDetails PREMIUM_PRODUCT_DETAILS;
 
-    private static BillingController instance;
+    private static final class InstanceHolder {
+        private static final BillingController INSTANCE = new BillingController(ApplicationLoader.applicationContext);
+    }
 
     public static boolean billingClientEmpty;
 
@@ -70,11 +72,8 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
     private boolean isDisconnected;
     private Runnable onCanceled;
 
-    public static synchronized BillingController getInstance() {
-        if (instance == null) {
-            instance = new BillingController(ApplicationLoader.applicationContext);
-        }
-        return instance;
+    public static BillingController getInstance() {
+        return InstanceHolder.INSTANCE;
     }
 
     private BillingController(Context ctx) {

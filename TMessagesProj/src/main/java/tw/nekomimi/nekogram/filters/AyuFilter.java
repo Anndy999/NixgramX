@@ -46,17 +46,19 @@ public class AyuFilter {
                     var str = NaConfig.INSTANCE.getRegexFiltersData().String();
                     FilterModel[] arr = new Gson().fromJson(str, FilterModel[].class);
                     if (arr != null) {
-                        filterModels = new ArrayList<>(Arrays.asList(arr));
+                        var parsed = new ArrayList<>(Arrays.asList(arr));
+                        parsed.removeAll(Collections.singleton(null));
                         boolean migrated = false;
-                        for (var filter : filterModels) {
+                        for (var filter : parsed) {
                             if (filter.migrateFromLegacy(0L)) {
                                 migrated = true;
                             }
                             filter.buildPattern();
                         }
                         if (migrated) {
-                            NaConfig.INSTANCE.getRegexFiltersData().setConfigString(new Gson().toJson(filterModels));
+                            NaConfig.INSTANCE.getRegexFiltersData().setConfigString(new Gson().toJson(parsed));
                         }
+                        filterModels = parsed;
                     } else {
                         filterModels = new ArrayList<>();
                     }
@@ -219,7 +221,7 @@ public class AyuFilter {
             ArrayList<Pattern> patterns = new ArrayList<>();
             if (models != null) {
                 for (FilterModel model : models) {
-                    if (model.enabled && model.pattern != null) {
+                    if (model != null && model.enabled && model.pattern != null) {
                         patterns.add(model.pattern);
                     }
                 }
@@ -266,7 +268,10 @@ public class AyuFilter {
         if (rules == null) {
             synchronized (cacheLock) {
                 rules = ruleIndex;
-                if (rules == null) ruleIndex = rules = new RuleIndex();
+                if (rules == null) {
+                    rules = new RuleIndex();
+                    ruleIndex = rules;
+                }
             }
         }
         return rules.isFiltered(msg, group, dialogId);
@@ -280,11 +285,13 @@ public class AyuFilter {
                     try {
                         ChatFilterEntry[] arr = new Gson().fromJson(str, ChatFilterEntry[].class);
                         if (arr != null) {
-                            chatFilterEntries = new ArrayList<>(Arrays.asList(arr));
+                            var parsed = new ArrayList<>(Arrays.asList(arr));
+                            parsed.removeAll(Collections.singleton(null));
                             boolean migrated = false;
-                            for (var entry : chatFilterEntries) {
+                            for (var entry : parsed) {
                                 if (entry.filters == null) continue;
                                 for (var f : entry.filters) {
+                                    if (f == null) continue;
                                     if (f.migrateFromLegacy(entry.dialogId)) {
                                         migrated = true;
                                     }
@@ -292,9 +299,10 @@ public class AyuFilter {
                                 }
                             }
                             if (migrated) {
-                                var json = new Gson().toJson(chatFilterEntries);
+                                var json = new Gson().toJson(parsed);
                                 NaConfig.INSTANCE.getRegexChatFiltersData().setConfigString(json);
                             }
+                            chatFilterEntries = parsed;
                         } else {
                             chatFilterEntries = new ArrayList<>();
                         }
