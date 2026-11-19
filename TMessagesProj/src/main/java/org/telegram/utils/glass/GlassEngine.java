@@ -18,6 +18,7 @@ import org.telegram.messenger.postdrawcompat.OnPostDrawListener;
 import org.telegram.messenger.postdrawcompat.ViewOnPostDrawListener;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.ui.Components.EdgeEffectTrackerFactory;
 import org.telegram.ui.Components.SectionsScrollView;
 import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
@@ -75,6 +76,17 @@ public class GlassEngine {
 
     public void registerDrawable(@NonNull View view, @NonNull GlassDrawable drawable) {
         viewPositionStates.add(new ViewPositionState(view, drawable));
+    }
+
+    public void removeDrawablesIn(View root) {
+        if (viewPositionStates.removeIf(state -> {
+            for (View view = state.view; view != null; view = view.getParent() instanceof View parent ? parent : null) {
+                if (view == root) return true;
+            }
+            return false;
+        })) {
+            externalCapturePositionInvalidated = true;
+        }
     }
 
     private final RectF externalCapturePosition = new RectF();
@@ -161,19 +173,26 @@ public class GlassEngine {
 
     private final ReferenceList<RecyclerListView> recyclerListViews = new ReferenceList<>();
 
-    public void addScrolledView(RecyclerListView recyclerListView) {
-        if (recyclerListView == null) {
-            return;
+    public Runnable addScrolledView(RecyclerListView recyclerListView) {
+        if (recyclerListView == null || !recyclerListViews.add(recyclerListView)) {
+            return () -> {};
         }
 
-        recyclerListViews.add(recyclerListView);
+        class EdgeListener implements EdgeEffectTrackerFactory.OnEdgeEffectListener {
+            int visibleEdges;
 
-        recyclerListView.addEdgeEffectListener((direction, isVisible) -> {
-            scrollEdgesGenerationId++;
-            scrollEdgesCount += (isVisible ? 1 : -1);
-        });
+            @Override
+            public void onEdgeEffectVisibilityChange(int direction, boolean isVisible) {
+                int previous = visibleEdges;
+                int edge = 1 << direction;
+                visibleEdges = isVisible ? previous | edge : previous & ~edge;
+                scrollEdgesCount += Integer.bitCount(visibleEdges) - Integer.bitCount(previous);
+                scrollEdgesGenerationId++;
+            }
+        }
+        EdgeListener edgeListener = new EdgeListener();
         // rows that appear without a scroll, e.g. a loaded page, change what is under the glass too
-        recyclerListView.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
+        RecyclerView.OnChildAttachStateChangeListener childListener = new RecyclerView.OnChildAttachStateChangeListener() {
             @Override
             public void onChildViewAttachedToWindow(@NonNull View view) {
                 otherGenerationId++;
@@ -183,8 +202,8 @@ public class GlassEngine {
             public void onChildViewDetachedFromWindow(@NonNull View view) {
                 otherGenerationId++;
             }
-        });
-        recyclerListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        };
+        RecyclerView.OnScrollListener scrollListener = new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
                 scrollGenerationId++;
@@ -194,7 +213,18 @@ public class GlassEngine {
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 GlassEngine.this.onScrolled(dx, dy);
             }
-        });
+        };
+        recyclerListView.addEdgeEffectListener(edgeListener);
+        recyclerListView.addOnChildAttachStateChangeListener(childListener);
+        recyclerListView.addOnScrollListener(scrollListener);
+        return () -> {
+            if (!recyclerListViews.remove(recyclerListView)) return;
+            recyclerListView.removeEdgeEffectListener(edgeListener);
+            recyclerListView.removeOnChildAttachStateChangeListener(childListener);
+            recyclerListView.removeOnScrollListener(scrollListener);
+            scrollEdgesCount -= Integer.bitCount(edgeListener.visibleEdges);
+            scrollEdgesGenerationId++;
+        };
     }
 
     public void addScrolledView(SectionsScrollView scrollView) {
@@ -250,6 +280,10 @@ public class GlassEngine {
 
     public void addNoiseSuppressor(DownscaleScrollableNoiseSuppressor downscaleScrollableNoiseSuppressor) {
         downscaleScrollableNoiseSuppressors.add(downscaleScrollableNoiseSuppressor);
+    }
+
+    public void removeNoiseSuppressor(DownscaleScrollableNoiseSuppressor noiseSuppressor) {
+        downscaleScrollableNoiseSuppressors.remove(noiseSuppressor);
     }
 
     public void invalidate() {

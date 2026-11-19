@@ -41,7 +41,6 @@ import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
-import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -50,6 +49,7 @@ import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.ActionBarMenuSubItem;
 import org.telegram.ui.ActionBar.ActionBarPopupWindow;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
@@ -61,6 +61,9 @@ import org.telegram.ui.Components.inset.WindowInsetsStateHolder;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Objects;
 
@@ -82,7 +85,12 @@ public class AyuMessageHistory extends NekoDelegateFragment {
     private static final int OPTION_SAVE_TO_DOWNLOADS = 7;
     private static final int OPTION_TRANSLATE = 8;
     private final MessageObject messageObject;
-    private List<EditedMessage> messages;
+    private static final int PAGE_SIZE = 40;
+    private final List<EditedMessage> messages = new ArrayList<>();
+    private final Map<Long, MessageObject> renderedHistory = new HashMap<>();
+    private boolean loading, noMoreHistory;
+    private int historyGeneration;
+    private LinearLayoutManager layoutManager;
     private final ArrayList<MessageObject> messageObjects = new ArrayList<>();
     private int rowCount;
     private RecyclerListView listView;
@@ -90,14 +98,13 @@ public class AyuMessageHistory extends NekoDelegateFragment {
     private Runnable showEmptyViewRunnable;
     private ActionBarPopupWindow scrimPopupWindow;
     private final WindowInsetsStateHolder windowInsetsStateHolder = new WindowInsetsStateHolder(this::checkInsets);
-    private String[] cachedAttachmentFileNames;
     private ActionBarMenuItem searchItem;
     private String searchQuery = "";
     private final ArrayList<EditedMessage> filteredMessages = new ArrayList<>();
 
     public AyuMessageHistory(MessageObject messageObject) {
         this.messageObject = messageObject;
-        updateHistory();
+        setCurrentAccount(messageObject.currentAccount);
     }
 
     private void checkInsets() {
@@ -111,29 +118,69 @@ public class AyuMessageHistory extends NekoDelegateFragment {
         return windowInsetsStateHolder.getCurrentNavigationBarInset();
     }
 
-    private void updateHistory() {
-        messages = AyuMessagesController.getInstance().getRevisions(getUserConfig().clientUserId, messageObject.messageOwner.dialog_id, messageObject.messageOwner.id);
-        if (messages == null) {
-            messages = new ArrayList<>();
-        }
-        cacheAttachmentFileNames();
-        applySearchFilter();
-    }
-
-    private void cacheAttachmentFileNames() {
-        File attachmentsDir = AyuMessagesController.attachmentsPath;
-        if (attachmentsDir.exists()) {
-            cachedAttachmentFileNames = attachmentsDir.list();
-        } else {
-            cachedAttachmentFileNames = null;
-        }
+    private void loadHistory(boolean refresh) {
+        if (isFinished || listView == null || (!refresh && (loading || noMoreHistory || messages.isEmpty()))) return;
+        int generation = refresh ? ++historyGeneration : historyGeneration;
+        EditedMessage oldest = refresh ? null : messages.get(0);
+        int position = layoutManager.findFirstVisibleItemPosition();
+        EditedMessage anchor = position >= 0 && position < filteredMessages.size() ? filteredMessages.get(position) : null;
+        View anchorView = layoutManager.findViewByPosition(position);
+        int anchorOffset = anchorView == null ? 0 : anchorView.getTop() - listView.getPaddingTop();
+        boolean firstPage = messages.isEmpty();
+        int limit = refresh ? Math.max(PAGE_SIZE, messages.size()) : PAGE_SIZE;
+        long userId = getUserConfig().clientUserId;
+        long dialogId = messageObject.messageOwner.dialog_id;
+        int messageId = messageObject.messageOwner.id;
+        loading = true;
+        updateEmptyView();
+        Utilities.globalQueue.postRunnable(() -> {
+            try {
+                var page = AyuMessagesController.getInstance().getRevisionsBefore(userId, dialogId, messageId,
+                        oldest == null ? Integer.MAX_VALUE : oldest.entityCreateDate,
+                        oldest == null ? Long.MAX_VALUE : oldest.fakeId, limit);
+                Collections.reverse(page);
+                var attachments = new AttachmentLookup();
+                Map<Long, MessageObject> objects = new HashMap<>();
+                for (EditedMessage revision : page) objects.put(revision.fakeId, createMessageObject(revision, attachments));
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (isFinished || generation != historyGeneration || listView == null) return;
+                    if (refresh) {
+                        messages.clear();
+                        renderedHistory.clear();
+                    }
+                    messages.addAll(0, page);
+                    renderedHistory.putAll(objects);
+                    noMoreHistory = page.size() < limit;
+                    loading = false;
+                    applySearchFilter();
+                    if (firstPage && rowCount > 0) {
+                        listView.scrollToPosition(rowCount - 1);
+                    } else if (anchor != null) {
+                        for (int i = 0; i < filteredMessages.size(); i++) {
+                            if (filteredMessages.get(i).fakeId == anchor.fakeId) {
+                                layoutManager.scrollToPositionWithOffset(i, anchorOffset);
+                                break;
+                            }
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (isFinished || generation != historyGeneration) return;
+                    loading = false;
+                    if (getParentActivity() != null) BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+                    updateEmptyView();
+                });
+            }
+        });
     }
 
     @Override
     public View createView(Context context) {
         long dialogId = messageObject.messageOwner.dialog_id;
         var peer = getMessagesController().getUserOrChat(dialogId);
-        int currentAccount = UserConfig.selectedAccount;
+        int currentAccount = getCurrentAccount();
 
         String name = switch (peer) {
             case null -> getString(R.string.EditsHistoryMenuText);
@@ -216,10 +263,16 @@ public class AyuMessageHistory extends NekoDelegateFragment {
         listView = new RecyclerListView(context);
         listView.setLayoutAnimation(null);
 
-        LinearLayoutManager layoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false);
+        layoutManager = new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false);
         layoutManager.setStackFromEnd(true);
 
         listView.setLayoutManager(layoutManager);
+        listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(@NonNull RecyclerView view, int dx, int dy) {
+                int first = layoutManager.findFirstVisibleItemPosition();
+                if (first != RecyclerView.NO_POSITION && first <= 2) loadHistory(false);
+            }
+        });
         listView.setVerticalScrollBarEnabled(true);
         listView.setAdapter(new ListAdapter(context, currentAccount));
         setupMessageListItemAnimator(listView);
@@ -254,7 +307,7 @@ public class AyuMessageHistory extends NekoDelegateFragment {
         emptyView.setText(getString(R.string.NoMessages));
         emptyView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         emptyView.setTypeface(AndroidUtilities.bold());
-        emptyView.setTextColor(Theme.getColor(Theme.key_chat_serviceText, getResourceProvider()));
+        ThemeBind.textColor(emptyView, Theme.key_chat_serviceText, getResourceProvider());
         emptyView.setGravity(Gravity.CENTER);
         emptyView.setVisibility(View.GONE);
         emptyView.setPadding(dp(20), dp(4), dp(20), dp(6));
@@ -263,6 +316,7 @@ public class AyuMessageHistory extends NekoDelegateFragment {
         updateEmptyView();
 
         setupGlassActionBar(frameLayout, listView);
+        loadHistory(true);
 
         return fragmentView;
     }
@@ -291,8 +345,10 @@ public class AyuMessageHistory extends NekoDelegateFragment {
             }
         }
         rowCount = filteredMessages.size();
-        rebuildMessageObjects();
+        messageObjects.clear();
+        for (EditedMessage revision : filteredMessages) messageObjects.add(renderedHistory.get(revision.fakeId));
         notifyAdapterDataChanged();
+        if (rowCount == 0 && !searchQuery.isEmpty() && !loading && !noMoreHistory) loadHistory(false);
         updateEmptyView();
     }
 
@@ -309,6 +365,8 @@ public class AyuMessageHistory extends NekoDelegateFragment {
     }
 
     private void updateEmptyView(boolean delayIfEmpty) {
+        if (emptyView != null) emptyView.setText(getString(loading ? R.string.Loading
+                : searchQuery.isEmpty() ? R.string.NoMessages : R.string.NoResult));
         showEmptyViewRunnable = updateListEmptyView(() -> emptyView, () -> listView, rowCount == 0, delayIfEmpty, showEmptyViewRunnable, () -> showEmptyViewRunnable = null);
     }
 
@@ -316,18 +374,19 @@ public class AyuMessageHistory extends NekoDelegateFragment {
     public boolean onFragmentCreate() {
         super.onFragmentCreate();
 
-        NotificationCenter.getInstance(UserConfig.selectedAccount).addObserver(this, AyuConstants.MESSAGE_EDITED_NOTIFICATION);
-        NotificationCenter.getInstance(UserConfig.selectedAccount).addObserver(this, NotificationCenter.voiceTranscriptionUpdate);
+        getNotificationCenter().addObserver(this, AyuConstants.MESSAGE_EDITED_NOTIFICATION);
+        getNotificationCenter().addObserver(this, NotificationCenter.voiceTranscriptionUpdate);
 
         return true;
     }
 
     @Override
     public void onFragmentDestroy() {
+        historyGeneration++;
         super.onFragmentDestroy();
 
-        NotificationCenter.getInstance(UserConfig.selectedAccount).removeObserver(this, AyuConstants.MESSAGE_EDITED_NOTIFICATION);
-        NotificationCenter.getInstance(UserConfig.selectedAccount).removeObserver(this, NotificationCenter.voiceTranscriptionUpdate);
+        getNotificationCenter().removeObserver(this, AyuConstants.MESSAGE_EDITED_NOTIFICATION);
+        getNotificationCenter().removeObserver(this, NotificationCenter.voiceTranscriptionUpdate);
         if (scrimPopupWindow != null) {
             scrimPopupWindow.dismiss();
             scrimPopupWindow = null;
@@ -357,10 +416,7 @@ public class AyuMessageHistory extends NekoDelegateFragment {
             var messageId = (int) args[1];
 
             if (dialogId == messageObject.messageOwner.dialog_id && messageId == messageObject.messageOwner.id) {
-                updateHistory();
-                if (listView != null && listView.getAdapter() != null) {
-                    listView.getAdapter().notifyDataSetChanged();
-                }
+                loadHistory(true);
             }
         } else if (id == NotificationCenter.voiceTranscriptionUpdate) {
             handleVoiceTranscriptionUpdate(args);
@@ -673,16 +729,7 @@ public class AyuMessageHistory extends NekoDelegateFragment {
                 var ayuMessageDetailCell = (NekoMessageCell) holder.itemView;
 
                 var editedMessage = filteredMessages.get(position);
-                MessageObject msg;
-                if (position >= 0 && position < messageObjects.size()) {
-                    msg = messageObjects.get(position);
-                    if (msg == null) {
-                        msg = createMessageObject(editedMessage);
-                        messageObjects.set(position, msg);
-                    }
-                } else {
-                    msg = createMessageObject(editedMessage);
-                }
+                MessageObject msg = messageObjects.get(position);
 
                 ayuMessageDetailCell.setAyuDelegate(AyuMessageHistory.this);
                 ayuMessageDetailCell.setMessageObject(msg, null, false, false, false);
@@ -697,7 +744,7 @@ public class AyuMessageHistory extends NekoDelegateFragment {
         }
     }
 
-    private MessageObject createMessageObject(EditedMessage editedMessage) {
+    private MessageObject createMessageObject(EditedMessage editedMessage, AttachmentLookup attachments) {
         int currentAccount = getCurrentAccount();
         var msg = new TLRPC.TL_message();
         AyuMessageUtils.map(editedMessage, msg, currentAccount);
@@ -724,24 +771,25 @@ public class AyuMessageHistory extends NekoDelegateFragment {
             msg.media = messageObject.messageOwner.media;
         } else if (editedMessage.documentType == AyuConstants.DOCUMENT_TYPE_FILE) {
             File originalPath = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
-            if (!messageObject.isAyuDeleted() && originalPath.exists() && Objects.equals(editedMessage.mediaPath, originalPath.getAbsolutePath())) {
+            if (!messageObject.isAyuDeleted() && originalPath.exists() && msg.media != null && messageObject.messageOwner.media != null
+                    && Objects.equals(editedMessage.mediaPath, originalPath.getAbsolutePath())) {
                 msg.media.document = messageObject.messageOwner.media.document;
                 localFileFound = true;
             } else { // try to find local file for media that was saved
-                File localFile = findSavedMedia(editedMessage);
+                File localFile = attachments.findSavedMedia(editedMessage);
                 if (localFile != null) {
                     updateDocumentMediaWithLocalFile(msg, localFile, editedMessage);
                     localFileFound = true;
                 }
             }
         } else if (editedMessage.documentType == AyuConstants.DOCUMENT_TYPE_STORY) {
-            File localFile = findSavedMedia(editedMessage);
+            File localFile = attachments.findSavedMedia(editedMessage);
             if (localFile != null) {
                 updateStoryMediaWithLocalFile(msg, localFile);
                 localFileFound = true;
             }
         } else if (editedMessage.documentType == AyuConstants.DOCUMENT_TYPE_PHOTO) {
-            File localFile = findSavedMedia(editedMessage);
+            File localFile = attachments.findSavedMedia(editedMessage);
             if (localFile != null) {
                 updatePhotoMediaWithLocalFile(msg, localFile);
                 localFileFound = true;
@@ -754,69 +802,76 @@ public class AyuMessageHistory extends NekoDelegateFragment {
         return messageObj;
     }
 
-    private File findSavedMedia(EditedMessage editedMessage) {
-        File attachmentsDir = AyuMessagesController.attachmentsPath;
-        if (!attachmentsDir.exists() && !attachmentsDir.mkdirs()) {
-            return null;
-        }
-        String[] fileNames = cachedAttachmentFileNames;
-        if (fileNames == null) {
-            return null;
-        }
-        String ttlPrefix = "ttl_" + editedMessage.dialogId + "_" + editedMessage.messageId + "_";
-        ArrayList<File> ttlMatches = new ArrayList<>();
-        for (String name : fileNames) {
-            if (name.startsWith(ttlPrefix)) {
-                ttlMatches.add(new File(attachmentsDir, name));
-            }
-        }
-        if (!ttlMatches.isEmpty()) {
-            File ttlMatch = AyuMessageUtils.getLargestNonEmpty(ttlMatches.toArray(new File[0]));
-            if (ttlMatch != null) {
-                return ttlMatch;
-            }
-        }
-        if (editedMessage.mediaPath != null && !editedMessage.mediaPath.isEmpty()) {
-            String baseName = new File(editedMessage.mediaPath).getName();
-            return findExistingFileByBaseNameCached(attachmentsDir, fileNames, baseName);
-        }
-        return null;
-    }
+    private static final class AttachmentLookup {
+        private String[] fileNames;
+        private boolean listed;
 
-    private File findExistingFileByBaseNameCached(File attachmentsDir, String[] fileNames, String baseName) {
-        // exact match
-        File exactMatch = new File(attachmentsDir, baseName);
-        if (exactMatch.exists()) {
-            return exactMatch;
-        }
-        String nameWithoutExtension = AyuUtils.removeExtension(baseName);
-        String extension = AyuUtils.getExtension(baseName);
-        // find matching files from cache
-        ArrayList<File> matchingFiles = new ArrayList<>();
-        for (String name : fileNames) {
-            if (!name.endsWith(extension)) {
-                continue;
+        private File findSavedMedia(EditedMessage editedMessage) {
+            File attachmentsDir = AyuMessagesController.attachmentsPath;
+            if (!attachmentsDir.isDirectory()) {
+                return null;
             }
-            if (name.equals(baseName)) {
-                matchingFiles.add(new File(attachmentsDir, name));
-                continue;
+            if (!listed) {
+                fileNames = attachmentsDir.list();
+                listed = true;
             }
-            if (!name.startsWith(nameWithoutExtension)) {
-                continue;
+            if (fileNames == null) return null;
+            String ttlPrefix = "ttl_" + editedMessage.dialogId + "_" + editedMessage.messageId + "_";
+            ArrayList<File> ttlMatches = new ArrayList<>();
+            for (String name : fileNames) {
+                if (name.startsWith(ttlPrefix)) {
+                    ttlMatches.add(new File(attachmentsDir, name));
+                }
             }
-            int length = nameWithoutExtension.length();
-            if (name.length() <= length) {
-                continue;
+            if (!ttlMatches.isEmpty()) {
+                File ttlMatch = AyuMessageUtils.getLargestNonEmpty(ttlMatches.toArray(new File[0]));
+                if (ttlMatch != null) {
+                    return ttlMatch;
+                }
             }
-            char ch = name.charAt(length);
-            if (ch == '@' || ch == '#') {
-                matchingFiles.add(new File(attachmentsDir, name));
+            if (editedMessage.mediaPath != null && !editedMessage.mediaPath.isEmpty()) {
+                String baseName = new File(editedMessage.mediaPath).getName();
+                return findExistingFileByBaseNameCached(attachmentsDir, fileNames, baseName);
             }
-        }
-        if (matchingFiles.isEmpty()) {
             return null;
         }
-        return AyuMessageUtils.getLargestNonEmpty(matchingFiles.toArray(new File[0]));
+
+        private File findExistingFileByBaseNameCached(File attachmentsDir, String[] fileNames, String baseName) {
+            // exact match
+            File exactMatch = new File(attachmentsDir, baseName);
+            if (exactMatch.exists()) {
+                return exactMatch;
+            }
+            String nameWithoutExtension = AyuUtils.removeExtension(baseName);
+            String extension = AyuUtils.getExtension(baseName);
+            // find matching files from cache
+            ArrayList<File> matchingFiles = new ArrayList<>();
+            for (String name : fileNames) {
+                if (!name.endsWith(extension)) {
+                    continue;
+                }
+                if (name.equals(baseName)) {
+                    matchingFiles.add(new File(attachmentsDir, name));
+                    continue;
+                }
+                if (!name.startsWith(nameWithoutExtension)) {
+                    continue;
+                }
+                int length = nameWithoutExtension.length();
+                if (name.length() <= length) {
+                    continue;
+                }
+                char ch = name.charAt(length);
+                if (ch == '@' || ch == '#') {
+                    matchingFiles.add(new File(attachmentsDir, name));
+                }
+            }
+            if (matchingFiles.isEmpty()) {
+                return null;
+            }
+            return AyuMessageUtils.getLargestNonEmpty(matchingFiles.toArray(new File[0]));
+        }
+
     }
 
     private void updatePhotoMediaWithLocalFile(TLRPC.Message msg, File localFile) {
@@ -941,13 +996,6 @@ public class AyuMessageHistory extends NekoDelegateFragment {
             }
         }
         msg.media = mediaDocument;
-    }
-
-    private void rebuildMessageObjects() {
-        messageObjects.clear();
-        for (int i = 0; i < filteredMessages.size(); i++) {
-            messageObjects.add(createMessageObject(filteredMessages.get(i)));
-        }
     }
 
     @SuppressLint("NotifyDataSetChanged")

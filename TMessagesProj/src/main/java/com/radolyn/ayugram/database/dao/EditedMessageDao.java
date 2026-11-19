@@ -18,8 +18,10 @@ import java.util.List;
 
 @Dao
 public interface EditedMessageDao {
-    @Query("SELECT * FROM editedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId = :messageId ORDER BY entityCreateDate")
-    List<EditedMessage> getAllRevisions(long userId, long dialogId, long messageId);
+    @Query("SELECT * FROM editedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId = :messageId "
+            + "AND (entityCreateDate < :beforeDate OR (entityCreateDate = :beforeDate AND fakeId < :beforeId)) "
+            + "ORDER BY entityCreateDate DESC, fakeId DESC LIMIT :limit")
+    List<EditedMessage> getRevisionsBefore(long userId, long dialogId, long messageId, int beforeDate, long beforeId, int limit);
 
     @Query("UPDATE editedmessage SET mediaPath = :newPath WHERE userId = :userId AND dialogId = :dialogId AND messageId = :messageId AND mediaPath = :oldPath")
     void updateAttachmentForRevisionsBetweenDates(long userId, long dialogId, long messageId, String oldPath, String newPath);

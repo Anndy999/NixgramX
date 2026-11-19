@@ -48,6 +48,7 @@ import org.telegram.tgnet.tl.TL_keyboard;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.BottomSheet;
+import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Cells.ChatMessageTransitionParams;
@@ -149,7 +150,10 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         }
     }
 
+    private Runnable disposeGlassActionBar;
+
     protected void setupGlassActionBar(@NonNull ViewGroup container, @NonNull RecyclerListView listView) {
+        clearGlassActionBar();
         if (actionBar == null) {
             return;
         }
@@ -166,6 +170,7 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         wallpaperDrawableFactory.setSourceRootView(viewPositionWatcher, container);
         wallpaperDrawableFactory.setGlassEngine(glassEngine);
         BlurredBackgroundDrawableViewFactory actionBarDrawableFactory = wallpaperDrawableFactory;
+        Runnable disposeContentGlass;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SharedConfig.chatBlurEnabled()) {
             boolean liquidGlassEnabled = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS);
             GlassSourceRenderNode contentGlassSource = new GlassSourceRenderNode(source);
@@ -178,7 +183,9 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
             actionBarDrawableFactory.setGlassEngine(glassEngine);
             actionBarDrawableFactory.setOutset(liquidGlassEnabled ? dp(8) : dp(48));
             actionBarDrawableFactory.setLiquidGlassEffectAllowed(liquidGlassEnabled);
-            setupContentGlassSource(container, listView, contentGlassSource, contentGlassNoiseSuppressor);
+            disposeContentGlass = setupContentGlassSource(container, listView, contentGlassSource, contentGlassNoiseSuppressor);
+        } else {
+            disposeContentGlass = null;
         }
         actionBar.setAddToContainer(false);
         actionBar.setCastShadows(false);
@@ -189,31 +196,55 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         fadeView.setup(wallpaperDrawableFactory);
         fadeView.setFadeHeightTop(dp(48));
         fadeView.setFadeHeightBottom(0);
-        container.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+        View.OnLayoutChangeListener fadeLayoutListener = (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             fadeView.setFadeZoneTop(actionBar.getBottom() + dp(2));
             applyGlassMessageListPadding(listView, listView.getPaddingBottom());
-        });
+        };
+        container.addOnLayoutChangeListener(fadeLayoutListener);
         container.addView(fadeView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         container.addView(actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+        disposeGlassActionBar = () -> {
+            container.removeOnLayoutChangeListener(fadeLayoutListener);
+            if (disposeContentGlass != null) disposeContentGlass.run();
+            glassEngine.removeDrawablesIn(container);
+            glassEngine.setRoot(null);
+        };
+    }
+
+    private void clearGlassActionBar() {
+        if (disposeGlassActionBar != null) {
+            disposeGlassActionBar.run();
+            disposeGlassActionBar = null;
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
-    private void setupContentGlassSource(@NonNull ViewGroup container, @NonNull RecyclerListView listView, @NonNull GlassSourceRenderNode source, @NonNull DownscaleScrollableNoiseSuppressor noiseSuppressor) {
+    private Runnable setupContentGlassSource(@NonNull ViewGroup container, @NonNull RecyclerListView listView, @NonNull GlassSourceRenderNode source, @NonNull DownscaleScrollableNoiseSuppressor noiseSuppressor) {
         ContentGlassSourceUpdater updater = new ContentGlassSourceUpdater(container, listView, source, noiseSuppressor);
         glassEngine.addNoiseSuppressor(noiseSuppressor);
-        glassEngine.addScrolledView(listView);
+        Runnable removeScrollTracking = glassEngine.addScrolledView(listView);
         glassEngine.setGlassInvalidationListener(updater::onGlassInvalidated);
         View.OnLayoutChangeListener updateListener = (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> updater.requestUpdate();
         container.addOnLayoutChangeListener(updateListener);
         listView.addOnLayoutChangeListener(updateListener);
-        listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        RecyclerView.OnScrollListener scrollListener = new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 noiseSuppressor.onScrolled(dx, dy);
                 updater.requestUpdate();
             }
-        });
+        };
+        listView.addOnScrollListener(scrollListener);
         updater.requestUpdate();
+        return () -> {
+            container.removeOnLayoutChangeListener(updateListener);
+            listView.removeOnLayoutChangeListener(updateListener);
+            listView.removeOnScrollListener(scrollListener);
+            updater.cancelUpdate();
+            removeScrollTracking.run();
+            glassEngine.removeNoiseSuppressor(noiseSuppressor);
+            glassEngine.setGlassInvalidationListener(null);
+        };
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -224,6 +255,10 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
         private final DownscaleScrollableNoiseSuppressor noiseSuppressor;
         private final IBlur3Capture capture;
         private boolean updateScheduled;
+        private final Runnable updateRunnable = () -> {
+            updateScheduled = false;
+            update(true);
+        };
 
         private ContentGlassSourceUpdater(@NonNull ViewGroup container, @NonNull RecyclerListView listView, @NonNull GlassSourceRenderNode source, @NonNull DownscaleScrollableNoiseSuppressor noiseSuppressor) {
             this.container = container;
@@ -237,18 +272,16 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
                 return;
             }
             updateScheduled = true;
-            container.post(() -> {
-                updateScheduled = false;
-                update();
-            });
+            container.post(updateRunnable);
         }
 
         private void onGlassInvalidated(int flags) {
             update(BitwiseUtils.hasFlag(flags, GlassEngine.FLAG_INVALIDATED_POSITIONS));
         }
 
-        private void update() {
-            update(true);
+        private void cancelUpdate() {
+            container.removeCallbacks(updateRunnable);
+            updateScheduled = false;
         }
 
         private void update(boolean positionsChanged) {
@@ -792,7 +825,22 @@ public abstract class NekoDelegateFragment extends BaseFragment implements Notif
     }
 
     @Override
+    public void clearViews() {
+        clearGlassActionBar();
+        super.clearViews();
+    }
+
+    @Override
+    public void setParentLayout(INavigationLayout layout) {
+        if (layout != null && fragmentView != null && layout.getView().getContext() != fragmentView.getContext()) {
+            clearGlassActionBar();
+        }
+        super.setParentLayout(layout);
+    }
+
+    @Override
     public void onFragmentDestroy() {
+        clearGlassActionBar();
         Bulletin.removeDelegate(this);
         cancelAyuMessageAnimations();
         dimBehindView(false);

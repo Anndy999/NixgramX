@@ -69,7 +69,7 @@ import java.util.Locale;
 import tw.nekomimi.nekogram.helpers.ChatsHelper;
 import tw.nekomimi.nekogram.llm.LlmConfig;
 import tw.nekomimi.nekogram.translate.Translator;
-import tw.nekomimi.nekogram.utils.AlertUtil;
+import tw.nekomimi.nekogram.parts.InputTranslation;
 
 public class EditTextCaption extends EditTextBoldCursor implements FloatingToolbar.StyleDelegate {
 
@@ -403,34 +403,11 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
         }
         final int start = Math.min(selectionStart, selectionEnd);
         final int end = Math.min(editable.length(), Math.max(selectionStart, selectionEnd));
-        final String query = (start == end ? editable : editable.subSequence(start, end)).toString();
 
         int provider = LlmConfig.isLLMTranslatorAvailable() ? Translator.providerLLMTranslator : 0;
 
-        Translator.translate(toLocale, query, provider, new Translator.Companion.TranslateCallBack() {
-            AlertDialog status = AlertUtil.showProgress(getContext());
-
-            {
-                status.show();
-            }
-
-            @Override
-            public void onSuccess(@NotNull String translation) {
-                status.dismiss();
-                if (start == end) replaceTextInternal(0, getText().length(), translation);
-                else replaceTextInternal(start, end, translation);
-            }
-
-            @Override
-            public void onFailed(boolean unsupported, @NotNull String message) {
-                status.dismiss();
-                AlertUtil.showTransFailedDialog(getContext(), unsupported, message, () -> {
-                    status = AlertUtil.showProgress(getContext());
-                    status.show();
-                    Translator.translate(toLocale, query, 0, this);
-                });
-            }
-        });
+        InputTranslation.start(getContext(), this, toLocale, provider, start, end, null, () -> true,
+                translation -> replaceTextInternal(start == end ? 0 : start, start == end ? length() : end, translation));
     }
 
     public void makeSelectedMention() {

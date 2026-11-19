@@ -611,34 +611,40 @@ public class BookmarkManagerActivity extends BaseFragment {
     }
 
     private void updateTabsStyle() {
+        if (tabsView != null) {
+            tabsView.setColors(
+                    Theme.key_profile_tabSelectedLine,
+                    Theme.key_profile_tabSelectedText,
+                    Theme.key_profile_tabText,
+                    Theme.key_profile_tabSelector,
+                    Theme.key_actionBarDefault
+            );
+            tabsView.setBackground(null);
+        }
+        if (tabsContainer != null && tabsContainerBackground == null) {
+            tabsContainerBackground = tabsBackgroundDrawableFactory.create(tabsContainer, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+            tabsContainerBackground.setRadius(dp(18));
+            tabsContainerBackground.setPadding(dp(6.666f));
+            tabsContainer.setBlurredBackground(tabsContainerBackground);
+        }
+        onThemeColorsChanged();
+    }
+
+    @Override
+    public void onThemeColorsChanged() {
+        final int background = Theme.getColor(Theme.key_windowBackgroundWhite, resourceProvider);
         if (actionBar != null) {
-            actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourceProvider));
+            actionBar.setBackgroundColor(background);
         }
         if (contentLayout != null) {
-            contentLayout.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourceProvider));
+            contentLayout.setBackgroundColor(background);
         }
-        tabsBackgroundSourceColor.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourceProvider));
-        if (tabsView == null) {
-            return;
+        tabsBackgroundSourceColor.setColor(background);
+        if (tabsView != null) {
+            tabsView.updateColors();
         }
-        tabsView.setColors(
-                Theme.key_profile_tabSelectedLine,
-                Theme.key_profile_tabSelectedText,
-                Theme.key_profile_tabText,
-                Theme.key_profile_tabSelector,
-                Theme.key_actionBarDefault
-        );
-        tabsView.updateColors();
-        tabsView.setBackground(null);
         if (tabsContainer != null) {
-            if (tabsContainerBackground == null) {
-                tabsContainerBackground = tabsBackgroundDrawableFactory.create(tabsContainer, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
-                tabsContainerBackground.setRadius(dp(18));
-                tabsContainerBackground.setPadding(dp(6.666f));
-                tabsContainer.setBlurredBackground(tabsContainerBackground);
-            } else {
-                tabsContainer.updateColors();
-            }
+            tabsContainer.updateColors();
         }
         invalidateGlass();
     }

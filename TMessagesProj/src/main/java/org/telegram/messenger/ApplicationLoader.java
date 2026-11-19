@@ -71,7 +71,8 @@ public class ApplicationLoader extends Application {
 
     public static ApplicationLoader applicationLoaderInstance;
 
-    private static PendingIntent pendingIntent;
+    static final String ACTION_RESTART_LOCAL_PUSH = "org.telegram.messenger.RESTART_LOCAL_PUSH";
+    private static final long LOCAL_PUSH_RESTART_INTERVAL = 10 * 60 * 1000L;
 
     @SuppressLint("StaticFieldLeak")
     public static volatile Context applicationContext;
@@ -244,6 +245,9 @@ public class ApplicationLoader extends Application {
 
                     boolean isSlow = isConnectionSlow();
                     for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                        if (a != UserConfig.selectedAccount && !UserConfig.getInstance(a).isClientActivated()) {
+                            continue;
+                        }
                         ConnectionsManager.getInstance(a).checkConnection();
                         FileLoader.getInstance(a).onNetworkChanged(isSlow);
                     }
@@ -281,26 +285,24 @@ public class ApplicationLoader extends Application {
         NaConfig.init();
         SharedPrefsHelper.init(applicationContext);
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(AndroidUtil.shouldEnableCrashlytics());
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             UserConfig.getInstance(a).loadConfig();
-            MessagesController.getInstance(a);
-            if (a == 0) {
-                ConnectionsManager.getInstance(a);
-                // Only mark GENERATING when we do not already have a token; otherwise clear stale status.
-                if (!android.text.TextUtils.isEmpty(SharedConfig.pushString)) {
-                    SharedConfig.pushStringStatus = "";
-                } else {
-                    SharedConfig.pushStringStatus = "__FIREBASE_GENERATING_SINCE_" + ConnectionsManager.getInstance(a).getCurrentTime() + "__";
-                }
-            } else {
-                ConnectionsManager.getInstance(a);
-            }
+        }
+        int selectedAccount = UserConfig.selectedAccount;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             TLRPC.User user = UserConfig.getInstance(a).getCurrentUser();
+            if (user == null && a != selectedAccount) {
+                continue;
+            }
+            MessagesController.getInstance(a);
+            ConnectionsManager.getInstance(a);
             if (user != null) {
                 MessagesController.getInstance(a).putUser(user, true);
                 SendMessagesHelper.getInstance(a).checkUnsentMessages();
             }
         }
+        SharedConfig.pushStringStatus = !android.text.TextUtils.isEmpty(SharedConfig.pushString) ? ""
+                : "__FIREBASE_GENERATING_SINCE_" + ConnectionsManager.getInstance(selectedAccount).getCurrentTime() + "__";
 
         PushListenerController.reconcilePushRegistration();
 
@@ -309,9 +311,11 @@ public class ApplicationLoader extends Application {
         FileLog.d("app initied");
 
         MediaController.getInstance();
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
-            ContactsController.getInstance(a).checkAppAccount();
-            DownloadController.getInstance(a);
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (a == selectedAccount || UserConfig.getInstance(a).isClientActivated()) {
+                ContactsController.getInstance(a).checkAppAccount();
+                DownloadController.getInstance(a);
+            }
         }
         BillingController.getInstance().startConnection();
         // HTML widgets: the isolated engine's process up front, after the app's own start, so that a widget's first
@@ -448,50 +452,44 @@ public class ApplicationLoader extends Application {
             editor.apply();
             ConnectionsManager.getInstance(UserConfig.selectedAccount).setPushConnectionEnabled(enabled);
         }
-        if (enabled) {
-            AndroidUtilities.runOnUIThread(() -> {
-                try {
-                    Log.d("TFOSS", "Starting push service...");
-                    if (NaConfig.INSTANCE.getPushServiceTypeInAppDialog().Bool()) {
-                        applicationContext.startForegroundService(new Intent(applicationContext, NotificationsService.class));
-                    } else {
-                        applicationContext.startService(new Intent(applicationContext, NotificationsService.class));
-                    }
-
-                    Log.d("TFOSS", "Trying to start push service every 10 minutes");
-                    // Telegram-FOSS: unconditionally enable push service
-                    AlarmManager am = (AlarmManager) applicationContext.getSystemService(Context.ALARM_SERVICE);
-                    Intent i = new Intent(applicationContext, NotificationsService.class);
-                    pendingIntent = PendingIntent.getBroadcast(applicationContext, 0, i, PendingIntent.FLAG_IMMUTABLE);
-
-                    am.cancel(pendingIntent);
-                    am.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 10 * 60 * 1000, pendingIntent);
-                } catch (Throwable e) {
-                    Log.e("TFOSS", "Failed to start push service");
-                    org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.SERVICE_FAILED, 0);
-                }
-            });
-
-        } else AndroidUtilities.runOnUIThread(() -> {
+        AndroidUtilities.runOnUIThread(() -> {
             try {
-                applicationContext.stopService(new Intent(applicationContext, NotificationsService.class));
+                Intent service = new Intent(applicationContext, NotificationsService.class);
+                Intent restart = new Intent(service).setAction(ACTION_RESTART_LOCAL_PUSH);
+                AlarmManager alarm = (AlarmManager) applicationContext.getSystemService(Context.ALARM_SERVICE);
+                int existing = PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE;
+                // Cancel both restart modes and the broadcast identity used by older builds.
+                cancelLocalPushAlarm(alarm, PendingIntent.getService(applicationContext, 0, restart, existing));
+                cancelLocalPushAlarm(alarm, PendingIntent.getForegroundService(applicationContext, 0, restart, existing));
+                cancelLocalPushAlarm(alarm, PendingIntent.getBroadcast(applicationContext, 0, service, existing));
+                if (!enabled) {
+                    applicationContext.stopService(service);
+                    return;
+                }
 
-                PendingIntent pintent = PendingIntent.getService(applicationContext, 0, new Intent(applicationContext, NotificationsService.class), PendingIntent.FLAG_MUTABLE);
-                AlarmManager alarm = (AlarmManager)applicationContext.getSystemService(Context.ALARM_SERVICE);
-                alarm.cancel(pintent);
-                // Reconstruct the broadcast identity too: static pendingIntent is lost on process death.
-                PendingIntent broadcast = PendingIntent.getBroadcast(applicationContext, 0,
-                        new Intent(applicationContext, NotificationsService.class), PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
-                if (broadcast != null) { alarm.cancel(broadcast); broadcast.cancel(); }
-                if (pendingIntent != null) {
-                    alarm.cancel(pendingIntent);
-                    pendingIntent = null;
+                boolean foreground = NaConfig.INSTANCE.getPushServiceTypeInAppDialog().Bool();
+                PendingIntent pendingRestart = foreground
+                        ? PendingIntent.getForegroundService(applicationContext, 0, restart, PendingIntent.FLAG_IMMUTABLE)
+                        : PendingIntent.getService(applicationContext, 0, restart, PendingIntent.FLAG_IMMUTABLE);
+                alarm.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        SystemClock.elapsedRealtime() + LOCAL_PUSH_RESTART_INTERVAL, LOCAL_PUSH_RESTART_INTERVAL, pendingRestart);
+                if (foreground) {
+                    applicationContext.startForegroundService(service);
+                } else {
+                    applicationContext.startService(service);
                 }
             } catch (Throwable failure) {
                 org.telegram.messenger.diagnostics.Diagnostics.event(org.telegram.messenger.diagnostics.Diagnostics.Event.SERVICE_FAILED, 0);
-                FileLog.e("Local push service cleanup failed (details omitted)");
+                FileLog.e("Local push service update failed (details omitted)");
             }
         });
+    }
+
+    private static void cancelLocalPushAlarm(AlarmManager alarm, PendingIntent pending) {
+        if (pending != null) {
+            alarm.cancel(pending);
+            pending.cancel();
+        }
     }
 
     @Override

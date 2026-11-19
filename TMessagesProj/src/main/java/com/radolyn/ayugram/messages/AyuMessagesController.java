@@ -15,6 +15,7 @@ import android.text.TextUtils;
 import com.radolyn.ayugram.AyuConstants;
 import com.radolyn.ayugram.AyuUtils;
 import com.radolyn.ayugram.database.AyuData;
+import com.radolyn.ayugram.database.AyuDatabase;
 import com.radolyn.ayugram.database.dao.DeletedMessageDao;
 import com.radolyn.ayugram.database.dao.EditedMessageDao;
 import com.radolyn.ayugram.database.entities.DeletedMessage;
@@ -30,8 +31,14 @@ import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import tw.nekomimi.nekogram.utils.FileUtil;
@@ -276,8 +283,8 @@ public class AyuMessagesController {
         return editedMessageDao.hasAnyRevisions(userId, dialogId, messageId);
     }
 
-    public List<EditedMessage> getRevisions(long userId, long dialogId, int messageId) {
-        return editedMessageDao.getAllRevisions(userId, dialogId, messageId);
+    public List<EditedMessage> getRevisionsBefore(long userId, long dialogId, int messageId, int beforeDate, long beforeId, int limit) {
+        return editedMessageDao.getRevisionsBefore(userId, dialogId, messageId, beforeDate, beforeId, limit);
     }
 
     public DeletedMessageFull getMessage(long userId, long dialogId, int messageId) {
@@ -322,23 +329,14 @@ public class AyuMessagesController {
     }
 
     public void delete(long userId, long dialogId, int messageId) {
-        var msg = getMessage(userId, dialogId, messageId);
-        if (msg == null) {
-            return;
-        }
-
-        deletedMessageDao.delete(userId, dialogId, messageId);
-
-        if (!TextUtils.isEmpty(msg.message.mediaPath)) {
-            var p = new File(msg.message.mediaPath);
-            try {
-                if (p.exists() && !p.delete()) {
-                    p.deleteOnExit();
-                }
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        }
+        AyuDatabase database = AyuData.getDatabase();
+        List<String> paths = database.runInTransaction(() -> {
+            DeletedMessageDao dao = database.deletedMessageDao();
+            List<String> mediaPaths = dao.getMediaPaths(userId, dialogId, List.of(messageId));
+            dao.delete(userId, dialogId, messageId);
+            return mediaPaths;
+        });
+        deleteUnreferencedAttachments(database, paths);
     }
 
     public void deleteMessages(long userId, long dialogId, List<Integer> messageIds) {
@@ -346,86 +344,98 @@ public class AyuMessagesController {
             return;
         }
 
-        List<String> mediaPaths = new ArrayList<>();
-
-        for (int messageId : messageIds) {
-            var msg = getMessage(userId, dialogId, messageId);
-            if (msg == null) {
-                continue;
+        // Leave room for the account and dialog parameters on SQLite with a 999-bind limit.
+        final int batchSize = 900;
+        List<Integer> ids = new ArrayList<>(new LinkedHashSet<>(messageIds));
+        Set<String> mediaPaths = new LinkedHashSet<>();
+        AyuDatabase database = AyuData.getDatabase();
+        DeletedMessageDao deletedMessages = database.deletedMessageDao();
+        EditedMessageDao editedMessages = database.editedMessageDao();
+        database.runInTransaction(() -> {
+            for (int start = 0; start < ids.size(); start += batchSize) {
+                List<Integer> batch = ids.subList(start, Math.min(start + batchSize, ids.size()));
+                mediaPaths.addAll(deletedMessages.getMediaPaths(userId, dialogId, batch));
+                deletedMessages.deleteMessages(userId, dialogId, batch);
+                editedMessages.deleteByDialogIdAndMessageIds(userId, dialogId, batch);
             }
+        });
 
-            if (!TextUtils.isEmpty(msg.message.mediaPath)) {
-                mediaPaths.add(msg.message.mediaPath);
-            }
-        }
-
-        deletedMessageDao.deleteMessages(userId, dialogId, messageIds);
-        editedMessageDao.deleteByDialogIdAndMessageIds(userId, dialogId, messageIds);
-
-        for (String mediaPath : mediaPaths) {
-            var p = new File(mediaPath);
-            try {
-                if (p.exists() && !p.delete()) {
-                    p.deleteOnExit();
-                }
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        }
+        deleteUnreferencedAttachments(database, mediaPaths);
     }
 
     public void deleteRevision(long fakeId) {
-        String mediaPath = editedMessageDao.getMediaPathByFakeId(fakeId);
-        int deleted = editedMessageDao.deleteByFakeId(fakeId);
-        if (deleted == 0) {
-            return;
-        }
-        if (!TextUtils.isEmpty(mediaPath)) {
-            File p = new File(mediaPath);
-            try {
-                if (p.exists() && !p.delete()) {
-                    p.deleteOnExit();
-                }
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        }
+        AyuDatabase database = AyuData.getDatabase();
+        String mediaPath = database.runInTransaction(() -> {
+            EditedMessageDao dao = database.editedMessageDao();
+            String path = dao.getMediaPathByFakeId(fakeId);
+            return dao.deleteByFakeId(fakeId) == 0 ? null : path;
+        });
+        if (mediaPath != null) deleteUnreferencedAttachments(database, List.of(mediaPath));
     }
 
     public void deleteCurrent(long userId, long dialogId, long mergeDialogId, Runnable callback) {
-        List<DeletedMessageFull> messages = deletedMessageDao.getMessagesByDialog(userId, dialogId);
+        AyuDatabase database = AyuData.getDatabase();
+        Set<String> paths = new LinkedHashSet<>();
+        database.runInTransaction(() -> {
+            DeletedMessageDao deleted = database.deletedMessageDao();
+            EditedMessageDao edited = database.editedMessageDao();
+            paths.addAll(deleted.getMediaPaths(userId, dialogId));
+            deleted.delete(userId, dialogId);
+            edited.delete(userId, dialogId);
+            if (mergeDialogId != 0 && mergeDialogId != dialogId) {
+                paths.addAll(deleted.getMediaPaths(userId, mergeDialogId));
+                deleted.delete(userId, mergeDialogId);
+                edited.delete(userId, mergeDialogId);
+            }
+        });
+        deleteUnreferencedAttachments(database, paths);
+        if (callback != null) callback.run();
+    }
 
-        if (mergeDialogId != 0) {
-            List<DeletedMessageFull> mergeMessages = deletedMessageDao.getMessagesByDialog(userId, mergeDialogId);
-            messages.addAll(mergeMessages);
+    private void deleteUnreferencedAttachments(AyuDatabase database, Iterable<String> paths) {
+        Map<File, Set<String>> candidates = new LinkedHashMap<>();
+        try {
+            File root = attachmentsPath.getCanonicalFile();
+            File configuredRoot = attachmentsPath.getAbsoluteFile();
+            for (String path : paths) {
+                if (TextUtils.isEmpty(path)) continue;
+                File file = new File(path);
+                if (!configuredRoot.equals(file.getParentFile()) && !root.equals(file.getParentFile())) continue;
+                File ownedFile = new File(root, file.getName());
+                if (!ownedFile.equals(file.getCanonicalFile()) || !ownedFile.isFile()) continue;
+                Set<String> aliases = candidates.computeIfAbsent(ownedFile, ignored -> new LinkedHashSet<>());
+                aliases.add(ownedFile.getPath());
+                aliases.add(new File(configuredRoot, file.getName()).getPath());
+            }
+        } catch (IOException | SecurityException e) {
+            FileLog.e(e);
         }
+        if (candidates.isEmpty()) return;
 
-        // Delete messages and their edit history from database
-        deletedMessageDao.delete(userId, dialogId);
-        editedMessageDao.delete(userId, dialogId);
-
-        if (mergeDialogId != 0) {
-            deletedMessageDao.delete(userId, mergeDialogId);
-            editedMessageDao.delete(userId, mergeDialogId);
-        }
-
-        // Clean up media files
-        for (DeletedMessageFull msg : messages) {
-            if (msg.message.mediaPath != null && !msg.message.mediaPath.isEmpty()) {
-                File mediaFile = new File(msg.message.mediaPath);
+        // A second transaction holds off new database references while checking and unlinking files.
+        database.runInTransaction(() -> {
+            Set<String> allPaths = new LinkedHashSet<>();
+            for (Set<String> aliases : candidates.values()) allPaths.addAll(aliases);
+            List<String> lookup = new ArrayList<>(allPaths);
+            Set<String> referenced = new HashSet<>();
+            // The Room query binds each input four times. Stay below SQLite's 999-parameter limit.
+            int batchSize = 200;
+            for (int start = 0; start < lookup.size(); start += batchSize) {
+                referenced.addAll(database.deletedMessageDao().getReferencedAttachmentPaths(
+                        lookup.subList(start, Math.min(start + batchSize, lookup.size()))));
+            }
+            for (Map.Entry<File, Set<String>> candidate : candidates.entrySet()) {
+                if (candidate.getValue().stream().anyMatch(referenced::contains)) continue;
+                File file = candidate.getKey();
                 try {
-                    if (mediaFile.exists() && !mediaFile.delete()) {
-                        mediaFile.deleteOnExit();
+                    if (file.equals(file.getCanonicalFile()) && file.isFile() && !file.delete()) {
+                        FileLog.e("Could not remove an unreferenced Ayu attachment");
                     }
-                } catch (Exception e) {
+                } catch (IOException | SecurityException e) {
                     FileLog.e(e);
                 }
             }
-        }
-
-        if (callback != null) {
-            callback.run();
-        }
+        });
     }
 
     public boolean isAyuDeletedMessageId(long userId, long dialogId, int messageId) {
@@ -445,6 +455,10 @@ public class AyuMessagesController {
 
     public List<DeletedMessageFull> getOlderMessagesBefore(long userId, long dialogId, int before, int limit) {
         return deletedMessageDao.getOlderMessagesBefore(userId, dialogId, before, limit);
+    }
+
+    public List<DeletedMessageFull> getOlderEncryptedMessages(long userId, long dialogId, long before, int limit) {
+        return deletedMessageDao.getOlderEncryptedMessages(userId, dialogId, before, limit);
     }
 
     public void updateMediaPath(long userId, long dialogId, int messageId, String newPath) {

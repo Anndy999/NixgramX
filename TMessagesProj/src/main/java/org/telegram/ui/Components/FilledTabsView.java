@@ -6,12 +6,22 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
+import androidx.customview.widget.ExploreByTouchHelper;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.Utilities;
+
+import java.util.List;
 
 public class FilledTabsView extends View {
 
@@ -24,9 +34,11 @@ public class FilledTabsView extends View {
 
     private Text[] tabs;
     private RectF[] bounds;
+    private final ExploreByTouchHelper accessibilityHelper = new TabsAccessibilityHelper();
 
     public FilledTabsView(Context context) {
         super(context);
+        ViewCompat.setAccessibilityDelegate(this, accessibilityHelper);
     }
 
     public void setTabs(CharSequence ...texts) {
@@ -38,6 +50,7 @@ public class FilledTabsView extends View {
             bounds[i] = new RectF();
         }
 
+        updateTabBounds();
         invalidate();
     }
 
@@ -47,7 +60,11 @@ public class FilledTabsView extends View {
         if (Math.abs(tabIndex - selectedTabIndex) > 0.001f) {
             invalidate();
         }
+        int previousIndex = Math.round(selectedTabIndex);
         selectedTabIndex = tabIndex;
+        if (previousIndex != Math.round(tabIndex)) {
+            accessibilityHelper.invalidateRoot();
+        }
     }
 
     private Utilities.Callback<Integer> onTabClick;
@@ -86,51 +103,57 @@ public class FilledTabsView extends View {
     }
 
     @Override
-    protected void dispatchDraw(Canvas canvas) {
-        if (tabs == null) {
-            return;
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        updateTabBounds();
+    }
+
+    private void updateTabBounds() {
+        if (tabs == null || tabs.length == 0) return;
+        float textBudget = Math.max(0, getWidth() - dp(8) - tabs.length * dp(24));
+        float naturalTextWidth = 0;
+        for (Text tab : tabs) {
+            tab.ellipsize(-1);
+            naturalTextWidth += tab.getWidth();
         }
+        float scale = naturalTextWidth > textBudget ? textBudget / naturalTextWidth : 1f;
+        float width = tabs.length * dp(24) + Math.min(naturalTextWidth, textBudget);
+        float x = (getWidth() - width) / 2f;
+        for (int i = 0; i < tabs.length; i++) {
+            if (scale < 1f) tabs[i].ellipsize(tabs[i].getWidth() * scale);
+            float tabWidth = tabs[i].getWidth() + dp(24);
+            bounds[i].set(x, 0, x + tabWidth, getHeight());
+            x += tabWidth;
+        }
+        accessibilityHelper.invalidateRoot();
+    }
 
-        final int W = getWidth();
-        final int H = getHeight();
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        if (tabs == null || tabs.length == 0) return;
 
-        int w = dp(4) + tabs.length * dp(24) + dp(4);
-        for (int i = 0; i < tabs.length; ++i)
-            w += tabs[i].getWidth();
-
-        float top = (H - dp(36)) / 2f, bottom = (H + dp(36)) / 2f;
-        final float contentLeft = (W - w) / 2f;
-        final float textLeft = contentLeft + dp(4 + 12);
-        float x = contentLeft;
-
-        AndroidUtilities.rectTmp.set(x, top, x + w, bottom);
+        final int height = getHeight();
+        final float textLeft = bounds[0].left + dp(12);
+        AndroidUtilities.rectTmp.set(bounds[0].left - dp(4), (height - dp(36)) / 2f,
+                bounds[tabs.length - 1].right + dp(4), (height + dp(36)) / 2f);
         canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(18), dp(18), backgroundPaint);
 
-        x += dp(4 + 12);
-        for (int i = 0; i < tabs.length; ++i) {
-            bounds[i].set(x - dp(4 + 12), top, x + tabs[i].getWidth() + dp(12 + 4), bottom);
-            x += tabs[i].getWidth() + dp(12 + 12);
-        }
-
-        x = (W - w) / 2f + dp(4);
-        top = (H - dp(36 - 8)) / 2f;
-        bottom = (H + dp(36 - 8)) / 2f;
-
+        float top = (height - dp(28)) / 2f, bottom = (height + dp(28)) / 2f;
         final int l = Utilities.clamp((int) Math.floor(selectedTabIndex), tabs.length - 1, 0);
         final int r = Utilities.clamp((int) Math.ceil(selectedTabIndex), tabs.length - 1, 0);
-        float left = AndroidUtilities.lerp(bounds[l].left + dp(4), bounds[r].left + dp(4), (float) (selectedTabIndex - Math.floor(selectedTabIndex)));
-        float right = AndroidUtilities.lerp(bounds[l].right - dp(4), bounds[r].right - dp(4), (float) (selectedTabIndex - Math.floor(selectedTabIndex)));
+        float left = AndroidUtilities.lerp(bounds[l].left, bounds[r].left, (float) (selectedTabIndex - Math.floor(selectedTabIndex)));
+        float right = AndroidUtilities.lerp(bounds[l].right, bounds[r].right, (float) (selectedTabIndex - Math.floor(selectedTabIndex)));
 
         AndroidUtilities.rectTmp.set(left, top, right, bottom);
         selectedPath.rewind();
         selectedPath.addRoundRect(AndroidUtilities.rectTmp, dp(15), dp(15), Path.Direction.CW);
         canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(15), dp(15), selectedPaint);
 
-        drawTabsText(canvas, textLeft, H, textColor);
+        drawTabsText(canvas, textLeft, height, textColor);
 
         canvas.save();
         canvas.clipPath(selectedPath);
-        drawTabsText(canvas, textLeft, H, selectedTextColor);
+        drawTabsText(canvas, textLeft, height, selectedTextColor);
         canvas.restore();
     }
 
@@ -141,31 +164,90 @@ public class FilledTabsView extends View {
         }
     }
 
-    private int lastPressedIndex = -1;
+    private int tabAt(float x, float y) {
+        if (bounds != null) {
+            for (int i = 0; i < bounds.length; i++) {
+                if (bounds[i].contains(x, y)) return i;
+            }
+        }
+        return ExploreByTouchHelper.INVALID_ID;
+    }
+
+    private int lastPressedIndex = ExploreByTouchHelper.INVALID_ID;
+    private boolean trackingTouch;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (tabs == null || bounds == null) return false;
-        int index = -1;
-        for (int i = 0; i < bounds.length; ++i) {
-            if (bounds[i].contains(event.getX(), event.getY())) {
-                index = i;
-                break;
+        int index = tabAt(event.getX(), event.getY());
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            trackingTouch = index != ExploreByTouchHelper.INVALID_ID;
+        }
+        if (!trackingTouch) return super.onTouchEvent(event);
+
+        if (action != MotionEvent.ACTION_CANCEL && index != ExploreByTouchHelper.INVALID_ID
+                && index != lastPressedIndex && onTabClick != null) {
+            lastPressedIndex = index;
+            onTabClick.run(index);
+        }
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            trackingTouch = false;
+            lastPressedIndex = ExploreByTouchHelper.INVALID_ID;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean dispatchHoverEvent(MotionEvent event) {
+        return accessibilityHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        return accessibilityHelper.dispatchKeyEvent(event) || super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+        accessibilityHelper.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+    }
+
+    private class TabsAccessibilityHelper extends ExploreByTouchHelper {
+        TabsAccessibilityHelper() {
+            super(FilledTabsView.this);
+        }
+
+        @Override
+        protected int getVirtualViewAt(float x, float y) {
+            return tabAt(x, y);
+        }
+
+        @Override
+        protected void getVisibleVirtualViews(List<Integer> ids) {
+            if (bounds == null) return;
+            for (int i = 0; i < bounds.length; i++) {
+                if (!bounds[i].isEmpty()) ids.add(i);
             }
         }
 
-        if (index >= 0 && index != lastPressedIndex) {
-            lastPressedIndex = index;
-            if (onTabClick != null) {
-                onTabClick.run(index);
-            }
+        @Override
+        protected void onPopulateNodeForVirtualView(int id, @NonNull AccessibilityNodeInfoCompat node) {
+            Rect rect = new Rect();
+            bounds[id].roundOut(rect);
+            node.setBoundsInParent(rect);
+            node.setText(tabs[id].getText());
+            node.setClassName("android.widget.Button");
+            node.setSelected(id == Math.round(selectedTabIndex));
+            node.setClickable(true);
+            node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK);
         }
-        if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
-            lastPressedIndex = -1;
-        }
-        if (event.getAction() == MotionEvent.ACTION_DOWN && index >= 0) {
+
+        @Override
+        protected boolean onPerformActionForVirtualView(int id, int action, Bundle arguments) {
+            if (action != AccessibilityNodeInfoCompat.ACTION_CLICK || onTabClick == null) return false;
+            onTabClick.run(id);
             return true;
         }
-        return super.onTouchEvent(event);
     }
 }

@@ -193,7 +193,7 @@
     <string name="LeftBottomButtonAction">Дія лівої кнопки</string>
     <string name="TranscribeProviderOpenAI">OpenAI-сумісний API</string>
     <string name="OpenAiApiCredentialsDialog">Налаштуйте API сумісний з OpenAI. Ви можете звернутися до цієї **документації.**\n</string>
-    <string name="OpenAiApiBaseUrlHint">API URL ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">API URL ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">Облікові дані API не встановлені.</string>
     <string name="ApiNotSupportedOnAndroidVersion">Цей постачальник API не підтримується для вашої версії Android (необхідний Android 8.0+).</string>
     <string name="AppIconTelegramOriginal">Оригінал</string>

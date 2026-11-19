@@ -4,12 +4,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.content.Context;
-import android.media.MediaCodec;
-import android.media.MediaExtractor;
-import android.media.MediaFormat;
-import android.media.MediaMuxer;
 import android.text.TextUtils;
-import android.util.Base64;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -34,18 +29,18 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -55,7 +50,7 @@ import xyz.nextalone.nagram.NaConfig;
 
 public class TranscribeHelper {
     private static final Gson gson = new Gson();
-    private static final ExecutorService executorService = Executors.newCachedThreadPool();
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(2);
     public static final int TRANSCRIBE_AUTO = 0;
     // public static final int TRANSCRIBE_PREMIUM = 1;
     public static final int TRANSCRIBE_WORKERSAI = 2;
@@ -328,55 +323,6 @@ public class TranscribeHelper {
         return HttpClient.INSTANCE.getTranscribeInstance();
     }
 
-    private static void extractAudio(String inputFilePath, String outputFilePath) throws IOException {
-        var extractor = new MediaExtractor();
-        extractor.setDataSource(inputFilePath);
-
-        MediaFormat audioFormat = null;
-        int audioTrackIndex = -1;
-        for (int i = 0; i < extractor.getTrackCount(); i++) {
-            var format = extractor.getTrackFormat(i);
-            var mime = format.getString(MediaFormat.KEY_MIME);
-            if (mime != null && mime.startsWith("audio/")) {
-                audioFormat = format;
-                audioTrackIndex = i;
-                break;
-            }
-        }
-
-        if (audioFormat == null) {
-            throw new IOException("No audio track found in " + inputFilePath);
-        }
-
-        var muxer = new MediaMuxer(outputFilePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-        var trackIndex = muxer.addTrack(audioFormat);
-        muxer.start();
-
-        extractor.selectTrack(audioTrackIndex);
-
-        var bufferInfo = new MediaCodec.BufferInfo();
-        var buffer = ByteBuffer.allocate(65536);
-
-        while (true) {
-            var sampleSize = extractor.readSampleData(buffer, 0);
-            if (sampleSize < 0) {
-                break;
-            }
-
-            bufferInfo.offset = 0;
-            bufferInfo.size = sampleSize;
-            bufferInfo.presentationTimeUs = extractor.getSampleTime();
-            bufferInfo.flags = 0;
-
-            muxer.writeSampleData(trackIndex, buffer, bufferInfo);
-            extractor.advance();
-        }
-
-        muxer.stop();
-        muxer.release();
-        extractor.release();
-    }
-
     public static void sendRequest(String path, boolean video, BiConsumer<String, Exception> callback) {
         switch (NaConfig.INSTANCE.getTranscribeProvider().Int()) {
             case TRANSCRIBE_AUTO:
@@ -410,44 +356,25 @@ public class TranscribeHelper {
             callback.accept(null, new Exception(getString(R.string.CloudflareCredentialsNotSet)));
             return;
         }
+        String accountId = NaConfig.INSTANCE.getTranscribeProviderCfAccountID().String();
+        String apiToken = NaConfig.INSTANCE.getTranscribeProviderCfApiToken().String();
         executorService.submit(() -> {
-            String audioPath;
-            if (video) {
-                var audioFile = new File(path + ".m4a");
-                try {
-                    extractAudio(path, audioFile.getAbsolutePath());
-                } catch (IOException e) {
-                    FileLog.e(e);
-                }
-                audioPath = audioFile.exists() ? audioFile.getAbsolutePath() : path;
-            } else {
-                audioPath = path;
-            }
-
-            byte[] audioBytes;
-            try {
-                audioBytes = Files.readAllBytes(new File(audioPath).toPath());
-            } catch (IOException e) {
-                callback.accept(null, e);
-                return;
-            }
-            String base64Audio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
-            String jsonBody = "{\"audio\":\"" + base64Audio + "\"}";
-
-            var client = getOkHttpClient();
-            var request = new Request.Builder()
-                    .url("https://api.cloudflare.com/client/v4/accounts/" + NaConfig.INSTANCE.getTranscribeProviderCfAccountID().String() + "/ai/run/@cf/openai/whisper-large-v3-turbo")
-                    .header("Authorization", "Bearer " + NaConfig.INSTANCE.getTranscribeProviderCfApiToken().String())
-                    .header("Content-Type", "application/json")
-                    .post(RequestBody.create(jsonBody, MediaType.get("application/json")));
-            try (var response = client.newCall(request.build()).execute()) {
-                var body = response.body().string();
-                var whisperResponse = gson.fromJson(body, WhisperResponse.class);
-                if (whisperResponse.success && whisperResponse.result != null) {
-                    callback.accept(whisperResponse.result.text, null);
-                } else {
-                    var errors = whisperResponse.errors;
-                    callback.accept(null, new Exception(errors.size() == 1 ? errors.get(0).message : errors.toString()));
+            try (var audio = TranscribeAudio.prepare(path, video, false)) {
+                var client = getOkHttpClient();
+                var request = new Request.Builder()
+                        .url("https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/@cf/openai/whisper-large-v3-turbo")
+                        .header("Authorization", "Bearer " + apiToken)
+                        .post(audio.inlineJson("{\"audio\":\"audio_file\"}", "audio_file", HttpClient.MEDIA_TYPE_JSON))
+                        .build();
+                try (var response = client.newCall(request).execute()) {
+                    if (!response.isSuccessful()) throw new IOException("Cloudflare transcription failed (HTTP " + response.code() + ")");
+                    var transcript = gson.fromJson(response.body().string(), WhisperResponse.class);
+                    if (transcript != null && Boolean.TRUE.equals(transcript.success) && transcript.result != null
+                            && !TextUtils.isEmpty(transcript.result.text)) {
+                        callback.accept(transcript.result.text, null);
+                    } else {
+                        throw new IOException("Cloudflare response contained no transcript");
+                    }
                 }
             } catch (Exception e) {
                 callback.accept(null, e);
@@ -468,26 +395,9 @@ public class TranscribeHelper {
         final String finalApiKey = apiKey;
         final String finalPrompt = customPrompt.isEmpty() ? GEMINI_PROMPT : customPrompt;
         executorService.submit(() -> {
-            String audioPath;
-            try {
-                if (video) {
-                    var audioFile = new File(path + ".m4a");
-                    try {
-                        extractAudio(path, audioFile.getAbsolutePath());
-                    } catch (IOException e) {
-                        FileLog.e(e);
-                    }
-                    audioPath = audioFile.exists() ? audioFile.getAbsolutePath() : path;
-                } else {
-                    audioPath = path;
-                }
-                File audioFile = new File(audioPath);
-                if (!audioFile.exists()) {
-                    throw new IOException("Audio file not found: " + audioPath);
-                }
-                byte[] audioBytes = Files.readAllBytes(audioFile.toPath());
-                String base64Audio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
-                GeminiRequest.InlineData inlineData = new GeminiRequest.InlineData(video ? "audio/m4a" : "audio/ogg", base64Audio);
+            try (var audio = TranscribeAudio.prepare(path, video, false)) {
+                String placeholder = UUID.randomUUID().toString();
+                GeminiRequest.InlineData inlineData = new GeminiRequest.InlineData(audio.mimeType(), placeholder);
                 GeminiRequest.Part audioPart = new GeminiRequest.Part(null, inlineData);
                 GeminiRequest.Part textPart = new GeminiRequest.Part(finalPrompt, null);
                 GeminiRequest.Content content = new GeminiRequest.Content(List.of(textPart, audioPart));
@@ -495,7 +405,7 @@ public class TranscribeHelper {
                 String jsonRequest = gson.toJson(geminiRequest);
 
                 OkHttpClient client = getOkHttpClient();
-                RequestBody requestBody = RequestBody.create(jsonRequest, HttpClient.MEDIA_TYPE_JSON);
+                RequestBody requestBody = audio.inlineJson(jsonRequest, placeholder, HttpClient.MEDIA_TYPE_JSON);
                 Request request = new Request.Builder()
                         .url(String.format(GEMINI_API_ENDPOINT, finalApiKey))
                         .post(requestBody)
@@ -551,77 +461,49 @@ public class TranscribeHelper {
             return;
         }
 
-        final String finalPrompt = TextUtils.isEmpty(customPrompt) ? OPENAI_COMPATIBLE_DEFAULT_PROMPT : customPrompt;
-        final String endpointUrl = apiBaseUrl.trim().replaceAll("(/chat/completions)?/*$", "") + "/chat/completions";
-
+        String base = apiBaseUrl.trim().replaceAll("/+$", "");
+        String normalizedModel = model.trim().toLowerCase(Locale.ROOT);
+        boolean transcriptions = base.endsWith("/audio/transcriptions") || (!base.endsWith("/chat/completions")
+                && (normalizedModel.equals("whisper-1") || normalizedModel.startsWith("gpt-4o-transcribe")
+                || normalizedModel.startsWith("gpt-4o-mini-transcribe")));
+        String endpoint = base.replaceFirst("/(?:chat/completions|audio/transcriptions)$", "")
+                + (transcriptions ? "/audio/transcriptions" : "/chat/completions");
+        String finalPrompt = TextUtils.isEmpty(customPrompt) ? OPENAI_COMPATIBLE_DEFAULT_PROMPT : customPrompt;
         executorService.submit(() -> {
-            String audioPathToUse;
-            String audioFormatForApi = "wav"; // mp3 or wav
-
-            try {
-                if (video) {
-                    var audioFile = new File(path + ".m4a");
-                    try {
-                        extractAudio(path, audioFile.getAbsolutePath());
-                    } catch (IOException e) {
-                        FileLog.e("OpenAI Compatible: Audio extraction failed", e);
-                    }
-                    audioPathToUse = audioFile.exists() ? audioFile.getAbsolutePath() : path;
+            try (var audio = TranscribeAudio.prepare(path, video, !transcriptions)) {
+                RequestBody requestBody;
+                if (transcriptions) {
+                    MultipartBody.Builder form = new MultipartBody.Builder().setType(MultipartBody.FORM)
+                            .addFormDataPart("model", model)
+                            .addFormDataPart("file", audio.uploadName(),
+                                    RequestBody.create(audio.file(), MediaType.get(audio.mimeType())));
+                    if (!TextUtils.isEmpty(customPrompt)) form.addFormDataPart("prompt", customPrompt);
+                    requestBody = form.build();
                 } else {
-                    audioPathToUse = path;
+                    String placeholder = UUID.randomUUID().toString();
+                    List<String> modalities = normalizedModel.startsWith("gpt") ? Collections.singletonList("text") : null;
+                    var message = getUserMessage(placeholder, "wav", finalPrompt);
+                    var request = new OpenAiChatRequest(model, modalities, Collections.singletonList(message));
+                    requestBody = audio.inlineJson(gson.toJson(request), placeholder, HttpClient.MEDIA_TYPE_JSON);
                 }
-
-                File audioFile = new File(audioPathToUse);
-                if (!audioFile.exists()) {
-                    throw new IOException("Audio file not found: " + audioPathToUse);
-                }
-                byte[] audioBytes = Files.readAllBytes(audioFile.toPath());
-                String base64Audio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
-
-                List<String> modalities = null;
-                if (model.toLowerCase().startsWith("gpt")) {
-                    modalities = Collections.singletonList("text");
-                }
-
-                OpenAiChatRequest.Message userMessage = getUserMessage(base64Audio, audioFormatForApi, finalPrompt);
-                OpenAiChatRequest openAiRequest = new OpenAiChatRequest(model, modalities, Collections.singletonList(userMessage));
-                String jsonRequest = gson.toJson(openAiRequest);
-
-                OkHttpClient client = getOkHttpClient();
-                RequestBody requestBody = RequestBody.create(jsonRequest, HttpClient.MEDIA_TYPE_JSON);
-                Request request = new Request.Builder()
-                        .url(endpointUrl)
-                        .header("Authorization", "Bearer " + apiKey)
-                        .header("Content-Type", "application/json")
-                        .post(requestBody)
-                        .build();
-
-                try (Response response = client.newCall(request).execute()) {
-                    String responseBody = response.body().string();
-                    if (!response.isSuccessful()) {
-                        try {
-                            OpenAiErrorResponse errorResponse = gson.fromJson(responseBody, OpenAiErrorResponse.class);
-                            if (errorResponse != null && errorResponse.error != null && !TextUtils.isEmpty(errorResponse.error.message)) {
-                                throw new IOException("OpenAI API request failed: " + response.code() + " " + response.message() + " - " + errorResponse.error.message);
-                            }
-                        } catch (Exception ignored) {}
-                        throw new IOException("OpenAI API request failed: " + response.code() + " " + response.message() + "\nBody: " + responseBody);
-                    }
-
-                    OpenAiChatResponse openAiResponse = gson.fromJson(responseBody, OpenAiChatResponse.class);
-                    if (openAiResponse != null && openAiResponse.choices != null && !openAiResponse.choices.isEmpty()) {
-                        OpenAiChatResponse.Choice firstChoice = openAiResponse.choices.get(0);
-                        if (firstChoice.message != null && !TextUtils.isEmpty(firstChoice.message.content)) {
-                            callback.accept(firstChoice.message.content.trim(), null);
-                        } else {
-                            callback.accept(null, new Exception("OpenAI response structure invalid (no message content). Finish Reason: " + firstChoice.finishReason));
-                        }
-                    } else if (openAiResponse != null && openAiResponse.error != null) {
-                        callback.accept(null, new Exception("OpenAI API Error: " + openAiResponse.error.message));
+                Request request = new Request.Builder().url(endpoint).header("Authorization", "Bearer " + apiKey)
+                        .post(requestBody).build();
+                String text;
+                try (Response response = getOkHttpClient().newCall(request).execute()) {
+                    if (!response.isSuccessful()) throw new IOException("OpenAI transcription failed (HTTP " + response.code() + ")");
+                    String body = response.body().string();
+                    if (transcriptions) {
+                        Result result = gson.fromJson(body, Result.class);
+                        text = result == null ? null : result.text;
                     } else {
-                        callback.accept(null, new Exception("Invalid or empty response from OpenAI API: " + responseBody));
+                        OpenAiChatResponse reply = gson.fromJson(body, OpenAiChatResponse.class);
+                        var choices = reply == null ? null : reply.choices;
+                        var first = choices == null || choices.isEmpty() ? null : choices.get(0);
+                        text = first == null || first.message == null ? null : first.message.content;
                     }
                 }
+                if (text == null || text.trim().isEmpty()) throw new IOException("OpenAI response contained no transcript");
+                callback.accept(text.trim(), null);
             } catch (Exception e) {
                 FileLog.e("OpenAI compatible transcription error", e);
                 callback.accept(null, e);

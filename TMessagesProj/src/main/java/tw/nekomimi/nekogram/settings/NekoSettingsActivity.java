@@ -11,7 +11,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
 import android.net.Uri;
 import android.os.Build;
 import android.text.Editable;
@@ -19,7 +18,8 @@ import android.text.InputType;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextWatcher;
-import android.text.style.ForegroundColorSpan;
+import android.text.TextPaint;
+import android.text.style.CharacterStyle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -183,27 +183,30 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             ImageView searchIcon = new ImageView(parent);
             searchIcon.setScaleType(ImageView.ScaleType.CENTER);
             searchIcon.setImageResource(R.drawable.ic_ab_search_solar);
-            searchIcon.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.MULTIPLY));
-            searchFrame.addView(searchIcon, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+            ThemeBind.colorFilter(searchIcon, Theme.key_windowBackgroundWhiteGrayIcon, resourceProvider, PorterDuff.Mode.MULTIPLY);
+            searchFrame.addView(searchIcon, LayoutHelper.createFrameRelatively(48, 48, Gravity.START | Gravity.CENTER_VERTICAL));
 
             EditTextBoldCursor searchField = new EditTextBoldCursor(parent);
             searchField.setHint(getString(R.string.Search));
-            searchField.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
-            searchField.setHintTextColor(getThemedColor(Theme.key_windowBackgroundWhiteHintText));
+            ThemeBind.textColor(searchField, Theme.key_dialogTextBlack, resourceProvider);
+            ThemeBind.hintTextColor(searchField, Theme.key_windowBackgroundWhiteHintText, resourceProvider);
             searchField.setSingleLine(true);
             searchField.setBackground(null);
             searchField.setInputType(InputType.TYPE_CLASS_TEXT);
-            searchField.setLineColors(getThemedColor(Theme.key_windowBackgroundWhiteInputField), getThemedColor(Theme.key_windowBackgroundWhiteInputFieldActivated), getThemedColor(Theme.key_text_RedRegular));
-            searchField.setPadding(dp(61), pad / 2, dp(48), pad / 2);
+            ThemeBind.lineColors(searchField, Theme.key_windowBackgroundWhiteInputField, Theme.key_windowBackgroundWhiteInputFieldActivated, Theme.key_text_RedRegular, resourceProvider);
+            searchField.setPadding(dp(LocaleController.isRTL ? 48 : 61), pad / 2,
+                    dp(LocaleController.isRTL ? 61 : 48), pad / 2);
             searchField.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER_VERTICAL));
             searchFrame.addView(searchField);
 
             ImageView clearButton = new ImageView(parent);
             clearButton.setScaleType(ImageView.ScaleType.CENTER);
             clearButton.setImageResource(R.drawable.ic_close_white);
-            clearButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP));
-            clearButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.MULTIPLY));
-            clearButton.setLayoutParams(new FrameLayout.LayoutParams(clearSize, clearSize, Gravity.END | Gravity.CENTER_VERTICAL));
+            ThemeBind.selectorBackground(clearButton, Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP),
+                    null, ThemeBind.of(Theme.key_listSelector), resourceProvider);
+            clearButton.setContentDescription(getString(R.string.ClearButton));
+            ThemeBind.colorFilter(clearButton, Theme.key_windowBackgroundWhiteGrayIcon, resourceProvider, PorterDuff.Mode.MULTIPLY);
+            clearButton.setLayoutParams(new FrameLayout.LayoutParams(clearSize, clearSize, LayoutHelper.getAbsoluteGravityEnd() | Gravity.CENTER_VERTICAL));
             searchFrame.addView(clearButton);
             containerLayout.addView(searchFrame);
 
@@ -246,7 +249,6 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                     if (queryParts[0].length > 0 && titleToSet.length() > 0) {
                         SpannableStringBuilder ss = new SpannableStringBuilder(titleToSet);
                         String lower = titleToSet.toString().toLowerCase(locale);
-                        int highlightColor = getThemedColor(Theme.key_windowBackgroundWhiteBlueText4);
                         for (String p : queryParts[0]) {
                             int idx = 0;
                             while (true) {
@@ -254,7 +256,12 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                                 if (found == -1) break;
                                 int end = found + p.length();
                                 if (end <= ss.length() && titleToSet.toString().regionMatches(true, found, p, 0, p.length())) {
-                                    ss.setSpan(new ForegroundColorSpan(highlightColor), found, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                    ss.setSpan(new CharacterStyle() {
+                                        @Override
+                                        public void updateDrawState(TextPaint paint) {
+                                            paint.setColor(getThemedColor(Theme.key_windowBackgroundWhiteBlueText4));
+                                        }
+                                    }, found, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                                 }
                                 idx = found + p.length();
                             }

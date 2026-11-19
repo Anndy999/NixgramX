@@ -30,9 +30,10 @@ import org.telegram.ui.Components.ReactionsContainerLayout;
 import org.telegram.ui.Stories.recorder.StoryEntry;
 
 @SuppressLint({"ViewConstructor", "ClickableViewAccessibility"})
-public class ReactionsContainerPreviewCell extends LinearLayout {
+public class ReactionsContainerPreviewCell extends LinearLayout implements Theme.Colorable {
 
     private final Drawable shadowDrawable;
+    private final Theme.ResourcesProvider resourcesProvider;
     private final INavigationLayout parentLayout;
     public BaseFragment fragment;
     public ReactionsContainerLayout tagSelector;
@@ -47,6 +48,7 @@ public class ReactionsContainerPreviewCell extends LinearLayout {
         super(context);
         int currentAccount = UserConfig.selectedAccount;
         parentLayout = layout;
+        this.resourcesProvider = resourcesProvider;
 
         setWillNotDraw(false);
         setOrientation(LinearLayout.VERTICAL);
@@ -63,14 +65,14 @@ public class ReactionsContainerPreviewCell extends LinearLayout {
         tagSelector.setClipChildren(false);
         tagSelector.setClipToPadding(false);
         tagSelector.setVisibility(View.VISIBLE);
-        tagSelector.setTranslationY(dp(12));
         addView(tagSelector, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 92.5f, Gravity.CENTER));
 
     }
 
     @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
+    public void updateColors() {
+        shadowDrawable.setColorFilter(Theme.getColor(Theme.key_windowBackgroundGrayShadow, resourcesProvider), android.graphics.PorterDuff.Mode.MULTIPLY);
+        invalidate();
     }
 
     @Override

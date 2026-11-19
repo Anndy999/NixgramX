@@ -6317,7 +6317,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                             if (error == null) {
                                 BulletinFactory.of(fragment).createSimpleBulletin(R.raw.done, LocaleController.getString(R.string.YourVersionIsLatestNax)).show();
                             } else {
-                                AlertsCreator.createSimpleAlert(this, getString(R.string.ErrorOccurred) + "\n" + error).show();
+                                String message = "UPDATE_NO_COMPATIBLE_APK".equals(error)
+                                        ? getString(R.string.NixUpdateNoCompatibleApk)
+                                        : getString(R.string.ErrorOccurred) + "\n" + error;
+                                AlertsCreator.createSimpleAlert(this, message).show();
                             }
                         }
                     }

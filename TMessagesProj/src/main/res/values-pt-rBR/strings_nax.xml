@@ -192,7 +192,7 @@
     <string name="LeftBottomButtonAction">Ação do botão esquerdo</string>
     <string name="TranscribeProviderOpenAI">API compatível com OpenAI</string>
     <string name="OpenAiApiCredentialsDialog">Configure a API compatível com a OpenAI. Consulte esta **documentação**.\n</string>
-    <string name="OpenAiApiBaseUrlHint">URL da API ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">URL da API ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">As credenciais da API não estão configuradas.</string>
     <string name="ApiNotSupportedOnAndroidVersion">Este provedor de API não é compatível com a sua versão do Android (requer Android 8.0+).</string>
     <string name="AppIconTelegramOriginal">Original</string>

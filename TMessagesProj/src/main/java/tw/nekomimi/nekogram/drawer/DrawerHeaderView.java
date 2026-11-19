@@ -57,7 +57,7 @@ public class DrawerHeaderView extends FrameLayout {
         avatarView = new BackupImageView(context);
         avatarView.setRoundRadius(dp(36));
         avatarView.setOnClickListener(v -> run(onProfile));
-        addView(avatarView, LayoutHelper.createFrame(72, 72, Gravity.START | Gravity.TOP, 16, 16, 0, 0));
+        addView(avatarView, LayoutHelper.createFrameRelatively(72, 72, Gravity.START | Gravity.TOP, 16, 16, 0, 0));
 
         themeButton = roundButton(context);
         themeDrawable = new RLottieDrawable(R.raw.sun, dp(24), dp(24), true, null);
@@ -70,7 +70,7 @@ public class DrawerHeaderView extends FrameLayout {
         setThemeToggleStaticState(Theme.isCurrentThemeDark());
         themeButton.setOnClickListener(v -> run(onTheme));
         themeButton.setOnLongClickListener(v -> { run(onThemeLongPress); return onThemeLongPress != null; });
-        addView(themeButton, LayoutHelper.createFrame(36, 36, Gravity.END | Gravity.TOP, 0, 16, 16, 0));
+        addView(themeButton, LayoutHelper.createFrameRelatively(36, 36, Gravity.END | Gravity.TOP, 0, 16, 16, 0));
 
         proxyButton = roundButton(context);
         LinearLayout proxyContent = new LinearLayout(context);
@@ -85,11 +85,11 @@ public class DrawerHeaderView extends FrameLayout {
         proxyContent.addView(proxyText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 2, 0, 2, 0));
         proxyButton.addView(proxyContent, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT));
         proxyButton.setOnClickListener(v -> run(onProxy));
-        addView(proxyButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 36, Gravity.END | Gravity.TOP, 0, 16, 60, 0));
+        addView(proxyButton, LayoutHelper.createFrameRelatively(LayoutHelper.WRAP_CONTENT, 36, Gravity.END | Gravity.TOP, 0, 16, 60, 0));
 
         FrameLayout accountBlock = new FrameLayout(context);
         accountBlock.setOnClickListener(v -> run(onAccounts));
-        addView(accountBlock, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 50, Gravity.START | Gravity.TOP, 0, 100, 0, 0));
+        addView(accountBlock, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, 50, Gravity.START | Gravity.TOP, 0, 100, 0, 0));
         nameView = new SimpleTextView(context);
         nameView.setTextSize(15);
         nameView.setTypeface(org.telegram.messenger.AndroidUtilities.bold());
@@ -97,16 +97,16 @@ public class DrawerHeaderView extends FrameLayout {
         nameView.setEllipsizeByGradient(true);
         nameView.setCanHideRightDrawable(false);
         nameView.setRightDrawableOutside(true);
-        accountBlock.addView(nameView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 24, Gravity.START | Gravity.TOP, 16, 0, 64, 0));
+        accountBlock.addView(nameView, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, 24, Gravity.START | Gravity.TOP, 16, 0, 64, 0));
         statusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(nameView, dp(22));
         subtitleView = new SimpleTextView(context);
         subtitleView.setTextSize(12);
         subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
-        accountBlock.addView(subtitleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 20, Gravity.START | Gravity.TOP, 16, 26, 64, 0));
+        accountBlock.addView(subtitleView, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, 20, Gravity.START | Gravity.TOP, 16, 26, 64, 0));
         chevronView = new ImageView(context);
         chevronView.setImageResource(R.drawable.msg_expand);
         chevronView.setColorFilter(iconFilter());
-        accountBlock.addView(chevronView, LayoutHelper.createFrame(24, 24, Gravity.END | Gravity.CENTER_VERTICAL, 0, 0, 22, 0));
+        accountBlock.addView(chevronView, LayoutHelper.createFrameRelatively(24, 24, Gravity.END | Gravity.CENTER_VERTICAL, 0, 0, 22, 0));
         updateColors();
     }
 

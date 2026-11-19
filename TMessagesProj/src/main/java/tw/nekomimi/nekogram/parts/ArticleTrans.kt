@@ -1,20 +1,17 @@
 package tw.nekomimi.nekogram.parts
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
-import org.telegram.messenger.AndroidUtilities
+import kotlinx.coroutines.withContext
 import org.telegram.tgnet.tl.TL_iv
 import org.telegram.ui.ArticleViewer
 import tw.nekomimi.nekogram.translate.Translator
 import tw.nekomimi.nekogram.utils.AlertUtil
-import tw.nekomimi.nekogram.utils.AppScope
-import tw.nekomimi.nekogram.utils.uUpdate
-import java.util.concurrent.atomic.AtomicInteger
 
 private fun extractTextPlainLeaves(
     richText: TL_iv.RichText, leaves: MutableList<TL_iv.textPlain>
@@ -43,96 +40,65 @@ private fun extractTextPlainLeaves(
 }
 
 fun ArticleViewer.doTransLATE() {
-    val status = AlertUtil.showProgress(parentActivity)
-    status.show()
-
-    val adapter = pages[0].adapter
-    val translatedTextCache = adapter.translatedTextCache
-    val job: Job = AppScope.io.launch {
-        val dispatcher = Dispatchers.IO.limitedParallelism(5)
-        val textsToTranslate = HashSet<String>()
-        pages[0].adapter.textBlocks.forEach { item ->
+    val page = pages.firstOrNull() ?: return
+    val context = parentActivity ?: return
+    val adapter = page.adapter
+    val article = adapter.translationSourcePage ?: return
+    val texts = buildSet {
+        for (item in adapter.textBlocks) {
             when (item) {
                 is TL_iv.RichText -> {
                     val leaves = mutableListOf<TL_iv.textPlain>()
                     extractTextPlainLeaves(item, leaves)
-                    leaves.forEach { plainText ->
-                        textsToTranslate.add(plainText.text)
-                    }
+                    leaves.forEach { add(it.text) }
                 }
-
-                is String -> {
-                    if (item.isNotBlank()) {
-                        textsToTranslate.add(item)
-                    }
-                }
+                is String -> if (item.isNotBlank()) add(item)
             }
         }
+    }
+    if (texts.isEmpty()) return
+    fun isCurrent() = isVisible && pages.firstOrNull() === page && adapter.translationSourcePage === article
 
-        val errorCount = AtomicInteger()
-        val all = textsToTranslate.size
-        val taskCount = AtomicInteger(all)
-
-        status.uUpdate("0 / $all")
-
-        supervisorScope {
-            val jobs = textsToTranslate.map { str ->
-                launch(dispatcher) {
-                    if (!isActive) return@launch
-
-                    if (translatedTextCache.containsKey(str)) {
-                        taskCount.decrementAndGet()
-                        status.uUpdate("${all - taskCount.get()} / $all")
-                        return@launch
-                    }
-
-                    runCatching {
-                        val translatedResult = Translator.translateArticle(str)
-                        translatedTextCache[str] = translatedResult
-
-                        status.uUpdate("${all - taskCount.get()} / $all")
-
-                        if (taskCount.decrementAndGet() % 10 == 0) {
-                            AndroidUtilities.runOnUIThread { updatePaintSize() }
+    val status = AlertUtil.showProgress(context, "0 / ${texts.size}")
+    status.show()
+    val job = CoroutineScope(Dispatchers.Main).launch {
+        val dispatcher = Dispatchers.IO.limitedParallelism(5)
+        var completed = 0
+        val translated = try {
+            coroutineScope {
+                texts.map { original ->
+                    async {
+                        val translation = withContext(dispatcher) {
+                            Translator.translateArticle(original)
                         }
-                    }.onFailure {
-                        if (!isActive) return@launch
-
-                        if (errorCount.incrementAndGet() > 3) {
-                            this@supervisorScope.cancel()
-                            AndroidUtilities.runOnUIThread {
-                                status.dismiss()
-                                updatePaintSize()
-                                updateTranslateButton(false)
-                                translatedTextCache.clear()
-                                AlertUtil.showTransFailedDialog(
-                                    parentActivity,
-                                    it is UnsupportedOperationException,
-                                    it.message ?: it.javaClass.simpleName
-                                ) {
-                                    doTransLATE()
-                                }
-                            }
-                        }
+                        completed++
+                        status.setMessage("$completed / ${texts.size}")
+                        original to translation
                     }
-                }
+                }.awaitAll()
             }
-
-            jobs.joinAll()
-        }
-
-        if (isActive) {
-            AndroidUtilities.runOnUIThread {
-                updatePaintSize()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (status.isShowing && isCurrent()) {
+                status.dismiss()
+                AlertUtil.showTransFailedDialog(context, e is UnsupportedOperationException, e.message ?: e.javaClass.simpleName) {
+                    if (isCurrent()) doTransLATE()
+                }
+            } else {
                 status.dismiss()
             }
+            return@launch
         }
-    }
 
-    status.setOnCancelListener {
-        updateTranslateButton(false)
-        job.cancel()
-        translatedTextCache.clear()
-        AndroidUtilities.runOnUIThread { updatePaintSize() }
+        if (status.isShowing && isCurrent()) {
+            adapter.translatedTextCache.clear()
+            adapter.translatedTextCache.putAll(translated)
+            updateTranslateButton(true)
+            updatePaintSize()
+        }
+        status.dismiss()
     }
+    status.setOnCancelListener { job.cancel() }
+    status.setOnDismissListener { job.cancel() }
 }

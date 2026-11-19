@@ -46,7 +46,7 @@ public class CloudStorageHelper extends AccountInstance {
             if (searchUser) {
                 getUserHelper().resolveUser(WEBVIEW_BOT, WEBVIEW_BOT_ID, arg -> invokeWebViewCustomMethod(method, data, false, callback));
             } else {
-                callback.run(null, "USER_NOT_FOUND");
+                if (callback != null) callback.run(null, "USER_NOT_FOUND");
             }
             return;
         }
@@ -62,7 +62,7 @@ public class CloudStorageHelper extends AccountInstance {
                 } else if (res instanceof TLRPC.TL_dataJSON) {
                     callback.run(((TLRPC.TL_dataJSON) res).data, null);
                 } else {
-                    callback.run(null, null);
+                    callback.run(null, "UNEXPECTED_RESPONSE");
                 }
             }
         }));
@@ -78,7 +78,7 @@ public class CloudStorageHelper extends AccountInstance {
     public void getItem(String key, Utilities.Callback2<String, String> callback) {
         getItems(new String[]{key}, (res, error) -> {
             if (error == null) {
-                callback.run(res.get(key), null);
+                callback.run(res == null ? null : res.get(key), null);
             } else {
                 callback.run(null, error);
             }

@@ -66,6 +66,11 @@ public class NotificationsService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        if (intent != null && ApplicationLoader.ACTION_RESTART_LOCAL_PUSH.equals(intent.getAction())
+                && !MessagesController.getNotificationsSettings(UserConfig.selectedAccount).getBoolean("pushService", false)) {
+            stopSelf(startId);
+            return START_NOT_STICKY;
+        }
         return START_STICKY;
     }
 

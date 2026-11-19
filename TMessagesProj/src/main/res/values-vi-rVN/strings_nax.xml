@@ -182,7 +182,7 @@
     <string name="LeftBottomButtonAction">Nút hành động bên trái</string>
     <string name="TranscribeProviderOpenAI">API tương thích với OpenAI</string>
     <string name="OpenAiApiCredentialsDialog">Cấu hình API tương thích với OpenAI. Bạn có thể tham khảo **tài liệu** này.\n</string>
-    <string name="OpenAiApiBaseUrlHint">API URL ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">API URL ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">Thông tin xác thực API chưa được cấu hình.</string>
     <string name="ApiNotSupportedOnAndroidVersion">API này không được hỗ trợ trên phiên bản Android của bạn (yêu cầu Android 8.0+ trở lên).</string>
     <string name="AppIconTelegramOriginal">Gốc</string>

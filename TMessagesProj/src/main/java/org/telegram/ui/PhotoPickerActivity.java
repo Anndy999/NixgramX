@@ -110,7 +110,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import kotlin.Unit;
 import tw.nekomimi.nekogram.NekoConfig;
@@ -118,7 +117,7 @@ import tw.nekomimi.nekogram.helpers.ChatsHelper;
 import tw.nekomimi.nekogram.llm.LlmConfig;
 import tw.nekomimi.nekogram.translate.Translator;
 import tw.nekomimi.nekogram.translate.TranslatorKt;
-import tw.nekomimi.nekogram.utils.AlertUtil;
+import tw.nekomimi.nekogram.parts.InputTranslation;
 import xyz.nextalone.nagram.NaConfig;
 
 public class PhotoPickerActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
@@ -1255,37 +1254,11 @@ public class PhotoPickerActivity extends BaseFragment implements NotificationCen
     }
 
     private void translateComment(Locale target, int provider) {
-        if (commentTextView == null) return;
-
-        String origin = commentTextView.getText().toString();
-        Translator.translate(target, origin, provider, new Translator.Companion.TranslateCallBack() {
-
-            final AtomicBoolean cancel = new AtomicBoolean();
-            AlertDialog status = AlertUtil.showProgress(getParentActivity());
-
-            {
-                status.setOnCancelListener((__) -> {
-                    cancel.set(true);
-                });
-                status.show();
-            }
-
-            @Override
-            public void onSuccess(@NotNull String translation) {
-                status.dismiss();
-                commentTextView.getEditText().setText(translation);
-            }
-
-            @Override
-            public void onFailed(boolean unsupported, @NotNull String message) {
-                status.dismiss();
-                AlertUtil.showTransFailedDialog(getParentActivity(), unsupported, message, () -> {
-                    status = AlertUtil.showProgress(getParentActivity());
-                    status.show();
-                    Translator.translate(origin, this);
-                });
-            }
-        });
+        final var field = commentTextView;
+        if (field == null) return;
+        final var editor = field.getEditText();
+        InputTranslation.start(getParentActivity(), editor, target, provider, 0, 0, null,
+                () -> commentTextView == field, editor::setText);
     }
 
     @Override
