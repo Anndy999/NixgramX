@@ -316,27 +316,31 @@ public class MessageHelper extends BaseController {
     }
 
     public ArrayList<TLRPC.Message> getMessagesStorageMessages(long dialogId, ArrayList<Integer> messageIds) {
+        if (messageIds.isEmpty()) return null;
         ArrayList<TLRPC.Message> messages = null;
         SQLiteCursor cursor = null;
         try {
             String ids = TextUtils.join(",", messageIds);
-            cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US,"SELECT data FROM messages_v2 WHERE uid = %d AND mid IN (%s)", dialogId, ids));
+            cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US,"SELECT data, mid FROM messages_v2 WHERE uid = %d AND mid IN (%s)", dialogId, ids));
             while (cursor.next()) {
                 NativeByteBuffer data = cursor.byteBufferValue(0);
-                if (data != null) {
+                if (data == null) continue;
+                try {
                     TLRPC.Message message = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
                     if (message != null) {
+                        message.id = cursor.intValue(1);
                         message.readAttachPath(data, UserConfig.getInstance(currentAccount).clientUserId);
                         if (messages == null) {
                             messages = new ArrayList<>();
                         }
                         messages.add(message);
                     }
+                } catch (RuntimeException e) {
+                    FileLog.e(e);
+                } finally {
                     data.reuse();
                 }
             }
-            cursor.dispose();
-            cursor = null;
         } catch (SQLiteException e) {
             FileLog.e(e);
         } finally {

@@ -20830,6 +20830,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private CompactHeaderRow compactCommentRow;
     private StaticLayout compactCommentLayout;
     private String compactCommentText;
+    private int compactCommentMaxWidth = -1;
+    private float compactCommentTextSize;
+    private PorterDuffColorFilter compactCommentTint;
+    private int compactCommentTintColor;
 
     // compact mode: comments are a single muted line at the bottom, like the reply row
     private void drawCompactCommentRow(Canvas canvas) {
@@ -20848,10 +20852,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         compactHeaderTextPaint.setTextSize(Theme.chat_replyTextPaint.getTextSize());
         final int count = getRepliesCount();
         final String text = isRepliesChat ? getString(R.string.ViewInChat) : count == 0 ? getString(R.string.LeaveAComment) : formatPluralString("CommentsCount", count);
-        if (compactCommentLayout == null || !text.equals(compactCommentText)) {
-            compactCommentText = text;
-            compactCommentLayout = makeCompactHeaderLine(text, compactHeaderTextPaint, getCompactContentWidth());
-        }
         // comments are a call to action: accent colored, unlike the muted reply row
         final int color = getThemedColor(Theme.key_chat_inPreviewInstantText);
         final int textColor = compactHeaderTextPaint.getColor();
@@ -20878,13 +20878,38 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
         final int avatarStep = dp(11);
-        final float avatarsWidth = avatars == 0 ? 0 : size + avatarStep * (avatars - 1) + dp(COMPACT_HEADER_AVATAR_GAP);
-        final float width = size + dp(COMPACT_HEADER_ICON_GAP) + avatarsWidth + (compactCommentLayout != null ? getCompactHeaderLineWidth(compactCommentLayout) : 0) - dp(COMPACT_COMMENT_ARROW_INSET) + size;
+        final TLRPC.MessageReplies replies = currentMessagesGroup != null && !currentMessagesGroup.messages.isEmpty() ? (currentMessagesGroup.messages.get(0).hasReplies() ? currentMessagesGroup.messages.get(0).messageOwner.replies : null) : (currentMessageObject.hasReplies() ? currentMessageObject.messageOwner.replies : null);
+        final boolean unread = replies != null && replies.read_max_id != 0 && replies.read_max_id < replies.max_id;
+        // The album footer spans the group, even when its drawing cell is a narrow tile.
+        final int rowWidth = isCompactAlbum() ? getCompactContentWidth()
+                : Math.min(getCompactContentWidth(), getCompactRight() - getCompactLeft());
+        final int contentWidth = Math.max(0, rowWidth - getCompactSideButtonColumn());
+        if (contentWidth == 0) {
+            commentButtonRect.setEmpty();
+            compactHeaderTextPaint.setColor(textColor);
+            return;
+        }
+        final int controlsWidth = size * 2 + dp(COMPACT_HEADER_ICON_GAP) - dp(COMPACT_COMMENT_ARROW_INSET)
+                + (unread ? dp(8) + dp(2.5f) : 0);
+        final int avatarSpace = contentWidth - controlsWidth - dp(COMPACT_HEADER_AVATAR_GAP);
+        avatars = Math.min(avatars, avatarSpace < size ? 0 : 1 + (avatarSpace - size) / avatarStep);
+        final int avatarsWidth = avatars == 0 ? 0 : size + avatarStep * (avatars - 1) + dp(COMPACT_HEADER_AVATAR_GAP);
+        final int textWidth = Math.max(0, contentWidth - controlsWidth - avatarsWidth);
+        final float textSize = compactHeaderTextPaint.getTextSize();
+        if (!text.equals(compactCommentText) || compactCommentMaxWidth != textWidth || compactCommentTextSize != textSize) {
+            compactCommentText = text;
+            compactCommentMaxWidth = textWidth;
+            compactCommentTextSize = textSize;
+            compactCommentLayout = makeCompactHeaderLine(text, compactHeaderTextPaint, textWidth);
+        }
+        final int width = Math.min(contentWidth, controlsWidth + avatarsWidth
+                + (compactCommentLayout == null ? 0 : getCompactHeaderLineWidth(compactCommentLayout)));
         final CompactHeaderRow row = compactCommentRow;
         row.bounds.set(x, y, x + width, y + size);
         commentButtonRect.set((int) (x - dp(6)), (int) (y - dp(4)), (int) (x + width + dp(6)), (int) (y + size + dp(4)));
 
         canvas.save();
+        if (contentWidth < controlsWidth) canvas.clipRect(x, y - dp(4), x + contentWidth, y + size + dp(4));
         row.bounce.setPressed(commentButtonPressed);
         final float scale = row.bounce.getScale(0.02f);
         canvas.scale(scale, scale, row.bounds.centerX(), row.bounds.centerY());
@@ -20896,7 +20921,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (row.selectorColor != selectorColor) {
             Theme.setSelectorDrawableColor(row.selector, row.selectorColor = selectorColor, true);
         }
-        final int[] state = commentButtonPressed ? new int[]{android.R.attr.state_pressed, android.R.attr.state_enabled} : StateSet.NOTHING;
+        final int[] state = commentButtonPressed ? PRESSED_ENABLED_STATE_SET : StateSet.NOTHING;
         if (!Arrays.equals(row.selector.getState(), state)) {
             row.selector.setState(state);
         }
@@ -20905,7 +20930,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         drawCompactLoading(canvas, row, color, delegate != null && delegate.shouldDrawThreadProgress(this, false));
 
         final Drawable icon = Theme.chat_commentDrawable;
-        icon.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+        if (compactCommentTint == null || compactCommentTintColor != color) {
+            compactCommentTintColor = color;
+            compactCommentTint = new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN);
+        }
+        icon.setColorFilter(compactCommentTint);
         icon.setBounds((int) x, (int) y, (int) x + size, (int) y + size);
         icon.setAlpha(currentMessageObject.isSent() ? 255 : 127);
         icon.draw(canvas);
@@ -20917,7 +20946,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             final Paint borderPaint = Theme.chat_docBackPaint;
             final int borderColor = getThemedColor(Theme.key_chat_compact_background);
             int i = 0;
-            for (int a = commentAvatarImages.length - 1; a >= 0; a--) {
+            for (int a = commentAvatarImages.length - 1; a >= 0 && i < avatars; a--) {
                 if (!commentAvatarImagesVisible[a] || !commentAvatarImages[a].hasImageSet()) {
                     continue;
                 }
@@ -20940,7 +20969,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             cx += getCompactHeaderLineWidth(compactCommentLayout);
         }
         final Drawable arrow = Theme.chat_commentArrowDrawable;
-        arrow.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+        arrow.setColorFilter(compactCommentTint);
         arrow.setAlpha(currentMessageObject.isSent() ? 255 : 127);
         // the arrow glyph has transparent padding, pull it towards the text
         arrow.setBounds((int) (cx - dp(COMPACT_COMMENT_ARROW_INSET)), (int) y, (int) (cx - dp(COMPACT_COMMENT_ARROW_INSET) + size), (int) y + size);
@@ -20948,8 +20977,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         arrow.setColorFilter(null);
         arrow.setAlpha(255);
         cx += size - dp(COMPACT_COMMENT_ARROW_INSET);
-        final TLRPC.MessageReplies replies = currentMessagesGroup != null && !currentMessagesGroup.messages.isEmpty() ? (currentMessagesGroup.messages.get(0).hasReplies() ? currentMessagesGroup.messages.get(0).messageOwner.replies : null) : (currentMessageObject.hasReplies() ? currentMessageObject.messageOwner.replies : null);
-        if (replies != null && replies.read_max_id != 0 && replies.read_max_id < replies.max_id) {
+        if (unread) {
             Theme.chat_docBackPaint.setColor(getThemedColor(Theme.key_chat_inInstant));
             canvas.drawCircle(cx + dp(8), y + size / 2f, dp(2.5f), Theme.chat_docBackPaint);
         }

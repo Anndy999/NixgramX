@@ -75,7 +75,6 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.style.CharacterStyle;
 import android.text.style.ClickableSpan;
-import android.text.style.ForegroundColorSpan;
 import android.text.style.URLSpan;
 import android.text.util.Linkify;
 import android.util.Property;
@@ -15163,6 +15162,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         private SearchResult[] searchArray;
         private ArrayList<MessagesController.FaqSearchResult> faqSearchArray = new ArrayList<>();
+        private String[] indexedSearchTitles;
+        private String[] indexedFaqTitles;
+        private Locale searchLocale = Locale.getDefault();
 
         private final BaseFragment fragment;
         private final int currentAccount;
@@ -15174,6 +15176,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         private ArrayList<Object> recentSearches = new ArrayList<>();
         private boolean searchWas;
         private Runnable searchRunnable;
+        private int searchGeneration;
         private String lastSearchString;
         public TLRPC.WebPage faqWebPage;
         private boolean loadingFaqPage;
@@ -15187,6 +15190,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
 
         private void updateSearchArray() {
+            indexSearchTitles();
             HashMap<Integer, SearchResult> resultHashMap = new HashMap<>();
             for (int a = 0; a < searchArray.length; a++) {
                 if (searchArray[a] == null) {
@@ -15531,12 +15535,40 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return MessagesController.getInstance(currentAccount).premiumFeaturesTypesToPosition.get(feature, -1) != -1;
         }
 
-        public void loadFaqWebPage() {
-            faqWebPage = MessagesController.getInstance(currentAccount).faqWebPage;
-            if (faqWebPage != null) {
-                faqSearchArray.addAll(MessagesController.getInstance(currentAccount).faqSearchArray);
+        private void indexSearchTitles() {
+            indexedSearchTitles = new String[searchArray.length];
+            for (int i = 0; i < searchArray.length; i++) {
+                if (searchArray[i] != null) {
+                    indexedSearchTitles[i] = " " + searchArray[i].searchTitle.toLowerCase(searchLocale);
+                }
             }
+        }
+
+        private void indexFaqTitles() {
+            indexedFaqTitles = new String[faqSearchArray.size()];
+            for (int i = 0; i < faqSearchArray.size(); i++) {
+                indexedFaqTitles[i] = " " + faqSearchArray.get(i).title.toLowerCase(searchLocale);
+            }
+        }
+
+        private void setFaqSearchResults(TLRPC.WebPage page, ArrayList<MessagesController.FaqSearchResult> results) {
+            faqWebPage = page;
+            faqSearchArray = new ArrayList<>(results);
+            indexFaqTitles();
+            if (!TextUtils.isEmpty(lastSearchString)) {
+                search(lastSearchString);
+            } else {
+                notifyDataSetChanged();
+            }
+        }
+
+        public void loadFaqWebPage() {
             if (faqWebPage != null || loadingFaqPage) {
+                return;
+            }
+            MessagesController controller = MessagesController.getInstance(currentAccount);
+            if (controller.faqWebPage != null) {
+                setFaqSearchResults(controller.faqWebPage, controller.faqSearchArray);
                 return;
             }
             loadingFaqPage = true;
@@ -15588,18 +15620,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 break;
                             }
                         }
-                        faqWebPage = page;
                     }
                     AndroidUtilities.runOnUIThread(() -> {
-                        faqSearchArray.addAll(arrayList);
-                        MessagesController.getInstance(currentAccount).faqSearchArray = arrayList;
-                        MessagesController.getInstance(currentAccount).faqWebPage = faqWebPage;
-                        if (!searchWas) {
-                            notifyDataSetChanged();
+                        loadingFaqPage = false;
+                        if (page.cached_page != null) {
+                            controller.faqSearchArray = arrayList;
+                            controller.faqWebPage = page;
+                            setFaqSearchResults(page, arrayList);
                         }
                     });
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> loadingFaqPage = false);
                 }
-                loadingFaqPage = false;
             });
         }
 
@@ -15708,7 +15740,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             View view;
             switch (viewType) {
                 case 0:
-                    view = new SettingsSearchCell(mContext);
+                    view = new SettingsSearchCell(mContext, fragment.getResourceProvider());
                     break;
                 case 1:
                     view = new GraySectionCell(mContext);
@@ -15786,6 +15818,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         public void search(String text) {
             lastSearchString = text;
+            final int generation = ++searchGeneration;
             if (searchRunnable != null) {
                 Utilities.searchQueue.cancelRunnable(searchRunnable);
                 searchRunnable = null;
@@ -15804,6 +15837,17 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 notifyDataSetChanged();
                 return;
             }
+            final Locale locale = Locale.getDefault();
+            if (!searchLocale.equals(locale)) {
+                searchLocale = locale;
+                indexSearchTitles();
+                indexFaqTitles();
+            }
+            final SearchResult[] settings = searchArray;
+            final String[] settingTitles = indexedSearchTitles;
+            final ArrayList<MessagesController.FaqSearchResult> faqEntries = faqSearchArray;
+            final String[] faqTitles = indexedFaqTitles;
+            final Theme.ResourcesProvider provider = fragment.getResourceProvider();
             Utilities.searchQueue.postRunnable(searchRunnable = () -> {
                 ArrayList<SearchResult> results = new ArrayList<>();
                 ArrayList<MessagesController.FaqSearchResult> faqResults = new ArrayList<>();
@@ -15817,12 +15861,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
 
-                for (int a = 0; a < searchArray.length; a++) {
-                    SearchResult result = searchArray[a];
+                for (int a = 0; a < settings.length; a++) {
+                    SearchResult result = settings[a];
                     if (result == null) {
                         continue;
                     }
-                    String title = " " + result.searchTitle.toLowerCase();
+                    String title = settingTitles[a];
                     SpannableStringBuilder stringBuilder = null;
                     for (int i = 0; i < searchArgs.length; i++) {
                         if (searchArgs[i].length() != 0) {
@@ -15841,7 +15885,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 if (stringBuilder == null) {
                                     stringBuilder = new SpannableStringBuilder(result.searchTitle);
                                 }
-                                stringBuilder.setSpan(new ForegroundColorSpan(fragment.getThemedColor(Theme.key_windowBackgroundWhiteBlueText4)), spanStart, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                stringBuilder.setSpan(new ForegroundColorSpanThemable(Theme.key_windowBackgroundWhiteBlueText4, provider), spanStart, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                             } else {
                                 break;
                             }
@@ -15864,10 +15908,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                     }
                 }
-                if (faqWebPage != null) {
-                    for (int a = 0, N = faqSearchArray.size(); a < N; a++) {
-                        MessagesController.FaqSearchResult result = faqSearchArray.get(a);
-                        String title = " " + result.title.toLowerCase();
+                if (faqTitles != null) {
+                    for (int a = 0; a < faqTitles.length; a++) {
+                        MessagesController.FaqSearchResult result = faqEntries.get(a);
+                        String title = faqTitles[a];
                         SpannableStringBuilder stringBuilder = null;
                         for (int i = 0; i < searchArgs.length; i++) {
                             if (searchArgs[i].length() != 0) {
@@ -15885,7 +15929,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                     if (stringBuilder == null) {
                                         stringBuilder = new SpannableStringBuilder(result.title);
                                     }
-                                    stringBuilder.setSpan(new ForegroundColorSpan(fragment.getThemedColor(Theme.key_windowBackgroundWhiteBlueText4)), index, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                                    stringBuilder.setSpan(new ForegroundColorSpanThemable(Theme.key_windowBackgroundWhiteBlueText4, provider), index, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                                 } else {
                                     break;
                                 }
@@ -15899,7 +15943,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
 
                 AndroidUtilities.runOnUIThread(() -> {
-                    if (!text.equals(lastSearchString)) {
+                    if (generation != searchGeneration) {
                         return;
                     }
                     if (!searchWas) {

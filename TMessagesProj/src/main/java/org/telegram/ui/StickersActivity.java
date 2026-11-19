@@ -802,8 +802,7 @@ public class StickersActivity extends BaseFragment implements NotificationCenter
                     try {
                         final long documentId = Long.parseLong(reaction.substring(9));
                         final AnimatedEmojiDrawable drawable = AnimatedEmojiDrawable.make(currentAccount, AnimatedEmojiDrawable.CACHE_TYPE_KEYBOARD, documentId);
-                        drawable.addView(cell.getValueBackupImageView());
-                        cell.getValueBackupImageView().setImageDrawable(drawable);
+                        cell.getValueBackupImageView().setAnimatedEmojiDrawable(drawable);
                     } catch (Exception e) {}
                 } else {
                     final TLRPC.TL_availableReaction availableReaction = MediaDataController.getInstance(currentAccount).getReactionsMap().get(reaction);
