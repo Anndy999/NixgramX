@@ -14,6 +14,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -97,6 +98,9 @@ public class BookmarksActivity extends NekoDelegateFragment {
     private final ArrayList<MessageObject> filteredMessages = new ArrayList<>();
 
     private int rowCount;
+    private int loadGeneration;
+    private boolean scrollToNewest;
+    private boolean refreshOnResume;
     private RecyclerListView listView;
     private ChatActivitySideControlsButtonsLayout sideControlsButtonsLayout;
     private boolean pagedownButtonManuallyHidden;
@@ -201,55 +205,69 @@ public class BookmarksActivity extends NekoDelegateFragment {
     }
 
     private void updateBookmarks() {
-        updateBookmarks(null);
-    }
-
-    private void updateBookmarks(Runnable onComplete) {
-        int accountId = getCurrentAccount();
-        long userId = getUserConfig().getClientUserId();
-        Utilities.globalQueue.postRunnable(() -> {
-            int[] messageIds = BookmarksHelper.getBookmarkedMessageIds(accountId, dialogId);
-            ArrayList<MessageObject> loaded = new ArrayList<>(messageIds.length);
-
-            for (int messageId : messageIds) {
-                TLRPC.Message message = MessagesStorage.getInstance(accountId).getMessage(dialogId, messageId);
-                MessageObject messageObject = null;
-                if (message != null) {
-                    messageObject = new MessageObject(accountId, message, false, true);
-                    if (messageObject.messageOwner.media != null) {
-                        messageObject.messageOwner.media.ttl_seconds = 0;
+        final int generation = ++loadGeneration;
+        final int account = getCurrentAccount();
+        final long userId = getUserConfig().getClientUserId();
+        MessagesStorage.getInstance(account).getStorageQueue().postRunnable(() -> {
+            int[] ids = BookmarksHelper.getBookmarkedMessageIds(account, dialogId);
+            ArrayList<Integer> requested = new ArrayList<>(ids.length);
+            for (int id : ids) requested.add(id);
+            var stored = MessageHelper.getInstance(account).getMessagesStorageMessages(dialogId, requested);
+            Utilities.globalQueue.postRunnable(() -> {
+                var loaded = loadBookmarkRows(account, userId, requested, stored);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (generation != loadGeneration || isFinished || listView == null
+                            || userId != getUserConfig().getClientUserId()) return;
+                    bookmarkedMessages.clear();
+                    bookmarkedMessages.addAll(loaded);
+                    applySearchFilter();
+                    if (scrollToNewest && rowCount > 0) {
+                        listView.scrollToPosition(rowCount - 1);
+                        listView.post(this::updateVisibleMessageCells);
                     }
-                } else if (NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) {
-                    DeletedMessageFull deleted = AyuMessagesController.getInstance().getMessage(userId, dialogId, messageId);
-                    if (hasAyuDeletedContent(deleted)) {
-                        var base = deleted.message;
-                        var tl = new TLRPC.TL_message();
-                        AyuMessageUtils.map(base, tl, accountId);
-                        AyuMessageUtils.mapMedia(base, tl, accountId);
-                        tl.ayuDeleted = true;
-                        messageObject = new MessageObject(accountId, tl, false, true);
-                    }
-                }
-                if (messageObject == null) {
-                    messageObject = createMissingMessagePlaceholder(accountId, userId, messageId);
-                }
-                if (messageObject != null) {
-                    messageObject.forceAvatar = true;
-                    loaded.add(messageObject);
-                }
-            }
-
-            loaded.sort(Comparator.comparingInt(MessageObject::getId));
-
-            AndroidUtilities.runOnUIThread(() -> {
-                bookmarkedMessages.clear();
-                bookmarkedMessages.addAll(loaded);
-                applySearchFilter();
-                if (onComplete != null) {
-                    onComplete.run();
-                }
+                    scrollToNewest = false;
+                });
             });
         });
+    }
+
+    private ArrayList<MessageObject> loadBookmarkRows(int account, long userId, ArrayList<Integer> requested,
+                                                      ArrayList<TLRPC.Message> stored) {
+        SparseArray<TLRPC.Message> messages = new SparseArray<>(requested.size());
+        if (stored != null) {
+            for (var message : stored) messages.put(message.id, message);
+        }
+        if (NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool() && messages.size() < requested.size()) {
+            ArrayList<Integer> missing = new ArrayList<>();
+            for (int id : requested) {
+                if (messages.get(id) == null) missing.add(id);
+            }
+            for (var deleted : AyuMessagesController.getInstance().getMessagesByIds(userId, dialogId, missing)) {
+                if (!hasAyuDeletedContent(deleted)) continue;
+                var tl = new TLRPC.TL_message();
+                AyuMessageUtils.map(deleted.message, tl, account);
+                AyuMessageUtils.mapMedia(deleted.message, tl, account);
+                tl.ayuDeleted = true;
+                messages.put(deleted.message.messageId, tl);
+            }
+        }
+        ArrayList<MessageObject> rows = new ArrayList<>(requested.size());
+        for (int id : requested) {
+            TLRPC.Message message = messages.get(id);
+            MessageObject object;
+            if (message != null) {
+                object = new MessageObject(account, message, false, true);
+                if (!message.ayuDeleted && message.media != null) message.media.ttl_seconds = 0;
+            } else {
+                object = createMissingMessagePlaceholder(account, userId, id);
+            }
+            if (object != null) {
+                object.forceAvatar = true;
+                rows.add(object);
+            }
+        }
+        rows.sort(Comparator.comparingInt(MessageObject::getId));
+        return rows;
     }
 
     private MessageObject createMissingMessagePlaceholder(int accountId, long userId, int messageId) {
@@ -498,13 +516,9 @@ public class BookmarksActivity extends NekoDelegateFragment {
 
         listView.post(updateFloatingDateRunnable);
 
-        updateBookmarks(() -> {
-            if (rowCount > 0 && listView != null) {
-                listView.scrollToPosition(rowCount - 1);
-                listView.post(this::updateVisibleMessageCells);
-            }
-            updatePagedownButtonVisibility(false);
-        });
+        scrollToNewest = true;
+        refreshOnResume = false;
+        updateBookmarks();
 
         setupGlassActionBar(frameLayout, listView);
         return fragmentView;
@@ -519,7 +533,8 @@ public class BookmarksActivity extends NekoDelegateFragment {
         }
 
         updateActionBarCount();
-        updateBookmarks();
+        if (refreshOnResume && listView != null) updateBookmarks();
+        refreshOnResume = true;
     }
 
     @Override
@@ -538,6 +553,7 @@ public class BookmarksActivity extends NekoDelegateFragment {
 
     @Override
     public void onFragmentDestroy() {
+        loadGeneration++;
         super.onFragmentDestroy();
 
         if (scrimPopupWindow != null) {

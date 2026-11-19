@@ -659,7 +659,7 @@ public class UniversalAdapter extends AdapterWithDiffUtils {
                 break;
             case VIEW_TYPE_TEXT_SETTINGS:
                 final TextSettingsCell settingsCell = (TextSettingsCell) holder.itemView;
-                settingsCell.getValueBackupImageView().setImageDrawable(null);
+                settingsCell.clearValueImage();
                 if (item.text != null) {
                     if (item.subtext != null) {
                         settingsCell.setTextAndValue(item.text, item.subtext, divider);

@@ -568,9 +568,11 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
 
         @Override
-        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-            super.onLayout(changed, left, top, right, bottom);
-            gradientPaint.setShader(new LinearGradient(0, 0, getMeasuredWidth(), 0, new int[]{0xff7593ff, 0xffa472ff}, new float[]{0f, 1f}, Shader.TileMode.CLAMP));
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
+            if (w != oldw && w > 0) {
+                gradientPaint.setShader(new LinearGradient(0, 0, w, 0, 0xff7593ff, 0xffa472ff, Shader.TileMode.CLAMP));
+            }
         }
 
         public void setTextSize(int size) {

@@ -235,7 +235,7 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                 @NonNull
                 @Override
                 public RecyclerListView.Holder onCreateViewHolder(@NonNull ViewGroup parent1, int viewType) {
-                    View view = new SettingsSearchCell(parent);
+                    View view = new SettingsSearchCell(parent, getResourceProvider());
                     view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                     return new RecyclerListView.Holder(view);
                 }
