@@ -63,6 +63,10 @@ public class RegexFiltersSettingActivity extends BaseNekoSettingsActivity {
     public RegexFiltersSettingActivity() {
     }
 
+    private final ArrayList<ChatFilterRow> visibleChatFilters = new ArrayList<>();
+
+    private record ChatFilterRow(long dialogId, int ruleCount) {}
+
     @Override
     protected void updateRows() {
         super.updateRows();
@@ -92,9 +96,12 @@ public class RegexFiltersSettingActivity extends BaseNekoSettingsActivity {
         // Chat-specific filters section
         chatFiltersHeaderRow = rowCount++;
         addChatFilterBtnRow = rowCount++;
-        var chatEntries = checkChatFilters(AyuFilter.getChatFilterEntries());
+        visibleChatFilters.clear();
+        for (AyuFilter.ChatFilterEntry entry : checkChatFilters(AyuFilter.getChatFilterEntries())) {
+            visibleChatFilters.add(new ChatFilterRow(entry.dialogId, entry.filters != null ? entry.filters.size() : 0));
+        }
         chatFiltersStartRow = rowCount;
-        rowCount += chatEntries.size();
+        rowCount += visibleChatFilters.size();
         chatFiltersEndRow = rowCount;
     }
 
@@ -389,13 +396,8 @@ public class RegexFiltersSettingActivity extends BaseNekoSettingsActivity {
             presentFragment(new ShadowBanListActivity());
         } else if (position == addChatFilterBtnRow) {
             presentFragment(getDialogsActivity());
-        } else if (position >= chatFiltersStartRow && position < chatFiltersEndRow) {
-            int idx = position - chatFiltersStartRow;
-            var chatEntries = checkChatFilters(AyuFilter.getChatFilterEntries());
-            if (idx >= 0 && idx < chatEntries.size()) {
-                long did = chatEntries.get(idx).dialogId;
-                presentFragment(new RegexChatFiltersListActivity(did));
-            }
+        } else if (view instanceof FiltersChatCell chatCell) {
+            presentFragment(new RegexChatFiltersListActivity(chatCell.getDialogId()));
         }
     }
 
@@ -421,15 +423,16 @@ public class RegexFiltersSettingActivity extends BaseNekoSettingsActivity {
     private ArrayList<AyuFilter.ChatFilterEntry> checkChatFilters(ArrayList<AyuFilter.ChatFilterEntry> chatEntries) {
         if (chatEntries == null || chatEntries.isEmpty()) return chatEntries;
         ArrayList<AyuFilter.ChatFilterEntry> newEntries = new ArrayList<>();
+        MessagesController controller = getMessagesController();
         for (AyuFilter.ChatFilterEntry entry : chatEntries) {
             if (entry == null) continue;
             if (entry.dialogId > 0) {
-                TLRPC.User user = MessagesController.getInstance(UserConfig.selectedAccount).getUser(entry.dialogId);
+                TLRPC.User user = controller.getUser(entry.dialogId);
                 if (user != null) {
                     newEntries.add(entry);
                 }
             } else {
-                TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(-entry.dialogId);
+                TLRPC.Chat chat = controller.getChat(-entry.dialogId);
                 if (chat != null) {
                     newEntries.add(entry);
                 }
@@ -479,7 +482,7 @@ public class RegexFiltersSettingActivity extends BaseNekoSettingsActivity {
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             if (viewType == TYPE_ACCOUNT) {
-                FiltersChatCell chatCell = new FiltersChatCell(mContext);
+                FiltersChatCell chatCell = new FiltersChatCell(mContext, currentAccount);
                 chatCell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                 chatCell.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 return new RecyclerListView.Holder(chatCell);
@@ -517,15 +520,9 @@ public class RegexFiltersSettingActivity extends BaseNekoSettingsActivity {
                     break;
                 case TYPE_ACCOUNT:
                     if (position >= chatFiltersStartRow && position < chatFiltersEndRow) {
-                        int idx = position - chatFiltersStartRow;
-                        var chatEntries = checkChatFilters(AyuFilter.getChatFilterEntries());
-                        if (idx >= 0 && idx < chatEntries.size()) {
-                            var entry = chatEntries.get(idx);
-                            long did = entry.dialogId;
-                            int count = entry.filters != null ? entry.filters.size() : 0;
-                            FiltersChatCell chatCell = (FiltersChatCell) holder.itemView;
-                            chatCell.setDialog(did, count);
-                        }
+                        ChatFilterRow row = visibleChatFilters.get(position - chatFiltersStartRow);
+                        FiltersChatCell chatCell = (FiltersChatCell) holder.itemView;
+                        chatCell.setDialog(row.dialogId(), row.ruleCount());
                     }
                     break;
                 case TYPE_HEADER:

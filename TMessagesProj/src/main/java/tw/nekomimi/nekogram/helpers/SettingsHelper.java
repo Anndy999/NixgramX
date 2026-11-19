@@ -4,16 +4,24 @@ import static org.telegram.messenger.LocaleController.getString;
 import static org.telegram.ui.ProfileActivity.sendLogs;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.text.TextUtils;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.BuildVars;
+import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.BaseFragment;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
+import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 import tw.nekomimi.nekogram.settings.BaseNekoXSettingsActivity;
 import tw.nekomimi.nekogram.settings.NekoAboutActivity;
@@ -108,39 +116,71 @@ public class SettingsHelper {
         void presentFragment(BaseFragment fragment);
     }
 
-    public static ArrayList<SettingsSearchResult> onCreateSearchArray(Callback callback) {
-        ArrayList<SettingsSearchResult> items = new ArrayList<>();
-        ArrayList<BaseNekoXSettingsActivity> fragments = new ArrayList<>();
-        fragments.add(new NekoGeneralSettingsActivity());
-        fragments.add(new NekoChatSettingsActivity());
-        fragments.add(new NekoExperimentalSettingsActivity());
-        fragments.add(new NekoTranslatorSettingsActivity());
+    // The cached index holds only row metadata. Each navigation opens a fresh fragment.
+    private record SearchEntry(int guid, String title, String category, int icon, String key,
+                               Supplier<BaseNekoXSettingsActivity> factory) {}
+    private record SearchScope(LocaleController.LocaleInfo language, int languageVersion, int baseVersion,
+                               int account, boolean debugRows) {}
 
-        String n_title = getString(R.string.NekoSettings);
-        for (BaseNekoXSettingsActivity fragment: fragments) {
-            int uid = fragment.getBaseGuid();
-            int drawable = fragment.getDrawable();
-            String f_title = fragment.getTitle();
-            for (Map.Entry<Integer, String> entry : fragment.getRowMapReverse().entrySet()) {
-                Integer i = entry.getKey();
-                String key = entry.getValue();
-                if (key.equals(String.valueOf(i))) {
-                    continue;
-                }
-                int guid = uid + i;
-                String title = getString(key);
-                if (title == null || title.isEmpty()) {
-                    continue;
-                }
-                Runnable open = () -> {
-                    callback.presentFragment(fragment);
-                    AndroidUtilities.runOnUIThread(() -> fragment.scrollToRow(key, null));
-                };
-                SettingsSearchResult result = new SettingsSearchResult(
-                        guid, title, n_title, f_title, drawable, open
-                );
-                items.add(result);
+    private static volatile List<SearchEntry> searchIndex;
+    private static SearchScope searchScope;
+    private static boolean observingSearchPreferences;
+    private static final SharedPreferences.OnSharedPreferenceChangeListener searchPreferencesListener =
+            (preferences, key) -> searchIndex = null;
+
+    private static synchronized List<SearchEntry> getSearchIndex() {
+        if (!observingSearchPreferences) {
+            NekoConfig.getPreferences().registerOnSharedPreferenceChangeListener(searchPreferencesListener);
+            observingSearchPreferences = true;
+        }
+        LocaleController.LocaleInfo language = LocaleController.getInstance().getCurrentLocaleInfo();
+        SearchScope scope = new SearchScope(language, language != null ? language.version : 0,
+                language != null ? language.baseVersion : 0, UserConfig.selectedAccount, BuildVars.LOGS_ENABLED);
+        List<SearchEntry> index = searchIndex;
+        if (scope.equals(searchScope) && index != null) {
+            return index;
+        }
+
+        ArrayList<SearchEntry> entries = new ArrayList<>();
+        indexPage(entries, NekoGeneralSettingsActivity::new);
+        indexPage(entries, NekoChatSettingsActivity::new);
+        indexPage(entries, NekoExperimentalSettingsActivity::new);
+        indexPage(entries, NekoTranslatorSettingsActivity::new);
+        searchScope = scope;
+        index = List.copyOf(entries);
+        searchIndex = index;
+        return index;
+    }
+
+    private static void indexPage(ArrayList<SearchEntry> entries, Supplier<BaseNekoXSettingsActivity> factory) {
+        BaseNekoXSettingsActivity fragment = factory.get();
+        int guid = fragment.getBaseGuid();
+        int icon = fragment.getDrawable();
+        String category = fragment.getTitle();
+        ArrayList<Map.Entry<Integer, String>> rows = new ArrayList<>(fragment.getRowMapReverse().entrySet());
+        rows.sort(Comparator.comparingInt(Map.Entry::getKey));
+        for (Map.Entry<Integer, String> row : rows) {
+            int position = row.getKey();
+            String key = row.getValue();
+            if (key.equals(String.valueOf(position))) continue;
+
+            String title = getString(key);
+            if (!TextUtils.isEmpty(title)) {
+                entries.add(new SearchEntry(guid + position, title, category, icon, key, factory));
             }
+        }
+    }
+
+    public static ArrayList<SettingsSearchResult> onCreateSearchArray(Callback callback) {
+        String title = getString(R.string.NekoSettings);
+        ArrayList<SettingsSearchResult> items = new ArrayList<>();
+        for (SearchEntry entry : getSearchIndex()) {
+            Runnable open = () -> {
+                BaseNekoXSettingsActivity fragment = entry.factory().get();
+                callback.presentFragment(fragment);
+                AndroidUtilities.runOnUIThread(() -> fragment.scrollToRow(entry.key(), null));
+            };
+            items.add(new SettingsSearchResult(entry.guid(), entry.title(), title, entry.category(), entry.icon(), open));
         }
         return items;
     }

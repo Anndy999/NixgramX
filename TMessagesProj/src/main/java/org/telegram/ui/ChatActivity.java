@@ -34639,11 +34639,24 @@ public class ChatActivity extends BaseFragment implements
                     popupLayout.addView(layout);
                 }
 
-                if (GroupedIconsView.useGroupedIcons()) {
-                    popupLayout.addView(new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
-
-                    var groupedIconsView = new GroupedIconsView(getContext(), ChatActivity.this, selectedObject, this.lastMessageMenuStatus.allowReply, this.lastMessageMenuStatus.allowReplyPm, this.lastMessageMenuStatus.allowEdit, this.lastMessageMenuStatus.allowDelete, this.lastMessageMenuStatus.allowForward, this.lastMessageMenuStatus.allowCopy, this.lastMessageMenuStatus.allowCopyPhoto, this.lastMessageMenuStatus.allowCopyLink, this.lastMessageMenuStatus.allowCopyLinkPm);
-                    popupLayout.addView(groupedIconsView.linearLayout);
+                if (hasGroupedIcons) {
+                    MessageMenuStatus status = lastMessageMenuStatus;
+                    boolean webPhoto = status.allowCopy && selectedObject != null && selectedObject.isPhoto() && selectedObject.isWebpage();
+                    boolean copyAsSticker = status.allowCopyPhoto && selectedObject != null && !selectedObject.isSticker()
+                            && NaConfig.INSTANCE.getShowCopyAsSticker().Bool();
+                    var groupedIcons = new GroupedIconsView(getContext(), ChatActivity.this, themeDelegate,
+                            status.allowReply, status.allowReplyPm, status.allowEdit,
+                            status.allowDelete && !showWelcomeMessageRevertOption(selectedObject), status.allowForward,
+                            status.allowCopy, (status.allowCopyPhoto || webPhoto) && !options.contains(OPTION_COPY_PHOTO), copyAsSticker,
+                            status.allowCopyLink && !options.contains(OPTION_COPY_LINK),
+                            status.allowCopyLinkPm && !options.contains(nkbtn_copy_link_in_pm),
+                            chatMode == MODE_SAVED && threadMessageId != getUserConfig().getClientUserId());
+                    groupedIcons.addSecondaryOptions(popupLayout, options);
+                    if (groupedIcons.getChildCount() > 0) {
+                        popupLayout.addView(new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate),
+                                LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
+                        popupLayout.addView(groupedIcons);
+                    }
                 }
 
             }

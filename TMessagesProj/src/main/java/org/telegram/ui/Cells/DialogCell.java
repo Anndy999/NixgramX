@@ -5878,9 +5878,24 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
         } else if (groupMessages != null && groupMessages.size() > 1 && TextUtils.isEmpty(restrictionReason) && currentDialogFolderId == 0 && encryptedChat == null) {
             thumbsCount = 0;
             hasVideoThumb = false;
-            Collections.sort(groupMessages, Comparator.comparingInt(MessageObject::getId));
-            for (int i = 0; i < Math.min(3, groupMessages.size()); ++i) {
-                MessageObject message = groupMessages.get(i);
+            // Select the first three IDs without reordering the controller's shared album.
+            MessageObject first = null, second = null, third = null;
+            for (MessageObject candidate : groupMessages) {
+                if (candidate == null) continue;
+                int id = candidate.getId();
+                if (first == null || id < first.getId()) {
+                    third = second;
+                    second = first;
+                    first = candidate;
+                } else if (second == null || id < second.getId()) {
+                    third = second;
+                    second = candidate;
+                } else if (third == null || id < third.getId()) {
+                    third = candidate;
+                }
+            }
+            for (int i = 0; i < 3; ++i) {
+                MessageObject message = i == 0 ? first : i == 1 ? second : third;
                 if (message != null && !message.needDrawBluredPreview() && (message.isPhoto() || message.isNewGif() || message.isVideo() || message.isRoundVideo() || message.isStoryMedia())) {
                     String type = message.isWebpage() ? message.messageOwner.media.webpage.type : null;
                     if (!("app".equals(type) || "profile".equals(type) || "article".equals(type) || type != null && type.startsWith("telegram_"))) {

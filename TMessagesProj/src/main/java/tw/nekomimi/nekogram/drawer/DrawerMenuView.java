@@ -1,17 +1,17 @@
 package tw.nekomimi.nekogram.drawer;
 
-import static org.telegram.messenger.AndroidUtilities.dp;
-
 import android.content.Context;
+import android.util.SparseArray;
 import android.view.View;
 import android.widget.LinearLayout;
 
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 
-import java.util.List;
+import java.util.HashSet;
 
 public class DrawerMenuView extends LinearLayout {
+    private final SparseArray<DrawerMenuItemView> rows = new SparseArray<>();
 
     public DrawerMenuView(Context context) {
         super(context);
@@ -19,19 +19,29 @@ public class DrawerMenuView extends LinearLayout {
     }
 
     public void rebuild(BaseFragment fragment, int currentAccount, Runnable afterClick) {
-        removeAllViews();
         if (fragment == null) {
+            removeAllViews();
+            rows.clear();
+            setVisibility(GONE);
             return;
         }
-        List<Integer> visible = MainMenuLayout.getVisibleIds();
-        for (Integer id : visible) {
+        var retained = new HashSet<Integer>();
+        int position = 0;
+        for (int id : MainMenuLayout.getVisibleIds()) {
             MainMenuHelper.MenuItemInfo info = MainMenuHelper.resolve(id, fragment, currentAccount);
-            if (info == null) {
+            if (info == null || !retained.add(id)) {
                 continue;
             }
-            DrawerMenuItemView row = new DrawerMenuItemView(getContext());
+            DrawerMenuItemView row = rows.get(id);
+            if (row == null) {
+                row = new DrawerMenuItemView(getContext());
+                rows.put(id, row);
+                addView(row, position, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+            } else if (indexOfChild(row) != position) {
+                removeView(row);
+                addView(row, position);
+            }
             row.setItem(info.iconRes, info.text);
-            row.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 2));
             row.setOnClickListener(v -> {
                 if (info.onClick != null) {
                     info.onClick.run();
@@ -40,21 +50,26 @@ public class DrawerMenuView extends LinearLayout {
                     afterClick.run();
                 }
             });
-            if (info.onLongClick != null) {
-                row.setOnLongClickListener(v -> {
-                    info.onLongClick.run();
-                    if (afterClick != null) {
-                        afterClick.run();
-                    }
-                    return true;
-                });
+            row.setOnLongClickListener(info.onLongClick == null ? null : v -> {
+                info.onLongClick.run();
+                if (afterClick != null) {
+                    afterClick.run();
+                }
+                return true;
+            });
+            row.setLongClickable(info.onLongClick != null);
+            position++;
+        }
+        for (int i = rows.size() - 1; i >= 0; i--) {
+            if (!retained.contains(rows.keyAt(i))) {
+                removeView(rows.valueAt(i));
+                rows.removeAt(i);
             }
-            addView(row, new LayoutParams(LayoutParams.MATCH_PARENT, dp(48)));
         }
-        if (getChildCount() == 0) {
-            setVisibility(View.GONE);
-        } else {
-            setVisibility(View.VISIBLE);
-        }
+        setVisibility(getChildCount() == 0 ? View.GONE : View.VISIBLE);
+    }
+
+    void updateColors() {
+        ThemeBind.updateTree(this, false);
     }
 }

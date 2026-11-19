@@ -540,9 +540,7 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
         drawerPanel.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         headerView.updateColors();
         accountPickerView.updateColors();
-        BaseFragment fragment = getContentFragment();
-        int account = fragment != null ? fragment.getCurrentAccount() : org.telegram.messenger.UserConfig.selectedAccount;
-        menuView.rebuild(fragment, account, () -> closeDrawer(true));
+        menuView.updateColors();
         setProgress(progress);
         invalidate();
     }

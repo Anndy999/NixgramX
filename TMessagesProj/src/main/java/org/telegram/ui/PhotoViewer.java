@@ -5871,15 +5871,26 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     if (videoPlayer == null || currentMessageObject == null) {
                         return;
                     }
-                    final long currentPosition = videoPlayer.getCurrentPosition();
-                    final MessageObject messageObject = currentMessageObject;
-                    final String videoPath = messageObject != null ? MessageHelper.getPathToMessage(messageObject) : null;
+                    final VideoPlayer requestedPlayer = videoPlayer;
+                    final long requestedPosition = requestedPlayer.getCurrentPosition();
+                    final MessageObject requestedMessage = currentMessageObject;
+                    final int requestedIndex = currentIndex;
+                    final String videoPath = MessageHelper.getPathToMessage(requestedMessage);
                     final File videoFile = !TextUtils.isEmpty(videoPath) ? new File(videoPath) : null;
-                    MessageHelper.copyVideoFrameToClipboard(videoFile, currentPosition, containerView, resourcesProvider, () -> {
-                        if (captureCurrentVideoFrameToClipboard()) {
+                    if (videoFile == null || !videoFile.isFile()) {
+                        if (!captureCurrentVideoFrameToClipboard()) {
+                            showDownloadAlert();
+                        }
+                        return;
+                    }
+                    MessageHelper.copyVideoFrameToClipboard(videoFile, requestedPosition, containerView, resourcesProvider, () -> {
+                        if (!isVisible || currentMessageObject != requestedMessage || currentIndex != requestedIndex
+                                || videoPlayer != requestedPlayer) {
                             return;
                         }
-                        if (messageObject != null && currentMessageObject == messageObject) {
+                        // A surface fallback is only useful while it is still displaying the requested frame.
+                        if (Math.abs(requestedPlayer.getCurrentPosition() - requestedPosition) > 100
+                                || !captureCurrentVideoFrameToClipboard()) {
                             showDownloadAlert();
                         }
                     });
