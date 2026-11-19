@@ -85,7 +85,10 @@ public class FiltersChatCell extends FrameLayout {
     }
 
     public void setDialog(long dialogId, int filterCount) {
-        needDivider = true;
+        if (!needDivider) {
+            needDivider = true;
+            setMinimumHeight(dp(56) + 1);
+        }
         String title = "";
         String subtitle = filterCount + " " + getString(R.string.RegexFiltersHeader);
         if (filterCount == 1) {
@@ -121,9 +124,4 @@ public class FiltersChatCell extends FrameLayout {
         setWillNotDraw(!needDivider);
     }
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        setMinimumHeight(dp(56) + (needDivider ? 1 : 0));
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-    }
 }

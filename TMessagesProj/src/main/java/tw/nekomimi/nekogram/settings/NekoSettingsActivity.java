@@ -33,6 +33,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -175,7 +176,7 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             searchIcon.setScaleType(ImageView.ScaleType.CENTER);
             searchIcon.setImageResource(R.drawable.ic_ab_search_solar);
             ThemeBind.colorFilter(searchIcon, Theme.key_windowBackgroundWhiteGrayIcon, resourceProvider, PorterDuff.Mode.MULTIPLY);
-            searchFrame.addView(searchIcon, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+            searchFrame.addView(searchIcon, LayoutHelper.createFrameRelatively(48, 48, Gravity.START | Gravity.CENTER_VERTICAL));
 
             EditTextBoldCursor searchField = new EditTextBoldCursor(parent);
             searchField.setHint(getString(R.string.Search));
@@ -185,7 +186,8 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             searchField.setBackground(null);
             searchField.setInputType(InputType.TYPE_CLASS_TEXT);
             ThemeBind.lineColors(searchField, Theme.key_windowBackgroundWhiteInputField, Theme.key_windowBackgroundWhiteInputFieldActivated, Theme.key_text_RedRegular, resourceProvider);
-            searchField.setPadding(dp(61), pad / 2, dp(48), pad / 2);
+            searchField.setPadding(dp(LocaleController.isRTL ? 48 : 61), pad / 2,
+                    dp(LocaleController.isRTL ? 61 : 48), pad / 2);
             searchField.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER_VERTICAL));
             searchFrame.addView(searchField);
 
@@ -196,7 +198,7 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                     null, ThemeBind.of(Theme.key_listSelector), resourceProvider);
             clearButton.setContentDescription(getString(R.string.ClearButton));
             ThemeBind.colorFilter(clearButton, Theme.key_windowBackgroundWhiteGrayIcon, resourceProvider, PorterDuff.Mode.MULTIPLY);
-            clearButton.setLayoutParams(new FrameLayout.LayoutParams(clearSize, clearSize, Gravity.END | Gravity.CENTER_VERTICAL));
+            clearButton.setLayoutParams(new FrameLayout.LayoutParams(clearSize, clearSize, LayoutHelper.getAbsoluteGravityEnd() | Gravity.CENTER_VERTICAL));
             searchFrame.addView(clearButton);
             containerLayout.addView(searchFrame);
 

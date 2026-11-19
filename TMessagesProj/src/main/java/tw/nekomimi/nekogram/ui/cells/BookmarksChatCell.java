@@ -95,7 +95,10 @@ public class BookmarksChatCell extends FrameLayout {
     }
 
     public void setData(TLObject peer, CharSequence title, CharSequence subtitle, int bookmarkCount, boolean divider) {
-        needDivider = divider;
+        if (needDivider != divider) {
+            needDivider = divider;
+            setMinimumHeight(dp(56) + (divider ? 1 : 0));
+        }
         boolean useSolar = NaConfig.INSTANCE.getIconReplacements().Int() == IconsResources.ICON_REPLACE_SOLAR;
 
         if (peer instanceof TLRPC.User user) {
@@ -147,7 +150,6 @@ public class BookmarksChatCell extends FrameLayout {
         } else {
             labelParams.rightMargin = endMargin;
         }
-        setMinimumHeight(dp(56) + (needDivider ? 1 : 0));
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 }
