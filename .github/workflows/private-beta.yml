@@ -8,8 +8,8 @@ permissions:
 
 jobs:
   private-beta:
-    name: Build and deliver private Beta arm64
-    if: github.actor == github.repository_owner && github.ref_name == 'diagnostic/private-beta-13.2.2'
+    name: Compile and verify ARM64 changes
+    if: github.actor == github.repository_owner && github.ref_name == 'verify/post-1359-stability'
     runs-on: ubuntu-latest
     timeout-minutes: 100
     env:
@@ -89,27 +89,3 @@ jobs:
           printf '%s\n' "$apk_info" | grep -F "package: name='app.nixgramx.android' versionCode='$NIXGRAMX_VERSION_CODE' versionName='13.2.2-beta-${GITHUB_SHA:0:7}'"
           printf '%s\n' "$apk_info" | grep -Fx "native-code: 'arm64-v8a'"
           echo "path=$PRIVATE_BETA_APK" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-      - name: Send APK to private Telegram test target
-        env:
-          APP_ID: ${{ secrets.APP_ID }}
-          APP_HASH: ${{ secrets.APP_HASH }}
-          HELPER_BOT_TOKEN: ${{ secrets.HELPER_BOT_TOKEN }}
-          HELPER_BOT_PRIVATE_TARGET: ${{ secrets.HELPER_BOT_PRIVATE_TARGET }}
-          HELPER_BOT_TARGET: ${{ secrets.HELPER_BOT_TARGET }}
-          HELPER_BOT_CANARY_TARGET: ${{ secrets.HELPER_BOT_CANARY_TARGET }}
-          COMMIT_ID: ${{ github.sha }}
-          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-          BUILD_TIMESTAMP: ${{ steps.build.outputs.timestamp }}
-          PRIVATE_BETA_APK: ${{ steps.apk.outputs.path }}
-          RELEASE_NOTES: |
-            - 书签和历史消息页面随视图生命周期清理玻璃效果监听与渲染资源。
-            - 批量删除历史消息时分批查询媒体路径，并用事务删除消息和编辑记录。
-            - 修正后备推送定时器的服务启动类型并清理旧定时器。
-            - 修复输入框绘制异常时的状态恢复，并补录 Android 14+ 的替换文本诊断。
-        run: |
-          set -euo pipefail
-          python -m pip install -r Tools/scripts/requirements.txt
-          python Tools/scripts/upload_private_beta.py "$HELPER_BOT_TOKEN"
