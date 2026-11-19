@@ -170,6 +170,9 @@ public class TextSettingsCell extends FrameLayout {
             valueTextView.measure(MeasureSpec.makeMeasureSpec(valueLimit, MeasureSpec.AT_MOST), heightSpec);
             end += valueTextView.getMeasuredWidth() + gap;
         }
+        if (drawLoading || drawLoadingProgress > 0) {
+            end = Math.max(end, AndroidUtilities.dp(padding) + AndroidUtilities.dp(loadingSize) + gap);
+        }
         int titleWidth = Math.max(0, innerWidth - start - Math.max(titleEnd, end));
         int titleSpec = MeasureSpec.makeMeasureSpec(titleWidth, MeasureSpec.EXACTLY);
         if (multilineTitle) {
@@ -385,8 +388,9 @@ public class TextSettingsCell extends FrameLayout {
                 }
             } else if (!drawLoading && drawLoadingProgress != 0) {
                 drawLoadingProgress -= 16 / 150f;
-                if (drawLoadingProgress < 0) {
+                if (drawLoadingProgress <= 0) {
                     drawLoadingProgress = 0;
+                    requestLayout();
                 }
             }
 
@@ -418,6 +422,7 @@ public class TextSettingsCell extends FrameLayout {
     }
 
     public void setDrawLoading(boolean drawLoading, int size, boolean animated) {
+        if (this.drawLoading != drawLoading || (drawLoading && loadingSize != size)) requestLayout();
         this.drawLoading = drawLoading;
         this.loadingSize = size;
 

@@ -187,29 +187,41 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = dp(heightDp);
 
-        if (lastWidth != 0 && lastWidth != width && valueText != null) {
-            valueTextView.setText(TextUtils.ellipsize(valueText, valueTextView.getPaint(), AndroidUtilities.displaySize.x / 2.5f, TextUtils.TruncateAt.END), false);
+        if (lastWidth != 0 && lastWidth != width && valueText != null && valueTextView.getVisibility() == VISIBLE) {
+            valueTextView.setText(TextUtils.ellipsize(valueText, valueTextView.getPaint(), width / 2.5f, TextUtils.TruncateAt.END), false);
         }
         lastWidth = width;
 
-        int valueWidth;
+        int titleSpace = Math.max(0, width - dp(71 + leftPadding));
+        int titleStart = dp(imageView.getVisibility() == VISIBLE ? offsetFromImage : leftPadding);
+        int accessoryEnd = 0;
+        if (valueImageView.getVisibility() == VISIBLE) {
+            valueImageView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST));
+            accessoryEnd = dp(23) + valueImageView.getMeasuredWidth();
+        }
+        if (checkBox != null && checkBox.getVisibility() == VISIBLE) accessoryEnd = Math.max(accessoryEnd, dp(22) + dp(38));
+        if (emojiDrawable != null && !emojiDrawable.isEmpty()) accessoryEnd = Math.max(accessoryEnd, dp(18) + emojiDrawable.getIntrinsicWidth());
+        if (drawLoading || drawLoadingProgress > 0) accessoryEnd = Math.max(accessoryEnd, dp(21) + dp(loadingSize));
+        int titleLimit = accessoryEnd > 0 ? Math.max(0, width - titleStart - accessoryEnd - dp(8)) : titleSpace;
         if (prioritizeTitleOverValue) {
-            textView.measure(MeasureSpec.makeMeasureSpec(width - dp(71 + leftPadding), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
-            subtitleView.measure(MeasureSpec.makeMeasureSpec(width - dp(71 + leftPadding), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
-            valueTextView.measure(MeasureSpec.makeMeasureSpec(width - dp(103 + leftPadding) - textView.getTextWidth(), LocaleController.isRTL ? MeasureSpec.AT_MOST : MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
-            valueSpoilersTextView.measure(MeasureSpec.makeMeasureSpec(width - dp(103 + leftPadding) - textView.getTextWidth(), LocaleController.isRTL ? MeasureSpec.AT_MOST : MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            int titleSpec = MeasureSpec.makeMeasureSpec(Math.min(titleLimit, titleSpace), MeasureSpec.AT_MOST);
+            textView.measure(titleSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            subtitleView.measure(titleSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            int valueSpec = MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(103 + leftPadding) - textView.getTextWidth()), LocaleController.isRTL ? MeasureSpec.AT_MOST : MeasureSpec.EXACTLY);
+            valueTextView.measure(valueSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            valueSpoilersTextView.measure(valueSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
         } else {
-            valueTextView.measure(MeasureSpec.makeMeasureSpec(width - dp(leftPadding), LocaleController.isRTL ? MeasureSpec.AT_MOST : MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
-            valueSpoilersTextView.measure(MeasureSpec.makeMeasureSpec(width - dp(leftPadding), LocaleController.isRTL ? MeasureSpec.AT_MOST : MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
-            valueWidth = Math.max(valueTextView.width(), valueSpoilersTextView.getTextWidth());
-            textView.measure(MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(71 + leftPadding) - valueWidth), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
-            subtitleView.measure(MeasureSpec.makeMeasureSpec(width - dp(71 + leftPadding) - valueWidth, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            int valueSpec = MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(leftPadding)), LocaleController.isRTL ? MeasureSpec.AT_MOST : MeasureSpec.EXACTLY);
+            valueTextView.measure(valueSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            valueSpoilersTextView.measure(valueSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            int valueWidth = Math.max(valueTextView.getVisibility() == VISIBLE ? valueTextView.width() : 0,
+                    valueSpoilersTextView.getVisibility() == VISIBLE ? valueSpoilersTextView.getTextWidth() : 0);
+            int titleSpec = MeasureSpec.makeMeasureSpec(Math.min(titleLimit, Math.max(0, titleSpace - valueWidth)), MeasureSpec.AT_MOST);
+            textView.measure(titleSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
+            subtitleView.measure(titleSpec, MeasureSpec.makeMeasureSpec(dp(20), MeasureSpec.EXACTLY));
         }
         if (imageView.getVisibility() == VISIBLE) {
             imageView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST));
-        }
-        if (valueImageView.getVisibility() == VISIBLE) {
-            valueImageView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST));
         }
         if (checkBox != null) {
             checkBox.measure(MeasureSpec.makeMeasureSpec(dp(38), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(22), MeasureSpec.EXACTLY));
@@ -242,10 +254,12 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
 
     public void updateEmojiBounds() {
         if (emojiDrawable == null) return;
+        int size = emojiDrawable.getIntrinsicWidth();
+        int left = LocaleController.isRTL ? dp(18) : getWidth() - dp(18) - size;
         emojiDrawable.setBounds(
-            getWidth() - emojiDrawable.getIntrinsicWidth() - AndroidUtilities.dp(18),
+            left,
             (getHeight() - emojiDrawable.getIntrinsicHeight()) / 2,
-            getWidth() - AndroidUtilities.dp(18),
+            left + size,
             (getHeight() + emojiDrawable.getIntrinsicHeight()) / 2
         );
     }
@@ -274,6 +288,7 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
             viewTop = (height - textView.getTextHeight() - subtitleView.getTextHeight() - dp(margin)) / 2 + dp(1);
             textView.layout(viewLeft, viewTop, viewLeft + textView.getMeasuredWidth(), viewTop + textView.getMeasuredHeight());
             viewTop = viewTop + textView.getTextHeight() + dp(margin);
+            if (LocaleController.isRTL) viewLeft += textView.getMeasuredWidth() - subtitleView.getMeasuredWidth();
             subtitleView.layout(viewLeft, viewTop, viewLeft + subtitleView.getMeasuredWidth(), viewTop + subtitleView.getMeasuredHeight());
         } else {
             viewTop = (height - textView.getTextHeight()) / 2 + dp(1);
@@ -505,8 +520,7 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
         offsetFromImage = getOffsetFromImage(false);
         textView.setText(text);
         textView.setRightDrawable(null);
-        valueText = value;
-        valueTextView.setText(valueText == null ? null : TextUtils.ellipsize(valueText, valueTextView.getPaint(), AndroidUtilities.displaySize.x / 2.5f, TextUtils.TruncateAt.END), animated);
+        setValue(value, animated);
         valueTextView.setVisibility(VISIBLE);
         valueSpoilersTextView.setVisibility(GONE);
         imageView.setVisibility(GONE);
@@ -522,7 +536,9 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
     }
 
     public void setValue(CharSequence value, boolean animated) {
-        valueTextView.setText(value == null ? "" : TextUtils.ellipsize(valueText = value, valueTextView.getPaint(), AndroidUtilities.displaySize.x / 2.5f, TextUtils.TruncateAt.END), animated);
+        valueText = value;
+        int width = getMeasuredWidth() > 0 ? getMeasuredWidth() : AndroidUtilities.displaySize.x;
+        valueTextView.setText(value == null ? "" : TextUtils.ellipsize(value, valueTextView.getPaint(), width / 2.5f, TextUtils.TruncateAt.END), animated);
     }
 
     public void setTextAndValueAndColorfulIcon(String text, CharSequence value, boolean animated, int resId, int colorTop, int colorBottom, boolean divider) {
@@ -530,7 +546,7 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
         offsetFromImage = getOffsetFromImage(false);
         textView.setText(text);
         textView.setRightDrawable(null);
-        valueTextView.setText(value == null ? "" : TextUtils.ellipsize(valueText = value, valueTextView.getPaint(), AndroidUtilities.displaySize.x / 2.5f, TextUtils.TruncateAt.END), animated);
+        setValue(value, animated);
         valueTextView.setVisibility(VISIBLE);
         valueSpoilersTextView.setVisibility(GONE);
         setColorfulIcon(colorTop, colorBottom, resId);
@@ -624,9 +640,10 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
         textView.setText(text);
         textView.setRightDrawable(null);
         imageView.setVisibility(VISIBLE);
+        valueText = value;
         if (value != null) {
             int availableWidth = (int) Math.max(1, AndroidUtilities.displaySize.x - (dp(offsetFromImage) + HintView2.measureCorrectly(text, textView.getTextPaint()) + dp(16)));
-            valueTextView.setText(value == null ? "" : TextUtils.ellipsize(valueText = value, valueTextView.getPaint(), availableWidth, TextUtils.TruncateAt.END), animated);
+            valueTextView.setText(TextUtils.ellipsize(value, valueTextView.getPaint(), availableWidth, TextUtils.TruncateAt.END), animated);
         } else {
             valueTextView.setText("", animated);
         }
@@ -690,6 +707,8 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
         offsetFromImage = getOffsetFromImage(false);
         textView.setText(text);
         textView.setRightDrawable(null);
+        valueTextView.setVisibility(GONE);
+        valueSpoilersTextView.setVisibility(GONE);
         imageView.setVisibility(GONE);
         valueImageView.setVisibility(GONE);
         needDivider = divider;
@@ -965,6 +984,7 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
     }
 
     public void setDrawLoading(boolean drawLoading, int size, boolean animated) {
+        if (this.drawLoading != drawLoading || (drawLoading && loadingSize != size)) requestLayout();
         this.drawLoading = drawLoading;
         this.loadingSize = size;
 
@@ -985,9 +1005,7 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
         if (drawLoading || drawLoadingProgress != 0) {
             if (paint == null) {
                 paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                paint.setColor(Theme.getColor(Theme.key_dialogSearchBackground, resourcesProvider));
             }
-            //LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT;
             if (incrementLoadingProgress) {
                 loadingProgress += 16 / 1000f;
                 if (loadingProgress > 1f) {
@@ -1011,24 +1029,19 @@ public class TextCell extends FrameLayout implements Theme.Colorable {
                 }
             } else if (!drawLoading && drawLoadingProgress != 0) {
                 drawLoadingProgress -= 16 / 150f;
-                if (drawLoadingProgress < 0) {
+                if (drawLoadingProgress <= 0) {
                     drawLoadingProgress = 0;
+                    requestLayout();
                 }
             }
 
             float alpha = (0.6f + 0.4f * loadingProgress) * drawLoadingProgress;
+            paint.setColor(Theme.getColor(Theme.key_dialogSearchBackground, resourcesProvider));
             paint.setAlpha((int) (255 * alpha));
             int cy = getMeasuredHeight() >> 1;
-            AndroidUtilities.rectTmp.set(
-                getMeasuredWidth() - dp(21) - dp(loadingSize),
-                cy - dp(3),
-                getMeasuredWidth() - dp(21),
-                cy + dp(3)
-            );
-            if (LocaleController.isRTL) {
-                AndroidUtilities.rectTmp.left = getMeasuredWidth() - AndroidUtilities.rectTmp.left;
-                AndroidUtilities.rectTmp.right = getMeasuredWidth() - AndroidUtilities.rectTmp.right;
-            }
+            int loadingWidth = dp(loadingSize);
+            int loadingLeft = LocaleController.isRTL ? dp(21) : getMeasuredWidth() - dp(21) - loadingWidth;
+            AndroidUtilities.rectTmp.set(loadingLeft, cy - dp(3), loadingLeft + loadingWidth, cy + dp(3));
             canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(3), dp(3), paint);
             invalidate();
         }

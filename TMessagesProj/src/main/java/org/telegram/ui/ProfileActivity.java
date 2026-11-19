@@ -15708,7 +15708,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             View view;
             switch (viewType) {
                 case 0:
-                    view = new SettingsSearchCell(mContext, getResourceProvider());
+                    view = new SettingsSearchCell(mContext, fragment.getResourceProvider());
                     break;
                 case 1:
                     view = new GraySectionCell(mContext);

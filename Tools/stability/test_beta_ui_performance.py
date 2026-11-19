@@ -226,7 +226,9 @@ class Probe {
         run_java('''
 class Probe {
     static final int VISIBLE = 0;
-    boolean multilineTitle, isRTL, imageViewIsColorful, betterLayout, needDivider;
+    boolean multilineTitle, isRTL, imageViewIsColorful, betterLayout, needDivider, drawLoading;
+    float drawLoadingProgress;
+    int loadingSize;
     int padding = 21, height;
     static class AndroidUtilities { static int dp(int n) { return n; } }
     static class MeasureSpec {
@@ -283,6 +285,15 @@ class Probe {
                 p.onMeasure(320, MeasureSpec.makeMeasureSpec(80, MeasureSpec.AT_MOST)); assert p.height == 80;
                 p.multilineTitle = false;
                 p.onMeasure(320, 0); assert p.height == 51;
+                p.valueTextView.visibility = p.valueImageView.visibility = p.valueBackupImageView.visibility = 8;
+                p.drawLoading = true; p.loadingSize = 45;
+                p.onMeasure(240, 0);
+                int loadingTitleWidth = p.textView.width;
+                assert p.start(p.textView) + loadingTitleWidth + 8 <= 230 - p.padding - p.loadingSize;
+                p.drawLoading = false; p.drawLoadingProgress = 0.5f;
+                p.onMeasure(240, 0); assert p.textView.width == loadingTitleWidth;
+                p.drawLoadingProgress = 0;
+                p.onMeasure(240, 0); assert p.textView.width > loadingTitleWidth;
             }
         }
     }
@@ -356,6 +367,71 @@ class Probe {
         rows = p.loadBookmarkRows(2, 104, ids, null);
         assert rows.stream().allMatch(row -> row.placeholder);
         assert AyuMessagesController.controller.queries == 1;
+    }
+}
+''')
+
+    def test_recycled_setting_cannot_restore_a_cleared_value_on_resize(self):
+        source = (JAVA / 'org/telegram/ui/Cells/TextCell.java').read_text()
+        setter = section(source, '    public void setValue(CharSequence value, boolean animated)',
+                         '    public void setTextAndValueAndColorfulIcon(')
+        resize = section(source, '        if (lastWidth != 0 && lastWidth != width', '        int titleSpace')
+        with_icon = section(source, '        valueText = value;\n        if (value != null)', '        valueTextView.setVisibility(VISIBLE);')
+        pill = section(source, '            int loadingWidth = dp(loadingSize);', '            canvas.drawRoundRect(')
+        run_java('''
+class Probe {
+    static final int VISIBLE = 0;
+    static class Label {
+        CharSequence text;
+        void setText(CharSequence s, boolean animate) { text = s; }
+        Object getPaint() { return null; }
+        int getVisibility() { return VISIBLE; }
+        Object getTextPaint() { return null; }
+    }
+    Label valueTextView = new Label(), textView = new Label();
+    static class TextUtils {
+        enum TruncateAt { END }
+        static CharSequence ellipsize(CharSequence s, Object p, float w, TruncateAt t) {
+            return s.subSequence(0, Math.min(s.length(), (int)w));
+        }
+    }
+    static class HintView2 { static float measureCorrectly(CharSequence s, Object p) { return s.length(); } }
+    static class Rect {
+        int left, right;
+        void set(int l, int t, int r, int b) { left = l; right = r; }
+    }
+    static class AndroidUtilities {
+        static class Size { int x = 320; }
+        static Size displaySize = new Size();
+        static Rect rectTmp = new Rect();
+    }
+    static class LocaleController { static boolean isRTL; }
+    int width = 320, lastWidth = 320, offsetFromImage = 71;
+    int getMeasuredWidth() { return width; }
+    static int dp(int v) { return v; }
+    CharSequence valueText;
+''' + setter + '''
+    void resize(int width) { this.width = width;
+''' + resize + '''
+    }
+    void bindIcon(CharSequence value) { String text = "title"; boolean animated = false;
+''' + with_icon + '''
+    }
+    void loadingBounds(int loadingSize) { int cy = 25;
+''' + pill + '''
+    }
+    public static void main(String[] args) {
+        Probe p = new Probe();
+        p.setValue("previous", false); p.setValue(null, false); p.resize(280);
+        assert p.valueTextView.text.length() == 0;
+        p.bindIcon("previous icon value"); p.bindIcon(null); p.resize(240);
+        assert p.valueTextView.text.length() == 0;
+        p.setValue("1234567890", false); p.resize(10);
+        assert p.valueTextView.text.toString().equals("1234");
+        p.resize(240); p.loadingBounds(45);
+        assert AndroidUtilities.rectTmp.left == 174 && AndroidUtilities.rectTmp.right == 219;
+        LocaleController.isRTL = true; p.loadingBounds(45);
+        assert AndroidUtilities.rectTmp.left == 21 && AndroidUtilities.rectTmp.right == 66;
     }
 }
 ''')
