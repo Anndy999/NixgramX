@@ -14,6 +14,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Cells.TextDetailSettingsCell;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
@@ -103,11 +104,11 @@ public class ConfigCellTextInput2 extends AbstractConfigCell implements WithBind
         linearLayout.setOrientation(LinearLayout.VERTICAL);
 
         EditTextBoldCursor editText = new EditTextBoldCursor(context);
-        editText.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
-        editText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        ThemeBind.hintTextColor(editText, Theme.key_windowBackgroundWhiteHintText);
+        ThemeBind.textColor(editText, Theme.key_windowBackgroundWhiteBlackText);
         editText.setHint(hint);
         editText.setText(bindConfig.String());
-        linearLayout.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, AndroidUtilities.dp(8), 0, AndroidUtilities.dp(10), 0));
+        linearLayout.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 8, 0, 10, 0));
 
         builder.setPositiveButton(getString(R.string.OK), (d, v) -> {
             String newV = editText.getText().toString().trim();

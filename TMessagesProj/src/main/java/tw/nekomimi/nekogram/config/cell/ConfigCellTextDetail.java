@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Cells.TextDetailSettingsCell;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
@@ -132,8 +133,8 @@ public class ConfigCellTextDetail extends AbstractConfigCell implements WithBind
 
         EditTextBoldCursor editText = new EditTextBoldCursor(context);
         editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
-        editText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        editText.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+        ThemeBind.textColor(editText, Theme.key_windowBackgroundWhiteBlackText);
+        ThemeBind.hintTextColor(editText, Theme.key_windowBackgroundWhiteHintText);
         editText.setHandlesColor(Theme.getColor(Theme.key_chat_TextSelectionCursor));
         editText.setFocusable(true);
         editText.setBackground(null);
@@ -142,7 +143,7 @@ public class ConfigCellTextDetail extends AbstractConfigCell implements WithBind
         editText.setText(bindConfig.String());
         editText.setHint(inputHint);
         editText.requestFocus();
-        linearLayout.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, dp(8), 0, dp(10), 0));
+        linearLayout.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 8, 0, 10, 0));
 
         builder.setPositiveButton(getString(R.string.OK), null);
         builder.setView(linearLayout);

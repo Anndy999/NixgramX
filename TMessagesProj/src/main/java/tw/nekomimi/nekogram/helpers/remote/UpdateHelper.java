@@ -153,22 +153,18 @@ public class UpdateHelper extends BaseRemoteHelper {
         return isBetaApk() ? "updateBeta" : "updateRelease";
     }
 
-    @SuppressWarnings("ConstantConditions")
-    private int getPreferredAbiFile(Map<String, Integer> files) {
+    private Integer getPreferredAbiFile(Map<String, Integer> files) {
         for (String abi : Build.SUPPORTED_ABIS) {
             if (files.containsKey(abi)) {
                 return files.get(abi);
             }
         }
-        return files.getOrDefault("universal", files.get("arm64-v8a"));
+        return files.get("universal");
     }
 
     private Map<String, Integer> jsonToMap(JSONObject obj) throws JSONException {
         Map<String, Integer> map = new HashMap<>();
-        List<String> abis = new ArrayList<>();
-        abis.add("arm64-v8a");
-        abis.add("universal");
-        for (var abi : abis) {
+        for (String abi : new String[]{"arm64-v8a", "armeabi-v7a", "x86_64", "x86", "universal"}) {
             if (obj.has(abi)) {
                 int id = obj.getInt(abi);
                 if (id <= 0) {
@@ -297,12 +293,12 @@ public class UpdateHelper extends BaseRemoteHelper {
         if (update.message != null && update.message > 0) {
             ids.put("message", update.message);
         }
-        if (update.document != null && !update.document.isEmpty()) {
-            Integer documentId = getPreferredAbiFile(update.document);
-            if (documentId != null && documentId > 0) {
-                ids.put("document", documentId);
-            }
+        Integer documentId = getPreferredAbiFile(update.document);
+        if (documentId == null) {
+            onError("UPDATE_NO_COMPATIBLE_APK", delegate);
+            return;
         }
+        ids.put("document", documentId);
         if (ids.isEmpty()) {
             getNewVersionMessagesCallback(delegate, update, null, null);
         } else {

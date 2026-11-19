@@ -94,7 +94,6 @@ import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
-import android.view.PixelCopy;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceView;
@@ -343,7 +342,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
 import kotlin.Unit;
@@ -353,11 +351,13 @@ import tw.nekomimi.nekogram.helpers.ChatsHelper;
 import tw.nekomimi.nekogram.llm.LlmConfig;
 import tw.nekomimi.nekogram.translate.Translator;
 import tw.nekomimi.nekogram.translate.TranslatorKt;
+import tw.nekomimi.nekogram.parts.InputTranslation;
 import tw.nekomimi.nekogram.utils.AlertUtil;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
 import tw.nekomimi.nekogram.utils.ProxyUtil;
 import xyz.nextalone.nagram.NaConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
+import tw.nekomimi.nekogram.helpers.VideoFrameClipboard;
 import tw.nekomimi.nekogram.streaming.MediaStreamingProvider;
 
 import me.vkryl.android.animator.BoolAnimator;
@@ -5882,8 +5882,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     BooleanSupplier sameFrame = () -> sameVideo.getAsBoolean()
                             && Math.abs(requestedPlayer.getCurrentPosition() - requestedPosition) <= 100;
                     Runnable captureDisplayedFrame = () -> {
-                        if (sameVideo.getAsBoolean() && !captureCurrentVideoFrameToClipboard(sameFrame, sameVideo)) {
-                            showDownloadAlert();
+                        if (sameVideo.getAsBoolean()) {
+                            captureCurrentVideoFrameToClipboard(sameFrame, sameVideo);
                         }
                     };
                     final String videoPath = MessageHelper.getPathToMessage(requestedMessage);
@@ -8307,40 +8307,17 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void translateComment(Locale target, int provider) {
-        if (captionEdit == null) return;
-
-        String origin = captionEdit.getText().toString();
-        Translator.translate(target, origin, provider, new Translator.Companion.TranslateCallBack() {
-
-            final AtomicBoolean cancel = new AtomicBoolean();
-            AlertDialog status = AlertUtil.showProgress(parentActivity);
-
-            {
-                status.setOnCancelListener((__) -> {
-                    cancel.set(true);
+        final var field = captionEdit;
+        if (field == null) return;
+        final var editor = field.editText.getEditText();
+        final int index = currentIndex;
+        InputTranslation.start(parentActivity, editor, target, provider, 0, 0, null,
+                () -> captionEdit == field && isVisible && currentIndex == index,
+                translation -> {
+                    field.setText(translation);
+                    setCaption(field.getText());
                 });
-                status.show();
-            }
-
-            @Override
-            public void onSuccess(@NotNull String translation) {
-                status.dismiss();
-                captionEdit.setText(translation);
-                setCaption(captionEdit.getText());
-            }
-
-            @Override
-            public void onFailed(boolean unsupported, @NotNull String message) {
-                status.dismiss();
-                AlertUtil.showTransFailedDialog(parentActivity, unsupported, message, () -> {
-                    status = AlertUtil.showProgress(parentActivity);
-                    status.show();
-                    Translator.translate(origin, this);
-                });
-            }
-        });
     }
-
 
     private void sendPressed(boolean notify, int scheduleDate, int scheduleRepeatPeriod) {
         sendPressed(notify, scheduleDate, scheduleRepeatPeriod, false, false, false);
@@ -24747,37 +24724,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         }
     }
 
-    private boolean captureCurrentVideoFrameToClipboard(BooleanSupplier sameFrame, BooleanSupplier sameVideo) {
-        if (!sameFrame.getAsBoolean()) return false;
-        if (usedSurfaceView) {
-            SurfaceView surfaceView = videoSurfaceView;
-            if (Build.VERSION.SDK_INT < 24 || ApplicationLoader.applicationHandler == null || surfaceView == null
-                    || surfaceView.getWidth() <= 0 || surfaceView.getHeight() <= 0
-                    || !surfaceView.getHolder().getSurface().isValid()) return false;
-
-            Bitmap bitmap = Bitmaps.createBitmap(surfaceView.getWidth(), surfaceView.getHeight(), Bitmap.Config.ARGB_8888);
-            try {
-                PixelCopy.request(surfaceView, bitmap, result -> {
-                    if (result == PixelCopy.SUCCESS && surfaceView == videoSurfaceView && sameFrame.getAsBoolean()) {
-                        MessageHelper.saveFrameBitmapToClipboard(bitmap, containerView, resourcesProvider);
-                    } else {
-                        bitmap.recycle();
-                        if (sameVideo.getAsBoolean()) showDownloadAlert();
-                    }
-                }, ApplicationLoader.applicationHandler);
-                return true;
-            } catch (IllegalArgumentException e) {
-                bitmap.recycle();
-                return false;
-            }
-        } else if (videoTextureView != null && videoTextureView.getWidth() > 0 && videoTextureView.getHeight() > 0) {
-            Bitmap bitmap = videoTextureView.getBitmap();
-            if (bitmap != null) {
-                MessageHelper.saveFrameBitmapToClipboard(bitmap, containerView, resourcesProvider);
-                return true;
-            }
-        }
-        return false;
+    private void captureCurrentVideoFrameToClipboard(BooleanSupplier sameFrame, BooleanSupplier sameVideo) {
+        SurfaceView surface = usedSurfaceView ? videoSurfaceView : null;
+        TextureView texture = usedSurfaceView ? null : videoTextureView;
+        VideoFrameClipboard.fromDisplay(surface, texture,
+                () -> sameFrame.getAsBoolean() && (usedSurfaceView ? surface != null && surface == videoSurfaceView
+                        : texture != null && texture == videoTextureView),
+                containerView, resourcesProvider, () -> {
+                    if (sameVideo.getAsBoolean()) showDownloadAlert();
+                });
     }
 
     private void setWindowHdrColorMode(boolean enabled) {

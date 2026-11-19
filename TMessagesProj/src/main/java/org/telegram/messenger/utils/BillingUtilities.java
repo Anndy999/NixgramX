@@ -1,7 +1,6 @@
 package org.telegram.messenger.utils;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Base64;
 
@@ -43,9 +42,7 @@ public class BillingUtilities {
         if (!currencyExpMap.isEmpty()) {
             return;
         }
-        try {
-            Context ctx = ApplicationLoader.applicationContext;
-            InputStream in = ctx.getAssets().open(CURRENCY_FILE);
+        try (InputStream in = ApplicationLoader.applicationContext.getAssets().open(CURRENCY_FILE)) {
             JSONObject obj = new JSONObject(new String(Util.toByteArray(in), Charsets.UTF_8));
             Iterator<String> it = obj.keys();
             while (it.hasNext()) {
@@ -53,7 +50,6 @@ public class BillingUtilities {
                 JSONObject currency = obj.optJSONObject(key);
                 currencyExpMap.put(key, currency.optInt(CURRENCY_EXP));
             }
-            in.close();
         } catch (Exception e) {
             FileLog.e(e);
         }

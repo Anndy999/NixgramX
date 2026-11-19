@@ -57,7 +57,9 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
     @Nullable
     public static ProductDetails PREMIUM_PRODUCT_DETAILS;
 
-    private static BillingController instance;
+    private static final class InstanceHolder {
+        private static final BillingController INSTANCE = new BillingController(ApplicationLoader.applicationContext);
+    }
 
     public static boolean billingClientEmpty;
 
@@ -71,10 +73,7 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
     private Runnable onCanceled;
 
     public static BillingController getInstance() {
-        if (instance == null) {
-            instance = new BillingController(ApplicationLoader.applicationContext);
-        }
-        return instance;
+        return InstanceHolder.INSTANCE;
     }
 
     private BillingController(Context ctx) {
@@ -136,7 +135,7 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
     }
 
     @SuppressWarnings("ConstantConditions")
-    public int getCurrencyExp(String currency) {
+    public synchronized int getCurrencyExp(String currency) {
         BillingUtilities.extractCurrencyExp(currencyExpMap);
         return currencyExpMap.getOrDefault(currency, 0);
     }
@@ -146,7 +145,6 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
             return;
         }
         try {
-            BillingUtilities.extractCurrencyExp(currencyExpMap);
             if (!BuildVars.useInvoiceBilling()) {
                 billingClient.startConnection(this);
             }

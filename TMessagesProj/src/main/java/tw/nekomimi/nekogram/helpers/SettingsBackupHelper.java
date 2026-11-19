@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import kotlin.text.StringsKt;
@@ -50,6 +51,33 @@ import xyz.nextalone.nagram.helper.LocalPeerColorHelper;
 import xyz.nextalone.nagram.helper.LocalPremiumStatusHelper;
 
 public final class SettingsBackupHelper {
+    private static final Set<String> CLOUD_MAIN_BOOLS = Set.of(
+            "autoplayGifs", "autoplayVideo", "raiseToSpeak", "shuffleMusic", "playOrderReversed",
+            "inappCamera", "allowBigEmoji", "streamMedia", "saveStreamMedia", "smoothKeyboard",
+            "pauseMusicOnRecord", "streamAllVideo", "streamMkv", "sortContactsByName", "sortFilesByName",
+            "useThreeLinesLayout", "loopStickers", "disableVoiceAudioEffects");
+    private static final Set<String> CLOUD_MAIN_INTS = Set.of(
+            "mapPreviewType", "repeatMode", "fontSize", "bubbleRadius", "ivFontSize", "suggestStickers",
+            "distanceSystemType", "keepMedia", "chatSwipeAction", "selectedAutoNightType",
+            "autoNightDayStartTime", "autoNightDayEndTime");
+    private static final Set<String> CLOUD_NEKO_KEYS = Set.of(
+            "unreadBadgeOnBackButton", "repeatConfirm", "DisableInstantCamera", "showSeconds",
+            "HidePhone", "IgnoreBlocked", "TypefaceUseDefault", "forceFontWeightFallback", "NameOrder",
+            "showAddToSavedMessages", "showReport", "showViewHistory", "showAdminActions",
+            "showChangePermissions", "showDeleteDownloadedFile", "showMessageDetails", "showTranslate",
+            "showRepeat", "showShareMessages", "showMessageHide", "ActionBarDecoration", "stickerSize",
+            "OpenArchiveOnPull", "HideKeyboardOnChatScroll", "EmojiUseDefault", "HideAllTab",
+            "sort_by_unread", "sort_by_unmuted", "sort_by_user", "sort_by_contacts", "TransToLang",
+            "TransInputToLang", "TabTitleType", "ConfirmAVMessage", "AskBeforeCalling", "MediaPreview",
+            "DisableVibration", "AutoPauseVideo", "DisableProximityEvents", "UseChatAttachEnterMenu",
+            "DisableLinkPreviewByDefault", "SendCommentAfterForward", "HideTimeForSticker",
+            "disableSwipeToNextChannel", "disableSwipeToNextTopic", "hideGroupSticker", "UsePersianCalendar",
+            "DisplayPersianCalendarByLatin", "showGhostInDrawer", "showGhostModeStatus");
+
+    static boolean isCloudNekoKey(String key) {
+        return key != null && CLOUD_NEKO_KEYS.contains(key);
+    }
+
     public static String backupSettingsJson(boolean isCloud, int indentSpaces) throws JSONException {
         return backupSettingsJson(isCloud, indentSpaces, true);
     }
@@ -57,6 +85,12 @@ public final class SettingsBackupHelper {
     public static String backupSettingsJson(boolean isCloud, int indentSpaces, boolean includeApiKeys) throws JSONException {
 
         JSONObject configJson = new JSONObject();
+        if (isCloud) {
+            spToJSON("mainconfig", configJson, key -> CLOUD_MAIN_BOOLS.contains(key)
+                    || CLOUD_MAIN_INTS.contains(key) || "lang_code".equals(key), false);
+            spToJSON("nkmrcfg", configJson, SettingsBackupHelper::isCloudNekoKey, false);
+            return configJson.toString(indentSpaces);
+        }
 
         ArrayList<String> userconfig = new ArrayList<>();
         userconfig.add("saveIncomingPhotos");
@@ -188,6 +222,15 @@ public final class SettingsBackupHelper {
 
     @SuppressLint("ApplySharedPref")
     public static void importSettings(JsonObject configJson) throws JSONException {
+        importSettings(configJson, false);
+    }
+
+    static void importCloudSettings(JsonObject configJson) throws JSONException {
+        importSettings(configJson, true);
+    }
+
+    @SuppressLint("ApplySharedPref")
+    private static void importSettings(JsonObject configJson, boolean cloud) throws JSONException {
         Map<String, Integer> configTypes = new HashMap<>();
         try {
             configTypes.putAll(NekoConfig.getConfigTypes());
@@ -208,6 +251,9 @@ public final class SettingsBackupHelper {
 
         for (Map.Entry<String, JsonElement> element : configJson.entrySet()) {
             String spName = element.getKey();
+            if (cloud && (!"mainconfig".equals(spName) && !"nkmrcfg".equals(spName) || !element.getValue().isJsonObject())) {
+                continue;
+            }
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences(spName, Activity.MODE_PRIVATE);
             SharedPreferences.Editor editor = preferences.edit();
             for (Map.Entry<String, JsonElement> config : ((JsonObject) element.getValue()).entrySet()) {
@@ -219,6 +265,13 @@ public final class SettingsBackupHelper {
                     continue;
                 }
                 JsonPrimitive value = config.getValue().getAsJsonPrimitive();
+                if (cloud) {
+                    if ("mainconfig".equals(spName) && !(CLOUD_MAIN_BOOLS.contains(key) && value.isBoolean()
+                            || CLOUD_MAIN_INTS.contains(key) && value.isNumber()
+                            || "lang_code".equals(key) && value.isString())) continue;
+                    if ("nkmrcfg".equals(spName) && !isCloudNekoKey(key.endsWith("_float")
+                            ? key.substring(0, key.length() - 6) : key)) continue;
+                }
                 if ("nkmrcfg".equals(spName)) {
                     boolean shouldSkip = true;
                     for (String prefix : preservePrefixes) {
@@ -266,7 +319,7 @@ public final class SettingsBackupHelper {
             }
             editor.commit();
         }
-        PushListenerController.reconcilePushRegistration();
+        if (!cloud) PushListenerController.reconcilePushRegistration();
     }
 
     private static boolean isCompatibleConfigValue(String key, JsonPrimitive value, int type) {

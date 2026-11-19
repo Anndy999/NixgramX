@@ -203,7 +203,7 @@
     <string name="DrawerMenuHidden">已隐藏</string>
     <string name="TranscribeProviderOpenAI">OpenAI-Compatible API</string>
     <string name="OpenAiApiCredentialsDialog">配置 OpenAI 兼容的 API。您可以参考此 **文档**。\n</string>
-    <string name="OpenAiApiBaseUrlHint">API URL ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">API URL ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">API 凭据未配置。</string>
     <string name="ApiNotSupportedOnAndroidVersion">此 API 提供商不支持您的 Android 版本 (需要 Android 8.0+)。</string>
     <string name="AppIconTelegramOriginal">官方默认</string>
@@ -386,4 +386,6 @@
     <string name="PasscodeClearAll">清除所有密码</string>
     <string name="NgxDiagnosticsDropped">已丢弃</string>
     <string name="NgxDiagnosticsCapturingShort">捕获中</string>
+    <string name="NixUpdateNoCompatibleApk">当前没有适用于此设备的更新包。</string>
+    <string name="CopyFrameInProgress">正在复制视频帧，请稍后再试。</string>
 </resources>

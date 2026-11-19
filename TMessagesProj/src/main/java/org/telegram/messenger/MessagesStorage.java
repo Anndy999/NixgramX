@@ -80,7 +80,6 @@ import java.util.function.Consumer;
 import me.vkryl.core.BitwiseUtils;
 
 import tw.nekomimi.nekogram.NekoConfig;
-import tw.nekomimi.nekogram.filters.AyuFilter;
 import tw.nekomimi.nekogram.helpers.AppRestartHelper;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
 import xyz.nextalone.nagram.NaConfig;
@@ -16604,9 +16603,6 @@ public class MessagesStorage extends BaseController {
                                                     prefs.setDialogId(dialogId);
                                                     AyuMessagesController.getInstance().onMessageEdited(prefs, message);
                                                 }
-                                            }
-                                            if (NaConfig.INSTANCE.getRegexFiltersEnabled().Bool()) {
-                                                AyuFilter.onMessageEdited(message.id, dialogId);
                                             }
                                         }
                                         // --- AyuGram hook

@@ -28,6 +28,18 @@ public interface DeletedMessageDao {
     @Query("SELECT mediaPath FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId = :messageId LIMIT 1")
     String getMediaPath(long userId, long dialogId, int messageId);
 
+    @Query("SELECT DISTINCT mediaPath FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId IN (:messageIds) AND mediaPath IS NOT NULL AND mediaPath <> ''")
+    List<String> getMediaPaths(long userId, long dialogId, List<Integer> messageIds);
+
+    @Query("SELECT DISTINCT mediaPath FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND mediaPath IS NOT NULL AND mediaPath <> ''")
+    List<String> getMediaPaths(long userId, long dialogId);
+
+    @Query("SELECT mediaPath FROM deletedmessage WHERE mediaPath IN (:paths) "
+            + "UNION SELECT hqThumbPath FROM deletedmessage WHERE hqThumbPath IN (:paths) "
+            + "UNION SELECT mediaPath FROM editedmessage WHERE mediaPath IN (:paths) "
+            + "UNION SELECT hqThumbPath FROM editedmessage WHERE hqThumbPath IN (:paths)")
+    List<String> getReferencedAttachmentPaths(List<String> paths);
+
     @Transaction
     @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND :startId <= messageId AND messageId <= :endId ORDER BY messageId LIMIT :limit")
     List<DeletedMessageFull> getMessages(long userId, long dialogId, long startId, long endId, int limit);
@@ -53,12 +65,19 @@ public interface DeletedMessageDao {
     List<DeletedMessageFull> getMessagesByDialog(long userId, long dialogId);
 
     @Transaction
-    @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId ORDER BY messageId DESC LIMIT :limit")
+    @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId "
+            + "AND (length(text) > 0 OR length(mediaPath) > 0 OR documentSerialized IS NOT NULL) ORDER BY messageId DESC LIMIT :limit")
     List<DeletedMessageFull> getLatestMessages(long userId, long dialogId, int limit);
 
     @Transaction
-    @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId < :before ORDER BY messageId DESC LIMIT :limit")
+    @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId < :before "
+            + "AND (length(text) > 0 OR length(mediaPath) > 0 OR documentSerialized IS NOT NULL) ORDER BY messageId DESC LIMIT :limit")
     List<DeletedMessageFull> getOlderMessagesBefore(long userId, long dialogId, int before, int limit);
+
+    @Transaction
+    @Query("SELECT * FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId > :before "
+            + "AND (length(text) > 0 OR length(mediaPath) > 0 OR documentSerialized IS NOT NULL) ORDER BY messageId ASC LIMIT :limit")
+    List<DeletedMessageFull> getOlderEncryptedMessages(long userId, long dialogId, long before, int limit);
 
     @Transaction
     @Query("SELECT messageId FROM deletedmessage WHERE userId = :userId AND dialogId = :dialogId AND messageId IN (:messageIds)")

@@ -25,9 +25,9 @@ import org.telegram.messenger.diagnostics.NgxDiagnosticCore.Value;
  * Unrelated diagnostics can still consume the global 50-event capture allowance.
  */
 public final class InputTextDiagnostics {
-    private enum Operation { COMMIT, COMPOSE, FINISH }
+    private enum Operation { COMMIT, COMPOSE, FINISH, REPLACE }
     private enum Failure { NULL_POINTER, INDEX_BOUNDS, ILLEGAL_ARGUMENT, RUNTIME, OTHER }
-    private enum Bucket { COMMIT, CONTROL, DRAW, FINISH }
+    private enum Bucket { COMMIT, CONTROL, DRAW, FINISH, REPLACE }
     private static final class Token {
         final long generation;
         final int id, argumentLength;
@@ -42,10 +42,10 @@ public final class InputTextDiagnostics {
         }
     }
     private static long generation = -1;
-    private static int commits, compositions, finishes, finishSnapshots, emptyCommits, sequence;
-    private static final int[] events = new int[4];
-    // Separate reservations; the first nonempty FINISH gets its own compact frame.
-    private static final int[] LIMITS = {24, 10, 4, 4};
+    private static int commits, compositions, finishes, finishSnapshots, replacements, emptyCommits, sequence;
+    private static final int[] events = new int[Bucket.values().length];
+    // Reserve a compact frame for the first REPLACE even after COMMIT uses its budget.
+    private static final int[] LIMITS = {24, 10, 4, 4, 4};
 
     private InputTextDiagnostics() {}
 
@@ -57,7 +57,7 @@ public final class InputTextDiagnostics {
         long current = NgxDiagnostics.captureGeneration();
         if (generation != current) {
             generation = current;
-            commits = compositions = finishes = finishSnapshots = emptyCommits = sequence = 0;
+            commits = compositions = finishes = finishSnapshots = replacements = emptyCommits = sequence = 0;
             java.util.Arrays.fill(events, 0);
         }
     }
@@ -84,7 +84,11 @@ public final class InputTextDiagnostics {
             refresh();
             int size = length(argument);
             Bucket bucket = Bucket.CONTROL;
-            if (operation == Operation.COMPOSE) {
+            if (operation == Operation.REPLACE) {
+                if (replacements >= 1) return null;
+                replacements++;
+                bucket = Bucket.REPLACE;
+            } else if (operation == Operation.COMPOSE) {
                 if (compositions >= 2) return null;
                 compositions++;
             } else if (operation == Operation.FINISH) {
@@ -149,6 +153,7 @@ public final class InputTextDiagnostics {
 
     public static InputConnection wrap(InputConnection target, EditText view) {
         if (target == null) return null;
+        if (Build.VERSION.SDK_INT >= 34) return new Api34Connection(target, view);
         return Build.VERSION.SDK_INT >= 33 ? new Api33Connection(target, view) : new BasicConnection(target, view);
     }
 
@@ -191,7 +196,7 @@ public final class InputTextDiagnostics {
     }
 
     @android.annotation.TargetApi(33)
-    private static final class Api33Connection extends BasicConnection {
+    private static class Api33Connection extends BasicConnection {
         Api33Connection(InputConnection target, EditText view) {
             super(target, view);
         }
@@ -216,9 +221,27 @@ public final class InputTextDiagnostics {
             }
     }
 
+    @android.annotation.TargetApi(34)
+    private static final class Api34Connection extends Api33Connection {
+        Api34Connection(InputConnection target, EditText view) {
+            super(target, view);
+        }
+
+        @Override
+        public boolean replaceText(int start, int end, CharSequence text, int cursor, TextAttribute attributes) {
+            Token token = start(Operation.REPLACE, text);
+            state(view, "INPUT_BEFORE", token, false);
+            boolean result = super.replaceText(start, end, text, cursor, attributes);
+            state(view, "INPUT_AFTER", token, result);
+            frame(view, token);
+            return result;
+        }
+    }
+
     private static void frame(EditText view, Token token) {
         try {
-            if (!current(token) || (token.bucket != Bucket.COMMIT && token.bucket != Bucket.FINISH)) return;
+            if (!current(token) || (token.bucket != Bucket.COMMIT && token.bucket != Bucket.FINISH
+                    && token.bucket != Bucket.REPLACE)) return;
             view.postOnAnimation(new Runnable() {
                 @Override
                 public void run() {
@@ -252,7 +275,7 @@ public final class InputTextDiagnostics {
                             Value.bool(Field.RESULT, appearanceColor != null),
                             Value.integer(Field.REPLACEMENT_COUNT, text.getSpans(0, text.length(), ReplacementSpan.class).length),
                             Value.integer(Field.SUGGESTION_COUNT, text.getSpans(0, text.length(), SuggestionSpan.class).length));
-                    if (token.bucket == Bucket.FINISH) return;
+                    if (token.bucket != Bucket.COMMIT) return;
                     for (int i = 0; i < Math.min(2, fg.length); i++) {
                         emit(token, "INPUT_FOREGROUND", Value.integer(Field.OP_SEQUENCE, token.id),
                                 Value.integer(Field.PAINT_COLOR, fg[i].getForegroundColor()),

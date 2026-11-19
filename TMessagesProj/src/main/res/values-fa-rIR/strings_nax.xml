@@ -193,7 +193,7 @@
     <string name="LeftBottomButtonAction">عملکرد دکمه پایین سمت چپ</string>
     <string name="TranscribeProviderOpenAI">API سازگار با OpenAI</string>
     <string name="OpenAiApiCredentialsDialog">API سازگار با OpenAI را پیکربندی کنید. می‌توانید به این **مستندات** مراجعه کنید.\n</string>
-    <string name="OpenAiApiBaseUrlHint">آدرس API ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">آدرس API ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">اطلاعات API پیکربندی نشده است.</string>
     <string name="ApiNotSupportedOnAndroidVersion">این ارائه‌دهنده API در نسخه اندروید شما پشتیبانی نمی‌شود (نیازمند اندروید ۸.۰ به بالا).</string>
     <string name="AppIconTelegramOriginal">اصلی</string>

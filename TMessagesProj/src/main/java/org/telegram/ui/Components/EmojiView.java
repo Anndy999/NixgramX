@@ -298,19 +298,18 @@ public class EmojiView extends FrameLayout implements
     }
 
     public void setAllow(boolean allowEmoji, boolean allowStickers, boolean allowGifs, boolean animated) {
-        currentTabs.clear();
-        for (int i = 0; i < allTabs.size(); i++) {
-            if (allTabs.get(i).type == TAB_EMOJI && allowEmoji) {
-                currentTabs.add(allTabs.get(i));
-            } if (allTabs.get(i).type == TAB_GIFS && allowGifs) {
-                currentTabs.add(allTabs.get(i));
-            }  if (allTabs.get(i).type == TAB_STICKERS && allowStickers) {
-                currentTabs.add(allTabs.get(i));
+        ArrayList<Tab> allowed = new ArrayList<>(allTabs.size());
+        for (Tab tab : allTabs) {
+            if (tab.type == TAB_EMOJI && allowEmoji || tab.type == TAB_GIFS && allowGifs || tab.type == TAB_STICKERS && allowStickers) {
+                allowed.add(tab);
             }
         }
         if (typeTabs != null) {
-            AndroidUtilities.updateViewVisibilityAnimated(typeTabs, currentTabs.size() > 1, 1, animated);
+            AndroidUtilities.updateViewVisibilityAnimated(typeTabs, allowed.size() > 1, 1, animated);
         }
+        if (currentTabs.equals(allowed)) return;
+        currentTabs.clear();
+        currentTabs.addAll(allowed);
         if (pager != null) {
             pager.setAdapter(null);
             pager.setAdapter(emojiPagerAdapter);
@@ -8704,12 +8703,12 @@ public class EmojiView extends FrameLayout implements
         }
 
         public CharSequence getPageTitle(int position) {
-            switch (position) {
-                case 0:
+            switch (currentTabs.get(position).type) {
+                case TAB_EMOJI:
                     return getString(R.string.Emoji);
-                case 1:
+                case TAB_GIFS:
                     return getString(R.string.AccDescrGIFs);
-                case 2:
+                case TAB_STICKERS:
                     return getString(R.string.AccDescrStickers);
             }
             return null;

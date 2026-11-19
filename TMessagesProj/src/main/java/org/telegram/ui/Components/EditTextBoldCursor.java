@@ -839,18 +839,10 @@ public class EditTextBoldCursor extends EditTextEffects {
         if (hintAnimatedDrawable != null && !TextUtils.isEmpty(hintAnimatedDrawable.getText()) && (hintVisible || hintAlpha != 0)) {
             if (hintAnimatedDrawable2 != null) {
                 if (hintAnimatedDrawable.getCurrentWidth() + hintAnimatedDrawable2.getCurrentWidth() < getMeasuredWidth()) {
-                    canvas.save();
-                    canvas.translate(hintAnimatedDrawable2.getCurrentWidth() - getMeasuredWidth() + hintAnimatedDrawable.getCurrentWidth(), 0);
-                    hintAnimatedDrawable2.setAlpha((int) (Color.alpha(hintColor) * hintAlpha));
-                    hintAnimatedDrawable2.draw(canvas);
-                    canvas.restore();
+                    drawSecondaryHint(canvas, hintAnimatedDrawable2.getCurrentWidth() - getMeasuredWidth() + hintAnimatedDrawable.getCurrentWidth());
                     hintAnimatedDrawable.setRightPadding(0);
                 } else {
-                    canvas.save();
-                    canvas.translate(rightHintOffset, 0);
-                    hintAnimatedDrawable2.setAlpha((int) (Color.alpha(hintColor) * hintAlpha));
-                    hintAnimatedDrawable2.draw(canvas);
-                    canvas.restore();
+                    drawSecondaryHint(canvas, rightHintOffset);
                     hintAnimatedDrawable.setRightPadding(hintAnimatedDrawable2.getCurrentWidth() + dp(2) - rightHintOffset);
                 }
             } else {
@@ -860,49 +852,60 @@ public class EditTextBoldCursor extends EditTextEffects {
             hintAnimatedDrawable.draw(canvas);
         } else if (hintLayout != null && (hintVisible || hintAlpha != 0)) {
             int oldColor = getPaint().getColor();
-
-            canvas.save();
-            int left = 0;
-            float lineLeft = hintLayout.getLineLeft(0);
-            float hintWidth = hintLayout.getLineWidth(0);
-            if (lineLeft != 0) {
-                left -= lineLeft;
-            }
-            if (supportRtlHint && LocaleController.isRTL) {
-                float offset = getMeasuredWidth() - hintWidth;
-                canvas.translate(hintLayoutX = left + getScrollX() + offset, hintLayoutY = lineY - hintLayout.getHeight() - dp(7));
-            } else {
-                canvas.translate(hintLayoutX = left + getScrollX()+ hintLayoutOffset, hintLayoutY = lineY - hintLayout.getHeight() - AndroidUtilities.dp2(7));
-            }
-            if (transformHintToHeader) {
-                float scale = 1.0f - 0.3f * headerAnimationProgress;
-
+            int saveCount = canvas.save();
+            try {
+                int left = 0;
+                float lineLeft = hintLayout.getLineLeft(0);
+                float hintWidth = hintLayout.getLineWidth(0);
+                if (lineLeft != 0) {
+                    left -= lineLeft;
+                }
                 if (supportRtlHint && LocaleController.isRTL) {
-                    canvas.translate((hintWidth + lineLeft) - (hintWidth + lineLeft) * scale, 0);
-                } else if (lineLeft != 0) {
-                    canvas.translate(lineLeft * (1.0f - scale), 0);
-                }
-                canvas.scale(scale, scale);
-                canvas.translate(0, -dp(22) * headerAnimationProgress);
-                getPaint().setColor(ColorUtils.blendARGB(hintColor, headerHintColor, headerAnimationProgress));
-            } else {
-                getPaint().setColor(hintColor);
-                getPaint().setAlpha((int) (255 * hintAlpha * (Color.alpha(hintColor) / 255.0f)));
-            }
-            if (hintAnimator != null && hintAnimator.animateTextChange) {
-                canvas.save();
-                canvas.clipRect(0, 0, getMeasuredWidth(), getMeasuredHeight());
-                hintAnimator.draw(canvas, getPaint());
-                canvas.restore();
-            } else {
-                if (drawHint != null) {
-                    drawHint.run(canvas, () -> hintLayout.draw(canvas));
+                    float offset = getMeasuredWidth() - hintWidth;
+                    canvas.translate(hintLayoutX = left + getScrollX() + offset, hintLayoutY = lineY - hintLayout.getHeight() - dp(7));
                 } else {
-                    hintLayout.draw(canvas);
+                    canvas.translate(hintLayoutX = left + getScrollX()+ hintLayoutOffset, hintLayoutY = lineY - hintLayout.getHeight() - AndroidUtilities.dp2(7));
                 }
+                if (transformHintToHeader) {
+                    float scale = 1.0f - 0.3f * headerAnimationProgress;
+
+                    if (supportRtlHint && LocaleController.isRTL) {
+                        canvas.translate((hintWidth + lineLeft) - (hintWidth + lineLeft) * scale, 0);
+                    } else if (lineLeft != 0) {
+                        canvas.translate(lineLeft * (1.0f - scale), 0);
+                    }
+                    canvas.scale(scale, scale);
+                    canvas.translate(0, -dp(22) * headerAnimationProgress);
+                    getPaint().setColor(ColorUtils.blendARGB(hintColor, headerHintColor, headerAnimationProgress));
+                } else {
+                    getPaint().setColor(hintColor);
+                    getPaint().setAlpha((int) (255 * hintAlpha * (Color.alpha(hintColor) / 255.0f)));
+                }
+                if (hintAnimator != null && hintAnimator.animateTextChange) {
+                    canvas.clipRect(0, 0, getMeasuredWidth(), getMeasuredHeight());
+                    hintAnimator.draw(canvas, getPaint());
+                } else {
+                    if (drawHint != null) {
+                        drawHint.run(canvas, () -> hintLayout.draw(canvas));
+                    } else {
+                        hintLayout.draw(canvas);
+                    }
+                }
+            } finally {
+                getPaint().setColor(oldColor);
+                canvas.restoreToCount(saveCount);
             }
-            getPaint().setColor(oldColor);
-            canvas.restore();
+        }
+    }
+
+    private void drawSecondaryHint(Canvas canvas, float offset) {
+        int saveCount = canvas.save();
+        try {
+            canvas.translate(offset, 0);
+            hintAnimatedDrawable2.setAlpha((int) (Color.alpha(hintColor) * hintAlpha));
+            hintAnimatedDrawable2.draw(canvas);
+        } finally {
+            canvas.restoreToCount(saveCount);
         }
     }
 
@@ -910,136 +913,132 @@ public class EditTextBoldCursor extends EditTextEffects {
     protected void onDraw(Canvas canvas) {
         drawHint(canvas);
 
-        if (ellipsizeByGradient) {
-            canvas.saveLayerAlpha(getScrollX() + getPaddingLeft() - ellipsizeWidth, 0, getScrollX() + getWidth() - getPaddingRight() + ellipsizeWidth, getHeight(), 0xFF, Canvas.ALL_SAVE_FLAG);
+        if (!ellipsizeByGradient) {
+            drawTextContent(canvas);
+            return;
         }
+        int layer = canvas.saveLayerAlpha(getScrollX() + getPaddingLeft() - ellipsizeWidth, 0,
+                getScrollX() + getWidth() - getPaddingRight() + ellipsizeWidth, getHeight(), 0xFF, Canvas.ALL_SAVE_FLAG);
+        try {
+            drawTextContent(canvas);
+            drawEllipsizeMask(canvas);
+        } finally {
+            canvas.restoreToCount(layer);
+        }
+    }
 
+    private void drawMainText(Canvas canvas) {
         int topPadding = getExtendedPaddingTop();
+        int previousScrollY = scrollY;
+        int previousIgnoreTopCount = ignoreTopCount;
+        int previousIgnoreBottomCount = ignoreBottomCount;
+        boolean previousDrawingMain = drawInMaim;
+        int saveCount = canvas.save();
         scrollY = Integer.MAX_VALUE;
         try {
-            if (mScrollYField != null) {
-                scrollY = mScrollYField.getInt(this);
-                mScrollYField.set(this, 0);
-            } else {
-                scrollY = getScrollX();
-            }
-        } catch (Exception e) {
-            if (BuildVars.DEBUG_PRIVATE_VERSION) {
-                throw new RuntimeException(e);
-            }
-        }
-        ignoreTopCount = 1;
-        ignoreBottomCount = 1;
-        canvas.save();
-        canvas.translate(0, topPadding);
-        int diagnosticSaveCount = org.telegram.messenger.diagnostics.InputTextDiagnostics.saveCount(canvas);
-        try {
-            drawInMaim = true;
-            super.onDraw(canvas);
-            drawInMaim = false;
-        } catch (Exception e) {
-            org.telegram.messenger.diagnostics.InputTextDiagnostics.drawFailure(
-                    e, canvas, diagnosticSaveCount, drawInMaim);
-            if (BuildVars.DEBUG_PRIVATE_VERSION) {
-                throw new RuntimeException(e);
-            }
-        }
-        if (mScrollYField != null && scrollY != Integer.MAX_VALUE) {
             try {
-                mScrollYField.set(this, scrollY);
+                if (mScrollYField != null) {
+                    scrollY = mScrollYField.getInt(this);
+                    mScrollYField.set(this, 0);
+                } else {
+                    scrollY = getScrollX();
+                }
             } catch (Exception e) {
                 if (BuildVars.DEBUG_PRIVATE_VERSION) {
                     throw new RuntimeException(e);
                 }
             }
-        }
-        canvas.restore();
-        if (cursorDrawable == null) {
+            ignoreTopCount = 1;
+            ignoreBottomCount = 1;
+            canvas.translate(0, topPadding);
+            int diagnosticSaveCount = org.telegram.messenger.diagnostics.InputTextDiagnostics.saveCount(canvas);
             try {
-                boolean showCursor;
-                if (mShowCursorField != null && editor != null) {
-                    long mShowCursor = mShowCursorField.getLong(editor);
-                    showCursor = (SystemClock.uptimeMillis() - mShowCursor) % (2 * 500) < 500 && isFocused();
-                } else {
-                    showCursor = cursorDrawn;
-                    cursorDrawn = false;
-                }
-                if (allowDrawCursor && showCursor) {
-                    canvas.save();
-                    int voffsetCursor = 0;
-                    if (getVerticalOffsetMethod != null) {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = (int) getVerticalOffsetMethod.invoke(this, true);
-                        }
-                    } else {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = getTotalPaddingTop() - getExtendedPaddingTop();
-                        }
-                    }
-                    canvas.translate(getPaddingLeft(), getExtendedPaddingTop() + voffsetCursor);
-                    Layout layout = getLayout();
-                    int line = layout.getLineForOffset(getSelectionStart());
-                    int lineCount = layout.getLineCount();
-                    updateCursorPosition();
-                    Rect bounds = gradientDrawable.getBounds();
-                    rect.left = bounds.left;
-                    rect.right = bounds.left + dp(cursorWidth);
-                    rect.bottom = bounds.bottom;
-                    rect.top = bounds.top;
-                    if (lineSpacingExtra != 0 && line < lineCount - 1) {
-                        rect.bottom -= lineSpacingExtra;
-                    }
-                    rect.top = rect.centerY() - cursorSize / 2;
-                    rect.bottom = rect.top + cursorSize;
-                    gradientDrawable.setBounds(rect);
-                    drawCursor(canvas, gradientDrawable);
-                    canvas.restore();
-                }
-            } catch (Throwable exception) {
+                drawInMaim = true;
+                super.onDraw(canvas);
+            } catch (Exception e) {
+                org.telegram.messenger.diagnostics.InputTextDiagnostics.drawFailure(
+                        e, canvas, diagnosticSaveCount, drawInMaim);
                 if (BuildVars.DEBUG_PRIVATE_VERSION) {
-                    throw new RuntimeException(exception);
+                    throw new RuntimeException(e);
                 }
             }
-        } else {
-            if (cursorDrawn && allowDrawCursor) {
-                try {
-                    canvas.save();
-                    int voffsetCursor = 0;
-                    if (getVerticalOffsetMethod != null) {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = (int) getVerticalOffsetMethod.invoke(this, true);
-                        }
-                    } else {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = getTotalPaddingTop() - getExtendedPaddingTop();
-                        }
-                    }
-                    canvas.translate(getPaddingLeft(), getExtendedPaddingTop() + voffsetCursor);
-                    Layout layout = getLayout();
-                    int line = layout.getLineForOffset(getSelectionStart());
-                    int lineCount = layout.getLineCount();
-                    updateCursorPosition();
-                    Rect bounds = gradientDrawable.getBounds();
-                    rect.left = bounds.left;
-                    rect.right = bounds.left + dp(cursorWidth);
-                    rect.bottom = bounds.bottom;
-                    rect.top = bounds.top;
-                    if (lineSpacingExtra != 0 && line < lineCount - 1) {
-                        rect.bottom -= lineSpacingExtra;
-                    }
-                    rect.top = rect.centerY() - cursorSize / 2;
-                    rect.bottom = rect.top + cursorSize;
-                    gradientDrawable.setBounds(rect);
-                    drawCursor(canvas, gradientDrawable);
-                    canvas.restore();
-                    cursorDrawn = false;
-                } catch (Throwable exception) {
-                    if (BuildVars.DEBUG_PRIVATE_VERSION) {
-                        throw new RuntimeException(exception);
-                    }
+        } finally {
+            drawInMaim = previousDrawingMain;
+            try {
+                if (mScrollYField != null && scrollY != Integer.MAX_VALUE) {
+                    mScrollYField.set(this, scrollY);
                 }
+            } catch (Exception e) {
+                if (BuildVars.DEBUG_PRIVATE_VERSION) {
+                    throw new RuntimeException(e);
+                }
+            } finally {
+                scrollY = previousScrollY;
+                ignoreTopCount = previousIgnoreTopCount;
+                ignoreBottomCount = previousIgnoreBottomCount;
+                canvas.restoreToCount(saveCount);
             }
         }
+    }
+
+    private void drawCustomCursor(Canvas canvas) {
+        try {
+            boolean showCursor;
+            if (cursorDrawable == null && mShowCursorField != null && editor != null) {
+                long mShowCursor = mShowCursorField.getLong(editor);
+                showCursor = (SystemClock.uptimeMillis() - mShowCursor) % (2 * 500) < 500 && isFocused();
+            } else {
+                showCursor = cursorDrawn;
+                if (cursorDrawable == null || allowDrawCursor) {
+                    cursorDrawn = false;
+                }
+            }
+            if (allowDrawCursor && showCursor) {
+                drawPositionedCursor(canvas);
+            }
+        } catch (Throwable exception) {
+            if (BuildVars.DEBUG_PRIVATE_VERSION) {
+                throw new RuntimeException(exception);
+            }
+        }
+    }
+
+    private void drawPositionedCursor(Canvas canvas) throws ReflectiveOperationException {
+        int saveCount = canvas.save();
+        try {
+            int verticalOffset = 0;
+            if (getVerticalOffsetMethod != null) {
+                if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
+                    verticalOffset = (int) getVerticalOffsetMethod.invoke(this, true);
+                }
+            } else if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
+                verticalOffset = getTotalPaddingTop() - getExtendedPaddingTop();
+            }
+            canvas.translate(getPaddingLeft(), getExtendedPaddingTop() + verticalOffset);
+            Layout layout = getLayout();
+            int line = layout.getLineForOffset(getSelectionStart());
+            int lineCount = layout.getLineCount();
+            updateCursorPosition();
+            Rect bounds = gradientDrawable.getBounds();
+            rect.left = bounds.left;
+            rect.right = bounds.left + dp(cursorWidth);
+            rect.top = bounds.top;
+            rect.bottom = bounds.bottom;
+            if (lineSpacingExtra != 0 && line < lineCount - 1) {
+                rect.bottom -= lineSpacingExtra;
+            }
+            rect.top = rect.centerY() - cursorSize / 2;
+            rect.bottom = rect.top + cursorSize;
+            gradientDrawable.setBounds(rect);
+            drawCursor(canvas, gradientDrawable);
+        } finally {
+            canvas.restoreToCount(saveCount);
+        }
+    }
+
+    private void drawTextContent(Canvas canvas) {
+        drawMainText(canvas);
+        drawCustomCursor(canvas);
         if (lineVisible && lineColor != 0) {
             int lineWidth = dp(1);
             boolean wasLineActive = lineActive;
@@ -1087,8 +1086,11 @@ public class EditTextBoldCursor extends EditTextEffects {
                 );
             }
         }
-        if (ellipsizeByGradient) {
-            canvas.save();
+    }
+
+    private void drawEllipsizeMask(Canvas canvas) {
+        int saveCount = canvas.save();
+        try {
             canvas.translate(getScrollX(), 0);
             ellipsizePaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_OUT));
             ellipsizeMatrix.reset();
@@ -1100,15 +1102,9 @@ public class EditTextBoldCursor extends EditTextEffects {
             ellipsizeMatrix.postTranslate(getWidth() - getPaddingRight(), 0);
             ellipsizeGradient.setLocalMatrix(ellipsizeMatrix);
             canvas.drawRect(getWidth() - getPaddingRight(), 0, getWidth() - getPaddingRight() + ellipsizeWidth, getHeight(), ellipsizePaint);
-            canvas.restore();
-            canvas.restore();
+        } finally {
+            canvas.restoreToCount(saveCount);
         }
-        /*if (errorLayout != null) {
-            canvas.save();
-            canvas.translate(getScrollX(), lineY + AndroidUtilities.dp(3));
-            errorLayout.draw(canvas);
-            canvas.restore();
-        }*/
     }
 
     protected void drawCursor(Canvas canvas, GradientDrawable drawable) {

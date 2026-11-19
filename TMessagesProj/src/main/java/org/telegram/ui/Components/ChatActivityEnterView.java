@@ -236,7 +236,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import kotlin.Unit;
 import tw.nekomimi.nekogram.helpers.ChatsHelper;
@@ -247,6 +246,7 @@ import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.translate.Translator;
 import tw.nekomimi.nekogram.translate.TranslatorKt;
 import tw.nekomimi.nekogram.ui.BottomBuilder;
+import tw.nekomimi.nekogram.parts.InputTranslation;
 import tw.nekomimi.nekogram.utils.AlertUtil;
 import xyz.nextalone.nagram.NaConfig;
 
@@ -7139,82 +7139,17 @@ public class ChatActivityEnterView extends FrameLayout implements
 
     private void translateComment(Locale target, int provider) {
         if (messageEditText == null) return;
-
-        int start = messageEditText.getSelectionStart();
-        int end = messageEditText.getSelectionEnd();
-        CharSequence text = messageEditText.getText();
-        if (start != end) {
-            text = text.subSequence(start, end);
-        }
-
-        String origin = text.toString();
-        String llmContext = buildInputTranslationContext(provider);
-
-        if (llmContext != null) {
-            Translator.translateWithContext(target, origin, new ArrayList<>(), llmContext, provider, new Translator.Companion.TranslateCallBack2() {
-                final AtomicBoolean cancel = new AtomicBoolean();
-                AlertDialog status = AlertUtil.showProgress(parentActivity);
-
-                {
-                    status.setOnCancelListener((__) -> {
-                        cancel.set(true);
-                    });
-                    status.show();
-                }
-
-                @Override
-                public void onSuccess(@NotNull TLRPC.TL_textWithEntities finalText) {
-                    status.dismiss();
-                    String translation = finalText.text;
-                    if (start == end) messageEditText.replaceTextInternal(0, messageEditText.getText().length(), translation);
-                    else messageEditText.replaceTextInternal(start, end, translation);
-                }
-
-                @Override
-                public void onFailed(boolean unsupported, @NotNull String message) {
-                    status.dismiss();
-                    AlertUtil.showTransFailedDialog(parentActivity, unsupported, message, () -> {
-                        status = AlertUtil.showProgress(parentActivity);
-                        status.show();
-                        Translator.translateWithContext(target, origin, new ArrayList<>(), null, provider, this);
-                    });
-                }
-            });
-        } else {
-            Translator.translate(target, origin, provider, new Translator.Companion.TranslateCallBack() {
-
-                final AtomicBoolean cancel = new AtomicBoolean();
-                AlertDialog status = AlertUtil.showProgress(parentActivity);
-
-                {
-
-                    status.setOnCancelListener((__) -> {
-                        cancel.set(true);
-                    });
-
-                    status.show();
-
-                }
-
-                @Override
-                public void onSuccess(@NotNull String translation) {
-                    status.dismiss();
-                    if (start == end) messageEditText.replaceTextInternal(0, messageEditText.getText().length(), translation);
-                    else messageEditText.replaceTextInternal(start, end, translation);
-                }
-
-                @Override
-                public void onFailed(boolean unsupported, @NotNull String message) {
-                    status.dismiss();
-                    AlertUtil.showTransFailedDialog(parentActivity, unsupported, message, () -> {
-                        status = AlertUtil.showProgress(parentActivity);
-                        status.show();
-                        Translator.translate(target, origin, 0, this);
-                    });
-                }
-
-            });
-        }
+        final var editor = messageEditText;
+        final long dialogId = dialog_id;
+        final int account = currentAccount;
+        final MessageObject editingMessage = editingMessageObject;
+        final int start = Math.max(0, Math.min(editor.getSelectionStart(), editor.getSelectionEnd()));
+        final int end = Math.max(start, Math.max(editor.getSelectionStart(), editor.getSelectionEnd()));
+        InputTranslation.start(parentActivity, editor, target, provider, start, end, buildInputTranslationContext(provider),
+                () -> messageEditText == editor && dialog_id == dialogId && currentAccount == account
+                        && editingMessageObject == editingMessage,
+                translation -> editor.replaceTextInternal(start == end ? 0 : start,
+                        start == end ? editor.length() : end, translation));
     }
 
     @Nullable

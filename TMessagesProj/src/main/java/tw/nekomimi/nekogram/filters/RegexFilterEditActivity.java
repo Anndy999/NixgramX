@@ -14,6 +14,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -24,6 +25,7 @@ import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.ActionBar.ThemeDescription;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Components.BulletinFactory;
@@ -173,13 +175,17 @@ public class RegexFilterEditActivity extends BaseFragment {
         ActionBarMenu menu = actionBar.createMenu();
         doneButton = menu.addItemWithWidth(done_button, R.drawable.ic_ab_done, dp(56));
 
-        fragmentView = new LinearLayout(context);
-        LinearLayout linearLayout = (LinearLayout) fragmentView;
+        ScrollView scrollView = new ScrollView(context);
+        fragmentView = scrollView;
+        scrollView.setFillViewport(true);
+        ThemeBind.backgroundColor(scrollView, Theme.key_windowBackgroundWhite, getResourceProvider());
+        LinearLayout linearLayout = new LinearLayout(context);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
-        fragmentView.setOnTouchListener((v, event) -> true);
+        scrollView.addView(linearLayout, LayoutHelper.createScroll(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
 
         editField = new EditTextBoldCursor(context);
         editField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+        editField.setMaxLines(5);
         editField.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         editField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
         editField.setBackground(null);
@@ -232,7 +238,7 @@ public class RegexFilterEditActivity extends BaseFragment {
         errorTextView = new TextView(context);
         errorTextView.setFocusable(true);
         errorTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        errorTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText8));
+        ThemeBind.textColor(errorTextView, Theme.key_windowBackgroundWhiteGrayText8, getResourceProvider());
         errorTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
         errorTextView.setText("");
         linearLayout.addView(errorTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT, 24, 10, 24, 0));
@@ -241,7 +247,7 @@ public class RegexFilterEditActivity extends BaseFragment {
             addToSharedFiltersButtonView = new TextCheckCell(context);
             addToSharedFiltersButtonView.setFocusable(true);
             addToSharedFiltersButtonView.setTextAndCheck(getString(R.string.RegexFiltersTextSelectionAddtoShared), addToSharedFilters, true);
-            addToSharedFiltersButtonView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+            ThemeBind.backgroundColor(addToSharedFiltersButtonView, Theme.key_windowBackgroundWhite, getResourceProvider());
             addToSharedFiltersButtonView.setOnClickListener((v) -> {
                 boolean checked = !addToSharedFiltersButtonView.isChecked();
                 addToSharedFiltersButtonView.setChecked(checked);
@@ -253,7 +259,7 @@ public class RegexFilterEditActivity extends BaseFragment {
         caseInsensitiveButtonView = new TextCheckCell(context);
         caseInsensitiveButtonView.setFocusable(true);
         caseInsensitiveButtonView.setTextAndCheck(getString(R.string.RegexFiltersCaseInsensitive), caseInsensitive, true);
-        caseInsensitiveButtonView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+        ThemeBind.backgroundColor(caseInsensitiveButtonView, Theme.key_windowBackgroundWhite, getResourceProvider());
         caseInsensitiveButtonView.setOnClickListener((v) -> {
             boolean checked = !caseInsensitiveButtonView.isChecked();
             caseInsensitiveButtonView.setChecked(checked);

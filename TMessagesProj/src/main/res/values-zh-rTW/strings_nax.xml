@@ -193,7 +193,7 @@
     <string name="LeftBottomButtonAction">左側按鈕操作</string>
     <string name="TranscribeProviderOpenAI">OpenAI-Compatible API</string>
     <string name="OpenAiApiCredentialsDialog">設定 OpenAI 相容的 API。您可以參考此 **文件**。\n</string>
-    <string name="OpenAiApiBaseUrlHint">API URL ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">API URL ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">尚未設定 API 憑證。</string>
     <string name="ApiNotSupportedOnAndroidVersion">此 API 提供者不支援您的 Android 版本 (需要 Android 8.0+)。</string>
     <string name="AppIconTelegramOriginal">官方預設</string>
@@ -386,4 +386,6 @@
     <string name="PasscodeClearAll">清除所有密碼</string>
     <string name="NgxDiagnosticsDropped">已捨棄</string>
     <string name="NgxDiagnosticsCapturingShort">擷取中</string>
+    <string name="NixUpdateNoCompatibleApk">目前沒有適用於此裝置的更新套件。</string>
+    <string name="CopyFrameInProgress">正在複製影片畫格，請稍後再試。</string>
 </resources>

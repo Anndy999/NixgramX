@@ -40,32 +40,32 @@ final class WidgetRemoteEngine extends WidgetEngine {
     private final ConcurrentHashMap<Long, Client> clients = new ConcurrentHashMap<>();
     private final AtomicLong nextId = new AtomicLong();
     private Context context;
-    // prewarm() was asked for: every binding gets the app's hold (hold()); guarded by `lock`.
-    private boolean kept;
+    private static final String WIDGET_USAGE_PREFS = "widget_engine_usage";
+    private static final String LAST_WIDGET_USE = "last_use";
+    private static final long RECENT_USE_MS = 24 * 60 * 60 * 1000L;
+    private long recordedUseAt;
 
     private WidgetRemoteEngine() {}
 
     /**
-     * The engine's process started now and kept for the app's lifetime, its bundles loaded, so that a widget's first
+     * Starts a recently used widget engine within the same idle window as a live session, so that a widget's first
      * frame does not wait for the process (a few hundred ms on a weak phone). An idle engine takes no CPU, only its
      * memory. After a death the binding is given up (drop()); the next session, or this called again on the next
      * return to the foreground, binds afresh. Cheap when the engine is up. Any thread but the main one.
      */
     void prewarm(Context context) {
+        long lastUse = context.getSharedPreferences(WIDGET_USAGE_PREFS, Context.MODE_PRIVATE).getLong(LAST_WIDGET_USE, 0);
+        long age = System.currentTimeMillis() - lastUse;
+        if (lastUse <= 0 || age < 0 || age >= RECENT_USE_MS) return;
         synchronized (lock) {
             if (this.context == null) this.context = context.getApplicationContext();
-            kept = true;
-            hold(connection());
+            Connection binding = connection();
+            if (binding.live != 0 || binding.warmRequested) return;
+            binding.warmRequested = true;
+            if (binding.engine != null) warmup(binding.engine);
+            main.removeCallbacks(binding.idleUnbind);
+            main.postDelayed(binding.idleUnbind, IDLE_UNBIND_MS);
         }
-    }
-
-    // Guarded by `lock`: the app's own hold on `binding` (prewarm), never released, so no idle unbind.
-    private void hold(Connection binding) {
-        if (binding.held) return;
-        binding.held = true;
-        binding.live++;
-        main.removeCallbacks(binding.idleUnbind);
-        if (binding.engine != null) warmup(binding.engine);
     }
 
     private static void warmup(IWidgetEngine engine) {
@@ -80,7 +80,7 @@ final class WidgetRemoteEngine extends WidgetEngine {
     private final class Connection implements ServiceConnection {
         IWidgetEngine engine;
         int generation, live;
-        boolean bound, held;
+        boolean bound, warmRequested;
         final Runnable idleUnbind = () -> unbindIfIdle(this);
 
         @Override
@@ -94,7 +94,7 @@ final class WidgetRemoteEngine extends WidgetEngine {
                     return;
                 }
                 engine = IWidgetEngine.Stub.asInterface(binder);
-                if (held) warmup(engine);
+                if (warmRequested) warmup(engine);
                 lock.notifyAll();
             }
         }
@@ -123,7 +123,6 @@ final class WidgetRemoteEngine extends WidgetEngine {
         }
         created.bound = true;
         connection = created;
-        if (kept) hold(created);
         return created;
     }
 
@@ -181,6 +180,12 @@ final class WidgetRemoteEngine extends WidgetEngine {
         // Died between the call and the put: lost() did not see this session.
         synchronized (lock) {
             if (binding.generation != generation || binding.engine == null) lost(binding, generation);
+            long now = System.currentTimeMillis();
+            if (recordedUseAt == 0 || now < recordedUseAt || now - recordedUseAt >= RECENT_USE_MS / 24) {
+                recordedUseAt = now;
+                this.context.getSharedPreferences(WIDGET_USAGE_PREFS, Context.MODE_PRIVATE).edit()
+                        .putLong(LAST_WIDGET_USE, now).apply();
+            }
         }
         return id;
     }

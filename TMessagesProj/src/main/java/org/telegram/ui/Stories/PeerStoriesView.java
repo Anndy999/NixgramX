@@ -70,7 +70,6 @@ import org.telegram.ui.recyclerview.ChatListItemAnimator;
 
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.Bitmaps;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BotWebViewVibrationEffect;
@@ -209,6 +208,7 @@ import org.telegram.ui.Stories.recorder.StoryRecorder;
 import org.telegram.ui.WrappedResourceProvider;
 
 import java.io.File;
+import java.util.function.BooleanSupplier;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -223,6 +223,7 @@ import java.util.concurrent.CountDownLatch;
 
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
+import tw.nekomimi.nekogram.helpers.VideoFrameClipboard;
 import tw.nekomimi.nekogram.ui.MessageDetailsActivity;
 import xyz.nextalone.nagram.NaConfig;
 
@@ -8525,21 +8526,6 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         }
     }
 
-    private boolean captureCurrentVideoFrameToClipboard() {
-        if (playerSharedScope != null && playerSharedScope.surfaceView != null && playerSharedScope.surfaceView.getWidth() > 0 && playerSharedScope.surfaceView.getHeight() > 0) {
-            Bitmap bitmap = Bitmaps.createBitmap(playerSharedScope.surfaceView.getWidth(), playerSharedScope.surfaceView.getHeight(), Bitmap.Config.ARGB_8888);
-            AndroidUtilities.getBitmapFromSurface(playerSharedScope.surfaceView, bitmap, () -> MessageHelper.saveFrameBitmapToClipboard(bitmap, storyContainer, resourcesProvider));
-            return true;
-        } else if (playerSharedScope != null && playerSharedScope.textureView != null && playerSharedScope.textureView.getWidth() > 0 && playerSharedScope.textureView.getHeight() > 0) {
-            Bitmap bitmap = playerSharedScope.textureView.getBitmap();
-            if (bitmap != null) {
-                MessageHelper.saveFrameBitmapToClipboard(bitmap, storyContainer, resourcesProvider);
-                return true;
-            }
-        }
-        return false;
-    }
-
     private void copyVideoFrameToClipboard() {
         if (currentStory.storyItem == null && currentStory.uploadingStory == null) {
             return;
@@ -8549,15 +8535,27 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         }
         File file = currentStory.getPath();
         if (file != null && file.exists()) {
-            long currentPosition = 0;
-            if (playerSharedScope != null && playerSharedScope.player != null) {
-                currentPosition = playerSharedScope.player.getCurrentPosition();
-            }
-            MessageHelper.copyVideoFrameToClipboard(file, currentPosition, storyContainer, resourcesProvider, () -> {
-                if (captureCurrentVideoFrameToClipboard()) {
+            final var scope = playerSharedScope;
+            final var player = scope == null ? null : scope.player;
+            final var story = currentStory.storyItem;
+            final var upload = currentStory.uploadingStory;
+            final long position = player == null ? 0 : player.getCurrentPosition();
+            BooleanSupplier sameStory = () -> isActive && story == currentStory.storyItem && upload == currentStory.uploadingStory;
+            MessageHelper.copyVideoFrameToClipboard(file, position, storyContainer, resourcesProvider, () -> {
+                if (!sameStory.getAsBoolean()) return;
+                if (player == null || scope != playerSharedScope || player != scope.player) {
+                    showDownloadAlert();
                     return;
                 }
-                showDownloadAlert();
+                SurfaceView surface = scope.surfaceView;
+                TextureView texture = scope.textureView;
+                VideoFrameClipboard.fromDisplay(surface, texture,
+                        () -> sameStory.getAsBoolean() && scope == playerSharedScope && player == scope.player
+                                && surface == scope.surfaceView && texture == scope.textureView
+                                && Math.abs(player.getCurrentPosition() - position) <= 100,
+                        storyContainer, resourcesProvider, () -> {
+                            if (sameStory.getAsBoolean()) showDownloadAlert();
+                        });
             });
         } else {
             showDownloadAlert();

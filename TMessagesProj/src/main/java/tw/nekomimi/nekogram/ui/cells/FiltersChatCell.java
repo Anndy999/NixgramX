@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -20,6 +21,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
@@ -31,16 +33,22 @@ public class FiltersChatCell extends FrameLayout {
     private final BackupImageView imageView;
     private final int currentAccount;
     private long dialogId;
+    private final LinearLayout labels;
     private boolean needDivider;
 
     public FiltersChatCell(Context context, int currentAccount) {
         super(context);
         this.currentAccount = currentAccount;
+        setMinimumHeight(dp(56));
+        labels = new LinearLayout(context);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        addView(labels, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
+                Gravity.START | Gravity.CENTER_VERTICAL, 68, 4, 16, 4));
 
         imageView = new BackupImageView(context);
         imageView.setRoundRadius(dp(20));
         imageView.getImageReceiver().setCurrentAccount(currentAccount);
-        addView(imageView, LayoutHelper.createFrame(40, 40, Gravity.LEFT | Gravity.CENTER_VERTICAL, 16, 0, 0, 0));
+        addView(imageView, LayoutHelper.createFrameRelatively(40, 40, Gravity.START | Gravity.CENTER_VERTICAL, 16, 0, 0, 0));
 
         textView = new TextView(context);
         textView.setLines(1);
@@ -49,17 +57,19 @@ public class FiltersChatCell extends FrameLayout {
         textView.setMaxLines(1);
         textView.setSingleLine(true);
         textView.setEllipsize(TextUtils.TruncateAt.END);
-        textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 68, 8, 16, 0));
+        ThemeBind.textColor(textView, Theme.key_windowBackgroundWhiteBlackText);
+        textView.setGravity(LayoutHelper.getAbsoluteGravityStart());
+        labels.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         subtitleView = new TextView(context);
         subtitleView.setLines(1);
         subtitleView.setTextSize(13);
-        subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        ThemeBind.textColor(subtitleView, Theme.key_windowBackgroundWhiteGrayText);
         subtitleView.setMaxLines(1);
         subtitleView.setSingleLine(true);
         subtitleView.setEllipsize(TextUtils.TruncateAt.END);
-        addView(subtitleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 68, 30, 16, 0));
+        subtitleView.setGravity(LayoutHelper.getAbsoluteGravityStart());
+        labels.addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         setWillNotDraw(false);
     }
@@ -68,7 +78,8 @@ public class FiltersChatCell extends FrameLayout {
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
         if (needDivider) {
-            canvas.drawLine(LocaleController.isRTL ? 0 : dp(68), getMeasuredHeight() - 1, getMeasuredWidth(), getMeasuredHeight() - 1, Theme.dividerPaint);
+            canvas.drawLine(LocaleController.isRTL ? 0 : dp(68), getHeight() - 1,
+                    LocaleController.isRTL ? getWidth() - dp(68) : getWidth(), getHeight() - 1, Theme.dividerPaint);
         }
     }
 
@@ -78,7 +89,10 @@ public class FiltersChatCell extends FrameLayout {
 
     public void setDialog(long dialogId, int filterCount) {
         this.dialogId = dialogId;
-        needDivider = true;
+        if (!needDivider) {
+            needDivider = true;
+            setMinimumHeight(dp(56) + 1);
+        }
         String title = "";
         String subtitle = filterCount + " " + getString(R.string.RegexFiltersHeader);
         if (filterCount == 1) {
@@ -114,11 +128,4 @@ public class FiltersChatCell extends FrameLayout {
         setWillNotDraw(!needDivider);
     }
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int width = MeasureSpec.getSize(widthMeasureSpec);
-        int height = dp(56) + (needDivider ? 1 : 0);
-        super.onMeasure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
-        setMeasuredDimension(width, height);
-    }
 }

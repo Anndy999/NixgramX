@@ -443,8 +443,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         if (hasHiddenArchive && position == 0 && listView.getPaddingTop() - view.getTop() - view.getMeasuredHeight() + tabsTranslation < 0) {
                             position = 1;
                             offset = tabsTranslation;
+                        } else if (position > 0 && view instanceof DialogCell cell && listView.getAdapter() == dialogsAdapter) {
+                            int updated = dialogsAdapter.findDialogPosition(cell.getDialogId());
+                            if (updated >= 0) position = updated;
                         }
-                        layoutManager.scrollToPositionWithOffset(position, (int) offset);
+                        position = Math.min(position, dialogsAdapter.getItemCount() - 1);
+                        if (position >= 0) layoutManager.scrollToPositionWithOffset(position, (int) offset);
                     }
                 }
             }
