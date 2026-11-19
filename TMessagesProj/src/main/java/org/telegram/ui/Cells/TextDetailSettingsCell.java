@@ -17,6 +17,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -28,14 +29,20 @@ import org.telegram.ui.Components.LayoutHelper;
 
 public class TextDetailSettingsCell extends FrameLayout {
 
-    private TextView textView;
-    private TextView valueTextView;
-    private ImageView imageView;
+    private final LinearLayout labels;
+    private final TextView textView;
+    private final TextView valueTextView;
+    private final ImageView imageView;
     private boolean needDivider;
     private boolean multiline;
 
     public TextDetailSettingsCell(Context context) {
         super(context);
+
+        labels = new LinearLayout(context);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        addView(labels, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
+                Gravity.START | Gravity.TOP, 21, 10, 21, 0));
 
         textView = new EmojiTextView(context);
         ThemeBind.textColor(textView, Theme.key_windowBackgroundWhiteBlackText);
@@ -45,7 +52,7 @@ public class TextDetailSettingsCell extends FrameLayout {
         textView.setSingleLine(true);
         textView.setEllipsize(TextUtils.TruncateAt.END);
         textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 21, 10, 21, 0));
+        labels.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         valueTextView = new EmojiTextView(context);
         ThemeBind.textColor(valueTextView, Theme.key_windowBackgroundWhiteGrayText2);
@@ -55,7 +62,7 @@ public class TextDetailSettingsCell extends FrameLayout {
         valueTextView.setMaxLines(1);
         valueTextView.setSingleLine(true);
         valueTextView.setPadding(0, 0, 0, 0);
-        addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 21, 35, 21, 0));
+        labels.addView(valueTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         imageView = new ImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
@@ -65,15 +72,6 @@ public class TextDetailSettingsCell extends FrameLayout {
 
         setMultilineDetail(true);
 
-    }
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        if (!multiline) {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(64) + (needDivider ? 1 : 0), MeasureSpec.EXACTLY));
-        } else {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-        }
     }
 
     public TextView getTextView() {
@@ -86,30 +84,28 @@ public class TextDetailSettingsCell extends FrameLayout {
 
     public void setMultilineDetail(boolean value) {
         multiline = value;
-        if (value) {
-            valueTextView.setLines(0);
-            valueTextView.setMaxLines(0);
-            valueTextView.setSingleLine(false);
-            valueTextView.setPadding(0, 0, 0, AndroidUtilities.dp(12));
-        } else {
-            valueTextView.setLines(1);
-            valueTextView.setMaxLines(1);
-            valueTextView.setSingleLine(true);
-            valueTextView.setPadding(0, 0, 0, 0);
-        }
+        valueTextView.setSingleLine(!value);
+        valueTextView.setEllipsize(value ? null : TextUtils.TruncateAt.END);
+        updateLayout();
+    }
+
+    private void updateLayout() {
+        boolean iconVisible = imageView.getVisibility() == VISIBLE;
+        setMinimumHeight(multiline ? 0 : AndroidUtilities.dp(64) + (needDivider ? 1 : 0));
+        textView.setMinHeight(valueTextView.getVisibility() == VISIBLE ? AndroidUtilities.dp(25) : 0);
+        int start = iconVisible ? AndroidUtilities.dp(50) : 0;
+        labels.setPadding(LocaleController.isRTL ? 0 : start, 0,
+                LocaleController.isRTL ? start : 0, multiline ? AndroidUtilities.dp(12) : 0);
     }
 
     public void setTextAndValue(CharSequence text, CharSequence value, boolean divider) {
         textView.setText(text);
-        if (TextUtils.isEmpty(value)) {
-            valueTextView.setVisibility(GONE);
-        } else {
-            valueTextView.setVisibility(VISIBLE);
-        }
+        valueTextView.setVisibility(TextUtils.isEmpty(value) ? GONE : VISIBLE);
         valueTextView.setText(value);
         needDivider = divider;
         imageView.setVisibility(GONE);
         setWillNotDraw(!divider);
+        updateLayout();
     }
 
     public void setTextAndValueAndIcon(String text, CharSequence value, int resId, boolean divider) {
@@ -117,10 +113,10 @@ public class TextDetailSettingsCell extends FrameLayout {
         valueTextView.setText(value);
         imageView.setImageResource(resId);
         imageView.setVisibility(VISIBLE);
-        textView.setPadding(LocaleController.isRTL ? 0 : AndroidUtilities.dp(50), 0, LocaleController.isRTL ? AndroidUtilities.dp(50) : 0, 0);
-        valueTextView.setPadding(LocaleController.isRTL ? 0 : AndroidUtilities.dp(50), 0, LocaleController.isRTL ? AndroidUtilities.dp(50) : 0, multiline ? AndroidUtilities.dp(12) : 0);
+        valueTextView.setVisibility(TextUtils.isEmpty(value) ? GONE : VISIBLE);
         needDivider = divider;
         setWillNotDraw(!divider);
+        updateLayout();
     }
 
     public void setValue(CharSequence value) {

@@ -11,6 +11,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -28,6 +29,7 @@ import org.telegram.utils.proxy.ProxySettings;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.LinkSpanDrawable;
@@ -193,12 +195,12 @@ public class DatacenterActivity extends BaseNekoSettingsActivity implements Noti
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             if (viewType == Integer.MAX_VALUE - 1) {
                 var headerCell = new DatacenterHeaderCell(mContext);
-                headerCell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                ThemeBind.backgroundColor(headerCell, Theme.key_windowBackgroundWhite, resourcesProvider);
                 headerCell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                 return new RecyclerListView.Holder(headerCell);
             } else if (viewType == Integer.MAX_VALUE) {
                 var dcCell = new DatacenterCell(mContext);
-                dcCell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                ThemeBind.backgroundColor(dcCell, Theme.key_windowBackgroundWhite, resourcesProvider);
                 dcCell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                 return new RecyclerListView.Holder(dcCell);
             } else {
@@ -237,6 +239,7 @@ public class DatacenterActivity extends BaseNekoSettingsActivity implements Noti
 
         public DatacenterHeaderCell(@NonNull Context context) {
             super(context);
+            setMinimumHeight(AndroidUtilities.dp(196));
             imageView = new BackupImageView(context);
             addView(imageView, LayoutHelper.createFrame(120, 120, Gravity.CENTER_HORIZONTAL, 0, 16, 0, 0));
 
@@ -249,21 +252,16 @@ public class DatacenterActivity extends BaseNekoSettingsActivity implements Noti
             imageView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
 
             textView = new LinkSpanDrawable.LinksTextView(context, resourcesProvider);
-            addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 36, 152, 36, 0));
+            addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 36, 152, 36, 12));
             textView.setGravity(Gravity.CENTER_HORIZONTAL);
-            textView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
+            ThemeBind.textColor(textView, Theme.key_windowBackgroundWhiteBlackText, resourcesProvider);
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            textView.setLinkTextColor(getThemedColor(Theme.key_windowBackgroundWhiteLinkText));
+            ThemeBind.linkTextColor(textView, Theme.key_windowBackgroundWhiteLinkText, resourcesProvider);
             textView.setHighlightColor(getThemedColor(Theme.key_windowBackgroundWhiteLinkSelection));
             textView.setMovementMethod(new AndroidUtilities.LinkMovementMethodMy());
             textView.setText(getSpannedString(R.string.DatacenterStatusAbout));
 
             setSticker();
-        }
-
-        @Override
-        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(196), MeasureSpec.EXACTLY));
         }
 
         @Override
@@ -329,32 +327,26 @@ public class DatacenterActivity extends BaseNekoSettingsActivity implements Noti
 
         public DatacenterCell(Context context) {
             super(context);
+            setMinimumHeight(AndroidUtilities.dp(64));
+            LinearLayout labels = new LinearLayout(context);
+            labels.setOrientation(LinearLayout.VERTICAL);
+            addView(labels, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
+                    Gravity.START | Gravity.CENTER_VERTICAL, 21, 8, 56, 8));
 
             textView = new TextView(context);
-            textView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
+            ThemeBind.textColor(textView, Theme.key_windowBackgroundWhiteBlackText, resourcesProvider);
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-            textView.setLines(1);
-            textView.setMaxLines(1);
             textView.setSingleLine(true);
             textView.setEllipsize(TextUtils.TruncateAt.END);
-            textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
-            addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, (LocaleController.isRTL ? 56 : 21), 10, (LocaleController.isRTL ? 21 : 56), 0));
+            textView.setGravity(LayoutHelper.getAbsoluteGravityStart());
+            labels.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             valueTextView = new TextView(context);
             valueTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-            valueTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
-            valueTextView.setLines(1);
-            valueTextView.setMaxLines(1);
-            valueTextView.setSingleLine(true);
-            valueTextView.setCompoundDrawablePadding(AndroidUtilities.dp(6));
+            valueTextView.setGravity(LayoutHelper.getAbsoluteGravityStart());
+            valueTextView.setMaxLines(2);
             valueTextView.setEllipsize(TextUtils.TruncateAt.END);
-            valueTextView.setPadding(0, 0, 0, 0);
-            addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, (LocaleController.isRTL ? 56 : 21), 35, (LocaleController.isRTL ? 21 : 56), 0));
-        }
-
-        @Override
-        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(64) + (needDivider ? 1 : 0), MeasureSpec.EXACTLY));
+            labels.addView(valueTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
 
         public void setDC(NekoConfig.DatacenterInfo info, boolean divider) {
@@ -386,7 +378,7 @@ public class DatacenterActivity extends BaseNekoSettingsActivity implements Noti
                 colorKey = Theme.key_windowBackgroundWhiteRedText4;
             }
             valueTextView.setTag(colorKey);
-            valueTextView.setTextColor(getThemedColor(colorKey));
+            ThemeBind.textColor(valueTextView, colorKey, resourcesProvider);
         }
 
         @Override

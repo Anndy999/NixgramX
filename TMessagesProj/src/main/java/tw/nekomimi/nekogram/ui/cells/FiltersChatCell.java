@@ -18,7 +18,6 @@ import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
-import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AvatarDrawable;
@@ -30,13 +29,17 @@ public class FiltersChatCell extends FrameLayout {
     private final TextView textView;
     private final TextView subtitleView;
     private final BackupImageView imageView;
+    private final int currentAccount;
+    private long dialogId;
     private boolean needDivider;
 
-    public FiltersChatCell(Context context) {
+    public FiltersChatCell(Context context, int currentAccount) {
         super(context);
+        this.currentAccount = currentAccount;
 
         imageView = new BackupImageView(context);
         imageView.setRoundRadius(dp(20));
+        imageView.getImageReceiver().setCurrentAccount(currentAccount);
         addView(imageView, LayoutHelper.createFrame(40, 40, Gravity.LEFT | Gravity.CENTER_VERTICAL, 16, 0, 0, 0));
 
         textView = new TextView(context);
@@ -69,11 +72,12 @@ public class FiltersChatCell extends FrameLayout {
         }
     }
 
-    public void setDialog(long dialogId) {
-        setDialog(dialogId, 0);
+    public long getDialogId() {
+        return dialogId;
     }
 
     public void setDialog(long dialogId, int filterCount) {
+        this.dialogId = dialogId;
         needDivider = true;
         String title = "";
         String subtitle = filterCount + " " + getString(R.string.RegexFiltersHeader);
@@ -81,7 +85,7 @@ public class FiltersChatCell extends FrameLayout {
             subtitle = subtitle.replace("s", "");
         }
         if (dialogId > 0) {
-            TLRPC.User user = MessagesController.getInstance(UserConfig.selectedAccount).getUser(dialogId);
+            TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
             if (user != null) {
                 title = ContactsController.formatName(user.first_name, user.last_name);
                 AvatarDrawable avatar = new AvatarDrawable();
@@ -92,7 +96,7 @@ public class FiltersChatCell extends FrameLayout {
                 imageView.setImageDrawable(null);
             }
         } else {
-            TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(-dialogId);
+            TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-dialogId);
             if (chat != null) {
                 title = chat.title;
                 AvatarDrawable avatar = new AvatarDrawable();

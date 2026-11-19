@@ -94,6 +94,7 @@ import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.PixelCopy;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceView;
@@ -343,6 +344,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
 import kotlin.Unit;
 import tw.nekomimi.nekogram.NekoConfig;
@@ -5871,18 +5873,27 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     if (videoPlayer == null || currentMessageObject == null) {
                         return;
                     }
-                    final long currentPosition = videoPlayer.getCurrentPosition();
-                    final MessageObject messageObject = currentMessageObject;
-                    final String videoPath = messageObject != null ? MessageHelper.getPathToMessage(messageObject) : null;
-                    final File videoFile = !TextUtils.isEmpty(videoPath) ? new File(videoPath) : null;
-                    MessageHelper.copyVideoFrameToClipboard(videoFile, currentPosition, containerView, resourcesProvider, () -> {
-                        if (captureCurrentVideoFrameToClipboard()) {
-                            return;
-                        }
-                        if (messageObject != null && currentMessageObject == messageObject) {
+                    final VideoPlayer requestedPlayer = videoPlayer;
+                    final long requestedPosition = requestedPlayer.getCurrentPosition();
+                    final MessageObject requestedMessage = currentMessageObject;
+                    final int requestedIndex = currentIndex;
+                    BooleanSupplier sameVideo = () -> isVisible && currentMessageObject == requestedMessage
+                            && currentIndex == requestedIndex && videoPlayer == requestedPlayer;
+                    BooleanSupplier sameFrame = () -> sameVideo.getAsBoolean()
+                            && Math.abs(requestedPlayer.getCurrentPosition() - requestedPosition) <= 100;
+                    Runnable captureDisplayedFrame = () -> {
+                        if (sameVideo.getAsBoolean() && !captureCurrentVideoFrameToClipboard(sameFrame, sameVideo)) {
                             showDownloadAlert();
                         }
-                    });
+                    };
+                    final String videoPath = MessageHelper.getPathToMessage(requestedMessage);
+                    final File videoFile = !TextUtils.isEmpty(videoPath) ? new File(videoPath) : null;
+                    if (videoFile == null || !videoFile.isFile()) {
+                        captureDisplayedFrame.run();
+                    } else {
+                        MessageHelper.copyVideoFrameToClipboard(videoFile, requestedPosition, containerView,
+                                resourcesProvider, captureDisplayedFrame);
+                    }
                 } else if (id == gallery_menu_set_photo) {
                     BaseFragment fragment = parentFragment;
                     if (fragment == null || fragment.getParentLayout() == null) {
@@ -24736,11 +24747,29 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         }
     }
 
-    private boolean captureCurrentVideoFrameToClipboard() {
-        if (usedSurfaceView && videoSurfaceView != null && videoSurfaceView.getWidth() > 0 && videoSurfaceView.getHeight() > 0) {
-            Bitmap bitmap = Bitmaps.createBitmap(videoSurfaceView.getWidth(), videoSurfaceView.getHeight(), Bitmap.Config.ARGB_8888);
-            AndroidUtilities.getBitmapFromSurface(videoSurfaceView, bitmap, () -> MessageHelper.saveFrameBitmapToClipboard(bitmap, containerView, resourcesProvider));
-            return true;
+    private boolean captureCurrentVideoFrameToClipboard(BooleanSupplier sameFrame, BooleanSupplier sameVideo) {
+        if (!sameFrame.getAsBoolean()) return false;
+        if (usedSurfaceView) {
+            SurfaceView surfaceView = videoSurfaceView;
+            if (Build.VERSION.SDK_INT < 24 || ApplicationLoader.applicationHandler == null || surfaceView == null
+                    || surfaceView.getWidth() <= 0 || surfaceView.getHeight() <= 0
+                    || !surfaceView.getHolder().getSurface().isValid()) return false;
+
+            Bitmap bitmap = Bitmaps.createBitmap(surfaceView.getWidth(), surfaceView.getHeight(), Bitmap.Config.ARGB_8888);
+            try {
+                PixelCopy.request(surfaceView, bitmap, result -> {
+                    if (result == PixelCopy.SUCCESS && surfaceView == videoSurfaceView && sameFrame.getAsBoolean()) {
+                        MessageHelper.saveFrameBitmapToClipboard(bitmap, containerView, resourcesProvider);
+                    } else {
+                        bitmap.recycle();
+                        if (sameVideo.getAsBoolean()) showDownloadAlert();
+                    }
+                }, ApplicationLoader.applicationHandler);
+                return true;
+            } catch (IllegalArgumentException e) {
+                bitmap.recycle();
+                return false;
+            }
         } else if (videoTextureView != null && videoTextureView.getWidth() > 0 && videoTextureView.getHeight() > 0) {
             Bitmap bitmap = videoTextureView.getBitmap();
             if (bitmap != null) {

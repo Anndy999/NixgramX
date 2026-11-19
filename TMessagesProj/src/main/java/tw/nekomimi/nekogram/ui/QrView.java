@@ -106,6 +106,7 @@ public class QrView extends View {
 
         int width = getWidth();
         int qrSize = 37;
+        if (width < qrSize || getHeight() < qrSize) return;
         int multiple = getWidth() / qrSize;
         int size = multiple * qrSize + 32;
         float scale = width / (float) size;

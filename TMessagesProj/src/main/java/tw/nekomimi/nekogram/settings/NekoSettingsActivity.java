@@ -26,6 +26,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -33,12 +34,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.BasePermissionsActivity;
 import org.telegram.ui.Cells.SettingsSearchCell;
 import org.telegram.ui.Cells.TextCell;
@@ -53,6 +56,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.UUID;
 
 import tw.nekomimi.nekogram.NekoConfig;
@@ -151,7 +155,13 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
             }));
 
             final ArrayList<SettingsSearchResult> filtered = new ArrayList<>(results);
-            final String[] currentQuery = new String[]{""};
+            Locale locale = java.util.Objects.requireNonNullElse(LocaleController.getInstance().getCurrentLocale(), Locale.getDefault());
+            String[] indexedTitles = new String[results.size()];
+            for (int i = 0; i < results.size(); i++) {
+                indexedTitles[i] = results.get(i).searchTitle.toLowerCase(locale);
+            }
+            final String[] currentQuery = {""};
+            final String[][] queryParts = {new String[0]};
             final int searchHeight = dp(36);
             final int clearSize = dp(36);
             final int pad = dp(12);
@@ -233,21 +243,18 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                     SettingsSearchResult r = filtered.get(position);
                     String[] path = r.path2 != null ? new String[]{r.path1, r.path2} : new String[]{r.path1};
                     CharSequence titleToSet = r.searchTitle == null ? "" : r.searchTitle;
-                    String q = currentQuery[0];
-                    if (q != null && !q.isEmpty() && titleToSet.length() > 0) {
+                    if (queryParts[0].length > 0 && titleToSet.length() > 0) {
                         SpannableStringBuilder ss = new SpannableStringBuilder(titleToSet);
-                        String lower = titleToSet.toString().toLowerCase();
-                        String[] parts = q.split("\\s+");
+                        String lower = titleToSet.toString().toLowerCase(locale);
                         int highlightColor = getThemedColor(Theme.key_windowBackgroundWhiteBlueText4);
-                        for (String p : parts) {
-                            if (p.isEmpty()) continue;
+                        for (String p : queryParts[0]) {
                             int idx = 0;
                             while (true) {
                                 int found = lower.indexOf(p, idx);
                                 if (found == -1) break;
-                                try {
-                                    ss.setSpan(new ForegroundColorSpan(highlightColor), found, found + p.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                                } catch (Exception ignore) {
+                                int end = found + p.length();
+                                if (end <= ss.length() && titleToSet.toString().regionMatches(true, found, p, 0, p.length())) {
+                                    ss.setSpan(new ForegroundColorSpan(highlightColor), found, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                                 }
                                 idx = found + p.length();
                             }
@@ -274,7 +281,16 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                 dialog.dismiss();
             });
 
-            containerLayout.addView(searchListView, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+            FrameLayout resultsFrame = new FrameLayout(parent);
+            resultsFrame.addView(searchListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+            TextView noResults = new TextView(parent);
+            noResults.setText(R.string.NoResult);
+            noResults.setGravity(Gravity.CENTER);
+            noResults.setMinHeight(dp(56));
+            ThemeBind.textColor(noResults, Theme.key_dialogTextGray3, resourceProvider);
+            resultsFrame.addView(noResults, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
+            searchListView.setEmptyView(noResults);
+            containerLayout.addView(resultsFrame, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
             searchField.addTextChangedListener(new TextWatcher() {
                 @Override
@@ -288,23 +304,24 @@ public class NekoSettingsActivity extends BaseNekoSettingsActivity {
                 @SuppressLint("NotifyDataSetChanged")
                 @Override
                 public void afterTextChanged(Editable s) {
-                    String q = s.toString().toLowerCase().trim();
+                    String q = s.toString().toLowerCase(locale).trim();
+                    if (q.equals(currentQuery[0])) return;
                     currentQuery[0] = q;
+                    queryParts[0] = q.isEmpty() ? new String[0] : q.split("\\s+");
                     filtered.clear();
                     if (q.isEmpty()) {
                         filtered.addAll(results);
                     } else {
-                        String[] parts = q.split("\\s+");
-                        for (SettingsSearchResult item : results) {
-                            String title = item.searchTitle == null ? "" : item.searchTitle.toLowerCase();
+                        for (int i = 0; i < indexedTitles.length; i++) {
+                            String title = indexedTitles[i];
                             boolean ok = true;
-                            for (String p : parts) {
+                            for (String p : queryParts[0]) {
                                 if (!title.contains(p)) {
                                     ok = false;
                                     break;
                                 }
                             }
-                            if (ok) filtered.add(item);
+                            if (ok) filtered.add(results.get(i));
                         }
                     }
                     adapter.notifyDataSetChanged();

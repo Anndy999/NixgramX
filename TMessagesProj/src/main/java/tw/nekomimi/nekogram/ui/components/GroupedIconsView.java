@@ -1,164 +1,111 @@
 package tw.nekomimi.nekogram.ui.components;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
+import static org.telegram.messenger.LocaleController.getString;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
+import android.os.Build;
 import android.view.Gravity;
-import android.widget.FrameLayout;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
-import androidx.core.content.ContextCompat;
-
-import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
+import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.ScaleStateListAnimator;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import xyz.nextalone.nagram.NaConfig;
 
-@SuppressLint("ViewConstructor")
-public class GroupedIconsView extends FrameLayout {
+public class GroupedIconsView extends LinearLayout {
 
-    private final static int OPTION_DELETE = 1;
-    private final static int OPTION_FORWARD = 2;
-    private final static int OPTION_FORWARD_NOQUOTE = 2011;
-    private final static int OPTION_COPY = 3;
-    private final static int OPTION_COPY_PHOTO = 150;
-    private final static int OPTION_COPY_PHOTO_AS_STICKER = 151;
-    private final static int OPTION_COPY_LINK = 22;
-    private final static int OPTION_COPY_LINK_PM = 2025;
-    private final static int OPTION_REPLY = 8;
-    private final static int OPTION_REPLY_PM = 2033;
-    private final static int OPTION_EDIT = 12;
+    private static final Option DELETE = new Option(1, R.drawable.msg_delete, R.string.Delete);
+    private static final Option FORWARD = new Option(2, R.drawable.msg_forward_noquote, R.string.Forward);
+    private static final Option FORWARD_NOQUOTE = new Option(2011, R.drawable.msg_forward_noquote, R.string.NoQuoteForward);
+    private static final Option COPY = new Option(3, R.drawable.msg_copy, R.string.Copy);
+    private static final Option COPY_PHOTO = new Option(150, R.drawable.msg_copy_photo, R.string.CopyPhoto);
+    private static final Option COPY_PHOTO_AS_STICKER = new Option(151, R.drawable.msg_copy_photo, R.string.CopyPhotoAsSticker);
+    private static final Option COPY_LINK = new Option(22, R.drawable.msg_link, R.string.CopyLink);
+    private static final Option COPY_LINK_PM = new Option(2025, R.drawable.msg_link, R.string.CopyLink);
+    private static final Option REPLY = new Option(8, R.drawable.menu_reply, R.string.Reply);
+    private static final Option REPLY_PM = new Option(2033, R.drawable.menu_reply, R.string.ReplyInPrivate);
+    private static final Option EDIT = new Option(12, R.drawable.msg_edit, R.string.Edit);
 
-    private final Context context;
+    private final List<Option> secondaryOptions = new ArrayList<>();
     private final ChatActivity chatActivity;
-    public LinearLayout linearLayout;
+    private final Theme.ResourcesProvider resourcesProvider;
 
-    public GroupedIconsView(Context context, ChatActivity chatActivity, MessageObject messageObject,
-                            boolean allowReply, boolean allowReplyPm,
-                            boolean allowEdit, boolean allowDelete, boolean allowForward,
-                            boolean allowCopy, boolean allowCopyPhoto,
-                            boolean allowCopyLink, boolean allowCopyLinkPm
-    ) {
+    public GroupedIconsView(Context context, ChatActivity chatActivity, Theme.ResourcesProvider resourcesProvider,
+                            boolean allowReply, boolean allowReplyPm, boolean allowEdit, boolean allowDelete,
+                            boolean allowForward, boolean allowCopy, boolean allowCopyPhoto, boolean allowCopyAsSticker,
+                            boolean allowCopyLink, boolean allowCopyLinkPm, boolean removeFromSaved) {
         super(context);
-
-        linearLayout = new LinearLayout(context);
-        linearLayout.setOrientation(LinearLayout.HORIZONTAL);
-        linearLayout.setGravity(Gravity.CENTER);
-
-        this.context = context;
         this.chatActivity = chatActivity;
+        this.resourcesProvider = resourcesProvider;
+        setOrientation(HORIZONTAL);
+        setGravity(Gravity.CENTER);
 
-        List<OptionConfig> options = new ArrayList<>();
+        if (allowReply) addOption(REPLY);
+        if (allowReplyPm) secondaryOptions.add(REPLY_PM);
 
-        // button 1: reply
-        options.add(new OptionConfig(R.drawable.menu_reply, OPTION_REPLY, OPTION_REPLY_PM, allowReply, allowReplyPm));
-
-        // button 2: copy text > copy photo > copy sticker > copy link
+        Option link = allowCopyLink ? COPY_LINK : allowCopyLinkPm ? COPY_LINK_PM : null;
         if (allowCopy) {
-            if (!allowCopyPhoto && messageObject != null && messageObject.isPhoto() && messageObject.isWebpage()) {
-                options.add(new OptionConfig(R.drawable.msg_copy, OPTION_COPY, OPTION_COPY_PHOTO));
-            } else if (allowCopyLink) {
-                options.add(new OptionConfig(R.drawable.msg_copy, OPTION_COPY, OPTION_COPY_LINK));
-            } else if (allowCopyLinkPm) {
-                options.add(new OptionConfig(R.drawable.msg_copy, OPTION_COPY, OPTION_COPY_LINK_PM));
-            } else {
-                options.add(new OptionConfig(R.drawable.msg_copy, OPTION_COPY));
-            }
+            addOption(COPY);
+            if (allowCopyPhoto && !allowDelete) addOption(COPY_PHOTO);
+            else if (allowCopyPhoto) secondaryOptions.add(COPY_PHOTO);
+            if (link != null) secondaryOptions.add(link);
         } else if (allowCopyPhoto) {
-            if (messageObject != null && !messageObject.isSticker()) {
-                options.add(new OptionConfig(R.drawable.msg_copy_photo, OPTION_COPY_PHOTO, OPTION_COPY_PHOTO_AS_STICKER));
-            } else {
-                if (allowCopyLink) {
-                    options.add(new OptionConfig(R.drawable.msg_copy_photo, OPTION_COPY_PHOTO, OPTION_COPY_LINK));
-                } else if (allowCopyLinkPm) {
-                    options.add(new OptionConfig(R.drawable.msg_copy_photo, OPTION_COPY_PHOTO, OPTION_COPY_LINK_PM));
-                } else {
-                    options.add(new OptionConfig(R.drawable.msg_copy_photo, OPTION_COPY_PHOTO));
-                }
-            }
-        } else if (allowCopyLink && allowDelete) {
-            options.add(new OptionConfig(R.drawable.msg_link, OPTION_COPY_LINK));
-        } else if (allowCopyLinkPm) {
-            options.add(new OptionConfig(R.drawable.msg_link, OPTION_COPY_LINK_PM));
-        } else {
-            options.add(new OptionConfig(R.drawable.msg_copy, OPTION_COPY, false));
+            addOption(COPY_PHOTO);
+            if (link != null) secondaryOptions.add(link);
+        } else if (link != null) {
+            addOption(link);
         }
-
-        // button 3: delete > copy photo > copy link
+        if (allowCopyAsSticker) secondaryOptions.add(COPY_PHOTO_AS_STICKER);
         if (allowDelete) {
-            options.add(new OptionConfig(R.drawable.msg_delete, OPTION_DELETE));
-        } else if (allowCopy && allowCopyPhoto) {
-            options.add(new OptionConfig(R.drawable.msg_copy_photo, OPTION_COPY_PHOTO, OPTION_COPY_PHOTO_AS_STICKER));
-        } else {
-            options.add(new OptionConfig(R.drawable.msg_link, OPTION_COPY_LINK, allowCopyLink));
+            addOption(removeFromSaved ? new Option(DELETE.id(), DELETE.icon(), R.string.Remove) : DELETE);
         }
-
-        // button 4: edit > forward
         if (allowEdit) {
-            options.add(new OptionConfig(R.drawable.msg_edit, OPTION_EDIT));
-        } else {
-            options.add(new OptionConfig(R.drawable.msg_forward_noquote, OPTION_FORWARD, OPTION_FORWARD_NOQUOTE, allowForward, allowForward));
+            addOption(EDIT);
+            if (allowForward) secondaryOptions.add(FORWARD);
+        } else if (allowForward) {
+            addOption(FORWARD);
         }
-
-        for (OptionConfig config : options) {
-            addOption(config);
-        }
+        if (allowForward) secondaryOptions.add(FORWARD_NOQUOTE);
     }
 
     public static boolean useGroupedIcons() {
         return NaConfig.INSTANCE.getGroupedMessageMenu().Bool();
     }
 
-    private void addOption(OptionConfig config) {
-        var imageView = new ImageView(context);
-        imageView.setPadding(dp(8), dp(8), dp(8), dp(8));
-        imageView.setScaleType(ImageView.ScaleType.CENTER);
-        imageView.setImageDrawable(Objects.requireNonNull(ContextCompat.getDrawable(context, config.iconResId)).mutate());
-        imageView.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP));
-        imageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuItemIcon), PorterDuff.Mode.MULTIPLY));
-        ScaleStateListAnimator.apply(imageView, .1f, 1.5f);
-
-        var params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.setMargins(dp(6), dp(6), dp(6), dp(6));
-        imageView.setLayoutParams(params);
-
-        linearLayout.addView(imageView);
-
-        if (config.isEnabled) {
-            imageView.setOnClickListener(v1 -> chatActivity.processSelectedOption(config.shortPressOptionId));
-            if (config.longPressOptionId != null && config.isLongClickEnabled) {
-                imageView.setOnLongClickListener(v1 -> {
-                    chatActivity.processSelectedOption(config.longPressOptionId);
-                    return true;
-                });
-            }
-        } else {
-            imageView.setAlpha(0.4f);
+    public void addSecondaryOptions(ViewGroup popup, List<Integer> existingOptions) {
+        for (Option option : secondaryOptions) {
+            if (existingOptions.contains(option.id())) continue;
+            var item = ActionBarMenuItem.addItem(popup, option.icon(), getString(option.label()), false, resourcesProvider);
+            item.setOnClickListener(v -> chatActivity.processSelectedOption(option.id()));
         }
     }
 
-    private record OptionConfig(int iconResId, int shortPressOptionId, Integer longPressOptionId, boolean isEnabled, boolean isLongClickEnabled) {
-        private OptionConfig(int iconResId, int shortPressOptionId) {
-            this(iconResId, shortPressOptionId, null, true, false);
-        }
-
-        private OptionConfig(int iconResId, int shortPressOptionId, boolean isEnabled) {
-            this(iconResId, shortPressOptionId, null, isEnabled, false);
-        }
-
-        private OptionConfig(int iconResId, int shortPressOptionId, int longPressOptionId) {
-            this(iconResId, shortPressOptionId, longPressOptionId, true, true);
-        }
+    private void addOption(Option option) {
+        ImageView button = new ImageView(getContext());
+        button.setScaleType(ImageView.ScaleType.CENTER);
+        button.setImageResource(option.icon());
+        CharSequence label = getString(option.label());
+        button.setContentDescription(label);
+        if (Build.VERSION.SDK_INT >= 26) button.setTooltipText(label);
+        ThemeBind.selectorBackground(button,
+                Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector, resourcesProvider), Theme.RIPPLE_MASK_CIRCLE_20DP),
+                null, ThemeBind.of(Theme.key_listSelector), resourcesProvider);
+        ThemeBind.colorFilter(button, Theme.key_actionBarDefaultSubmenuItemIcon, resourcesProvider, PorterDuff.Mode.MULTIPLY);
+        ScaleStateListAnimator.apply(button, .1f, 1.5f);
+        button.setOnClickListener(v -> chatActivity.processSelectedOption(option.id()));
+        addView(button, new LayoutParams(dp(48), dp(48)));
     }
+
+    private record Option(int id, int icon, int label) {}
 }

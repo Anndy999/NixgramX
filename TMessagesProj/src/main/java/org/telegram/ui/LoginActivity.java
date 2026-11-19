@@ -8821,7 +8821,20 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
             qrView = new QrView(context);
             qrView.setData(null);
-            addView(qrView, LayoutHelper.createLinear(280, 280, Gravity.CENTER_HORIZONTAL, 30, 30,30, 30));
+            addView(qrView, LayoutHelper.createLinear(280, 280, Gravity.CENTER_HORIZONTAL, 16, 30, 16, 30));
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) qrView.getLayoutParams();
+            int size = AndroidUtilities.dp(280);
+            if (MeasureSpec.getMode(widthMeasureSpec) != MeasureSpec.UNSPECIFIED) {
+                int available = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight()
+                        - params.leftMargin - params.rightMargin;
+                size = Math.min(size, Math.max(0, available));
+            }
+            params.width = params.height = size;
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         }
 
         @Override
