@@ -245,6 +245,9 @@ public class ApplicationLoader extends Application {
 
                     boolean isSlow = isConnectionSlow();
                     for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                        if (a != UserConfig.selectedAccount && !UserConfig.getInstance(a).isClientActivated()) {
+                            continue;
+                        }
                         ConnectionsManager.getInstance(a).checkConnection();
                         FileLoader.getInstance(a).onNetworkChanged(isSlow);
                     }
@@ -282,26 +285,24 @@ public class ApplicationLoader extends Application {
         NaConfig.init();
         SharedPrefsHelper.init(applicationContext);
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(AndroidUtil.shouldEnableCrashlytics());
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             UserConfig.getInstance(a).loadConfig();
-            MessagesController.getInstance(a);
-            if (a == 0) {
-                ConnectionsManager.getInstance(a);
-                // Only mark GENERATING when we do not already have a token; otherwise clear stale status.
-                if (!android.text.TextUtils.isEmpty(SharedConfig.pushString)) {
-                    SharedConfig.pushStringStatus = "";
-                } else {
-                    SharedConfig.pushStringStatus = "__FIREBASE_GENERATING_SINCE_" + ConnectionsManager.getInstance(a).getCurrentTime() + "__";
-                }
-            } else {
-                ConnectionsManager.getInstance(a);
-            }
+        }
+        int selectedAccount = UserConfig.selectedAccount;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             TLRPC.User user = UserConfig.getInstance(a).getCurrentUser();
+            if (user == null && a != selectedAccount) {
+                continue;
+            }
+            MessagesController.getInstance(a);
+            ConnectionsManager.getInstance(a);
             if (user != null) {
                 MessagesController.getInstance(a).putUser(user, true);
                 SendMessagesHelper.getInstance(a).checkUnsentMessages();
             }
         }
+        SharedConfig.pushStringStatus = !android.text.TextUtils.isEmpty(SharedConfig.pushString) ? ""
+                : "__FIREBASE_GENERATING_SINCE_" + ConnectionsManager.getInstance(selectedAccount).getCurrentTime() + "__";
 
         PushListenerController.reconcilePushRegistration();
 
@@ -310,9 +311,11 @@ public class ApplicationLoader extends Application {
         FileLog.d("app initied");
 
         MediaController.getInstance();
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
-            ContactsController.getInstance(a).checkAppAccount();
-            DownloadController.getInstance(a);
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (a == selectedAccount || UserConfig.getInstance(a).isClientActivated()) {
+                ContactsController.getInstance(a).checkAppAccount();
+                DownloadController.getInstance(a);
+            }
         }
         BillingController.getInstance().startConnection();
         // HTML widgets: the isolated engine's process up front, after the app's own start, so that a widget's first

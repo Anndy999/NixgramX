@@ -206,7 +206,7 @@
     <string name="LeftBottomButtonAction">Left Button Action</string>
     <string name="TranscribeProviderOpenAI">OpenAI-Compatible API</string>
     <string name="OpenAiApiCredentialsDialog">Configure OpenAI-compatible API. You can refer to this **documentation**.\n</string>
-    <string name="OpenAiApiBaseUrlHint">API URL ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">API URL ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">API credentials are not configured.</string>
     <string name="ApiNotSupportedOnAndroidVersion">This API provider is not supported on your Android version (requires Android 8.0+).</string>
     <string name="AppIconTelegramOriginal">Original</string>
@@ -397,4 +397,5 @@
     <string name="PasscodeClearAll">Clear all passcodes</string>
     <string name="NgxDiagnosticsDropped">dropped</string>
     <string name="NgxDiagnosticsCapturingShort">capturing</string>
+    <string name="NixUpdateNoCompatibleApk">No compatible update is available for this device.</string>
 </resources>

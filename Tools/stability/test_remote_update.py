@@ -89,7 +89,11 @@ STUBS['org/telegram/messenger/FileLoader.java'] = STUBS['org/telegram/messenger/
 # JSON is a deterministic boundary stub, not a replacement/parser test for Android org.json.
 STUBS['org/json/JSONObject.java'] = '''public class JSONObject {
     String data; public JSONObject(String s) throws JSONException {if(s.equals("malformed"))throw new JSONException();data=s;}
-    public boolean has(String key){return !data.contains("universal-only") || !key.equals("arm64-v8a");}
+    public boolean has(String key){
+        if(data.contains("universal-only"))return key.equals("universal");
+        if(data.contains("arm64-only"))return key.equals("arm64-v8a");
+        return key.equals("arm64-v8a") || key.equals("universal");
+    }
     public int getInt(String key) throws JSONException {
         if(data.contains("missing-code") && key.equals("version_code"))throw new JSONException();
         return switch(key){case "version_code" -> data.contains("old")?1283:data.contains("current")?1284:1285;
@@ -210,6 +214,7 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
             check(newer.count==1 && SharedConfig.pendingAppUpdate==accepted);
         }else{
             if(test.equals("release"))NaConfig.channel=1;
+            if(test.equals("incompatible-error"))android.os.Build.SUPPORTED_ABIS=new String[]{"armeabi-v7a"};
             var result=start(!test.equals("automatic"));
             if(test.equals("account"))UserConfig.selectedAccount=2;
             if(test.equals("lane"))NaConfig.channel=1;
@@ -225,6 +230,7 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
                     case "missing-version" -> "current missing-version";
                     case "invalid-doc" -> "current invalid-doc";
                     case "universal" -> "new universal-only";
+                    case "incompatible-error" -> "new arm64-only";
                     default -> "new";
                 };
                 if(test.equals("pointer-error"))req.callback().run(null,new TLRPC.Error());
@@ -238,6 +244,7 @@ public class RemoteUpdateTest extends BaseRemoteHelper {
             AndroidUtilities.drain();check(result.count==1);
             if(test.contains("error") || test.startsWith("missing") || test.equals("malformed") || test.equals("invalid-doc")){
                 check(result.error!=null && SharedConfig.pendingAppUpdate==pending);
+                if(test.equals("incompatible-error"))check(result.error.equals("UPDATE_NO_COMPATIBLE_APK"));
             }else if(test.equals("same")){
                 check(result.error==null && result.update==null && SharedConfig.pendingAppUpdate==null);
             }else{
@@ -283,7 +290,7 @@ for case in ('same', 'new', 'rebuilt', 'release', 'automatic', 'account', 'lane'
              'malformed', 'missing-code', 'missing-version', 'invalid-doc',
              'resolve-error', 'pointer-error', 'missing-pointer', 'attachment-error',
              'overlap', 'overlap-queued', 'overlap-fileref-then-manual',
-             'overlap-manual-then-fileref', 'duplicate', 'universal', 'shared-helper'):
+             'overlap-manual-then-fileref', 'duplicate', 'universal', 'incompatible-error', 'shared-helper'):
     setattr(RemoteUpdateTest, 'test_' + case.replace('-', '_'), scenario(case))
 
 

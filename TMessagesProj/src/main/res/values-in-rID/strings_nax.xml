@@ -193,7 +193,7 @@
     <string name="LeftBottomButtonAction">Aksi Tombol Kiri</string>
     <string name="TranscribeProviderOpenAI">API yang kompatibel dengan OpenAI</string>
     <string name="OpenAiApiCredentialsDialog">Konfigurasikan API yang kompatibel dengan OpenAI. Anda dapat merujuk ke **dokumentasi** ini.\n</string>
-    <string name="OpenAiApiBaseUrlHint">URL API ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">URL API ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">Kredensial API tidak dikonfigurasi.</string>
     <string name="ApiNotSupportedOnAndroidVersion">Penyedia API ini tidak didukung pada versi Android Anda (membutuhkan Android 8.0+).</string>
     <string name="AppIconTelegramOriginal">Asli</string>

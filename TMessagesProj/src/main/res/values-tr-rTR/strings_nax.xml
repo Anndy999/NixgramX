@@ -193,7 +193,7 @@
     <string name="LeftBottomButtonAction">Sol Buton Eylemi</string>
     <string name="TranscribeProviderOpenAI">OpenAI Uyumlu API</string>
     <string name="OpenAiApiCredentialsDialog">OpenAI uyumlu API\'yi yapılandırın. Bu **belgelere** başvurabilirsiniz.\n</string>
-    <string name="OpenAiApiBaseUrlHint">API URL\'si ([…]/chat/completions)</string>
+    <string name="OpenAiApiBaseUrlHint">API URL\'si ([…]/v1)</string>
     <string name="OpenAiCredentialsNotSet">API kimlik bilgileri yapılandırılmadı.</string>
     <string name="ApiNotSupportedOnAndroidVersion">Bu API sağlayıcısı Android sürümünüzde desteklenmiyor (Android 8.0+ gerektirir).</string>
     <string name="AppIconTelegramOriginal">Orijinal</string>

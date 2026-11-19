@@ -282,7 +282,7 @@ public final class WidgetSandboxSession {
     }
 
     /**
-     * Starts the isolated engine now and keeps it (WidgetRemoteEngine#prewarm): called once the app is up. Not on
+     * Prewarms a recently used isolated engine once the app is up. Not on
      * low-RAM devices, where the engine starts with the first widget and goes 30 s after the last; not while the kill
      * switch is on. Background thread.
      */
