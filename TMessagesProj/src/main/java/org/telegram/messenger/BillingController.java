@@ -70,7 +70,7 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
     private boolean isDisconnected;
     private Runnable onCanceled;
 
-    public static BillingController getInstance() {
+    public static synchronized BillingController getInstance() {
         if (instance == null) {
             instance = new BillingController(ApplicationLoader.applicationContext);
         }
@@ -136,7 +136,7 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
     }
 
     @SuppressWarnings("ConstantConditions")
-    public int getCurrencyExp(String currency) {
+    public synchronized int getCurrencyExp(String currency) {
         BillingUtilities.extractCurrencyExp(currencyExpMap);
         return currencyExpMap.getOrDefault(currency, 0);
     }
@@ -146,7 +146,6 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
             return;
         }
         try {
-            BillingUtilities.extractCurrencyExp(currencyExpMap);
             if (!BuildVars.useInvoiceBilling()) {
                 billingClient.startConnection(this);
             }

@@ -484,6 +484,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
     private boolean loadingFilteredMessage;
     private MessageObject filteredMessageCache;
     private int lastCheckedMessageId;
+    private long lastFilterRevision;
     private int lastFilteredNullMessageId;
     private long lastFilteredNullTime;
     private CharSequence lastMessageString;
@@ -3357,7 +3358,9 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         // Message filter: if the last message is blocked/filtered, try to pick previous unfiltered for preview
                         if (message != null) {
                             int currentMessageId = message.getId();
-                            if (currentMessageId != lastCheckedMessageId) {
+                            long revision = AyuFilter.getFilterRevision();
+                            if (currentMessageId != lastCheckedMessageId || revision != lastFilterRevision) {
+                                lastFilterRevision = revision;
                                 lastCheckedMessageId = currentMessageId;
                                 filteredMessageCache = null;
                                 loadingFilteredMessage = false;
@@ -3401,7 +3404,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                                     MessageHelper.getInstance(currentAccount).loadLastMessageSkippingFilteredAsync(
                                         dialogId,
                                         (result) -> {
-                                            if (dialogId != currentDialogId || requestMessageId != lastCheckedMessageId) {
+                                            if (dialogId != currentDialogId || requestMessageId != lastCheckedMessageId || revision != lastFilterRevision) {
                                                 return;
                                             }
                                             filteredMessageCache = result;

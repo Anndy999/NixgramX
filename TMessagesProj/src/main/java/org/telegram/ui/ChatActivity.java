@@ -6255,10 +6255,15 @@ public class ChatActivity extends BaseFragment implements
 
             protected void drawChatBackgroundElements(Canvas canvas, RectF positionF) {
                 final int count = getChildCount();
+                boolean mayHaveGroupedMessages = false;
                 MessageObject.GroupedMessages lastDrawnGroup = null;
 
                 for (int a = 0; a < count; a++) {
                     View child = getChildAt(a);
+                    // Grouped backgrounds can extend outside a member's capture rectangle.
+                    if (!mayHaveGroupedMessages && child instanceof ChatMessageCell cell && cell.getCurrentMessagesGroup() != null) {
+                        mayHaveGroupedMessages = true;
+                    }
                     if (child.getVisibility() == View.INVISIBLE || child.getVisibility() == View.GONE || quickRejectChild(child, positionF)) {
                         continue;
                     }
@@ -6278,6 +6283,7 @@ public class ChatActivity extends BaseFragment implements
                                 child.setTranslationY(0);
                             }
                         }
+                        mayHaveGroupedMessages = true; // The rest of the children were not inspected.
                         break;
                     } else if (child instanceof UserInfoCell) {
                         UserInfoCell cell = (UserInfoCell) child;
@@ -6397,6 +6403,10 @@ public class ChatActivity extends BaseFragment implements
                             canvas.restore();
                         }
                     }
+                }
+                if (!mayHaveGroupedMessages) {
+                    drawingGroups.clear();
+                    return;
                 }
                 MessageObject.GroupedMessages scrimGroup = null;
                 if (scrimView instanceof ChatMessageCell) {
@@ -18979,16 +18989,13 @@ public class ChatActivity extends BaseFragment implements
                     }
 
                     if (child instanceof ChatMessageCell) {
-                        blurCanvas.save();
-                        blurCanvas.translate(child.getX(), child.getY());
                         ChatMessageCell cell = (ChatMessageCell) child;
                         if (cell.drawBackgroundInParent()) {
                             blurCanvas.save();
-                            blurCanvas.translate(0, cell.starsPriceTopPadding);
+                            blurCanvas.translate(child.getX(), child.getY() + cell.starsPriceTopPadding);
                             cell.drawBackgroundInternal(blurCanvas, true);
                             blurCanvas.restore();
                         }
-                        blurCanvas.restore();
                         chatListView.drawChild(blurCanvas, child, drawingTime);
                         if (cell.hasOutboundsContent()) {
                             blurCanvas.save();
@@ -19018,8 +19025,7 @@ public class ChatActivity extends BaseFragment implements
 
         public void drawList(Canvas blurCanvas, RectF position) {
             tmpRectF2.set(position);
-            tmpRectF2.intersect(0, 0, getWidth(), getHeight());
-            if (tmpRectF2.isEmpty()) {
+            if (!tmpRectF2.intersect(0, 0, getWidth(), getHeight())) {
                 return;
             }
 

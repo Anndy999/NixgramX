@@ -33,7 +33,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.ViewPager;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DialogObject;
@@ -138,7 +137,6 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
     RecyclerListView recyclerListView;
     private PullForegroundDrawable pullForegroundDrawable;
     ArrayList<ItemInternal> itemInternals = new ArrayList<>();
-    ArrayList<ItemInternal> oldItems = new ArrayList<>();
 
     private Drawable arrowDrawable;
 
@@ -180,6 +178,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
 
     public void onReorderStateChanged(boolean reordering) {
         isReordering = reordering;
+        if (reordering && diffPending) updateList(null);
     }
 
     public int fixPosition(int position) {
@@ -301,6 +300,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         private TLRPC.Chat chat;
         private TLRPC.User user;
         private long dialogId;
+        private String url;
 
         public ItemInternal(int viewType, String string) {
             super(viewType, false);
@@ -348,6 +348,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             super(viewType, true);
             this.dialog = dialog;
             if (dialog != null) {
+                dialogId = dialog.id;
                 int currentId = dialogsStableIds.get(dialog.id, -1);
                 if (currentId >= 0) {
                     stableId = currentId;
@@ -377,6 +378,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         public ItemInternal(int viewTypeMeUrl, TLRPC.RecentMeUrl recentMeUrl) {
             super(viewTypeMeUrl, true);
             this.recentMeUrl = recentMeUrl;
+            url = recentMeUrl == null ? null : recentMeUrl.url;
             stableId = stableIdPointer++;
         }
 
@@ -404,6 +406,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             super(viewTypeUser, true);
             contact = tl_contact;
             if (contact != null) {
+                dialogId = contact.user_id;
                 int currentId = dialogsStableIds.get(contact.user_id, -1);
                 if (currentId > 0) {
                     stableId = currentId;
@@ -421,19 +424,22 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 return false;
             }
             if (viewType == VIEW_TYPE_DIALOG) {
-                return dialog != null && itemInternal.dialog != null && dialog.id == itemInternal.dialog.id
+                return dialog != null && itemInternal.dialog != null && dialogId == itemInternal.dialogId
                         && isFolder == itemInternal.isFolder &&
                         isForumCell == itemInternal.isForumCell &&
                         pinned == itemInternal.pinned;
             }
             if (viewType == VIEW_TYPE_HEADER_2) {
-                return dialog != null && itemInternal.dialog != null && dialog.id == itemInternal.dialog.id && dialog.isFolder == itemInternal.dialog.isFolder;
+                return dialog != null && itemInternal.dialog != null && dialogId == itemInternal.dialogId && isFolder == itemInternal.isFolder;
             }
             if (viewType == VIEW_TYPE_ME_URL) {
-                return recentMeUrl != null && itemInternal.recentMeUrl != null && recentMeUrl.url != null && recentMeUrl.url.equals(recentMeUrl.url);
+                return url != null && url.equals(itemInternal.url);
             }
             if (viewType == VIEW_TYPE_USER) {
-                return contact != null && itemInternal.contact != null && contact.user_id == itemInternal.contact.user_id;
+                return contact != null && itemInternal.contact != null && dialogId == itemInternal.dialogId;
+            }
+            if (viewType == VIEW_TYPE_DIALOG_COMMUNITY || viewType == VIEW_TYPE_HEADER_3) {
+                return stableId == itemInternal.stableId;
             }
             if (viewType == VIEW_TYPE_EMPTY) {
                 return emptyType == itemInternal.emptyType;
@@ -531,6 +537,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
 
     public void setDialogsListFrozen(boolean frozen) {
         dialogsListFrozen = frozen;
+        if (diffPending) updateList(null);
     }
 
     public boolean getDialogsListIsFrozen() {
@@ -545,20 +552,25 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
         hasHints = folderId == 0 && dialogsType == DialogsActivity.DIALOGS_TYPE_DEFAULT && !isOnlySelect && !MessagesController.getInstance(currentAccount).hintDialogs.isEmpty();
     }
 
-    boolean isCalculatingDiff;
-    boolean updateListPending;
-    private final static boolean ALLOW_UPDATE_IN_BACKGROUND = BuildVars.DEBUG_PRIVATE_VERSION;
+    private long diffGeneration;
+    private boolean diffPending;
+    private Runnable pendingScrollPosition;
+    private boolean refreshOnAttach;
 
     public void updateList(Runnable saveScrollPosition) {
-        if (isCalculatingDiff) {
-            updateListPending = true;
+        if (diffPending && saveScrollPosition != null && !dialogsListFrozen && !isReordering) {
+            pendingScrollPosition = saveScrollPosition;
             return;
         }
-        isCalculatingDiff = true;
-        oldItems = new ArrayList<>();
-        oldItems.addAll(itemInternals);
+        final long generation = ++diffGeneration;
+        diffPending = false;
+        pendingScrollPosition = null;
+        final var oldItems = itemInternals;
+        final int previousCount = dialogsCount;
+        final boolean hadHints = hasHints || hasChatlistHint;
+        itemInternals = new ArrayList<>(oldItems.size());
         updateItemList();
-        ArrayList<ItemInternal> newItems = new ArrayList<>(itemInternals);
+        final var newItems = itemInternals;
         itemInternals = oldItems;
 
         DiffUtil.Callback callback = new DiffUtil.Callback() {
@@ -582,47 +594,69 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                 return oldItems.get(oldItemPosition).viewType == newItems.get(newItemPosition).viewType;
             }
         };
-        if (itemInternals.size() < 50 || !ALLOW_UPDATE_IN_BACKGROUND) {
-            DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
-            isCalculatingDiff = false;
-            if (saveScrollPosition != null) {
-                saveScrollPosition.run();
-            }
-            itemInternals = newItems;
-            result.dispatchUpdatesTo(this);
-        } else {
-            Utilities.searchQueue.postRunnable(() -> {
-                DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
-                AndroidUtilities.runOnUIThread(() -> {
-                    if (!isCalculatingDiff) {
-                        return;
-                    }
-                    isCalculatingDiff = false;
-                    if (saveScrollPosition != null) {
-                        saveScrollPosition.run();
-                    }
-                    itemInternals = newItems;
-                    result.dispatchUpdatesTo(this);
-                    if (updateListPending) {
-                        updateListPending = false;
-                        updateList(saveScrollPosition);
-                    }
-                });
-            });
+        // Special rows, count changes, and interactive reordering can change adapter
+        // metadata as well as rows. Commit those together in the current UI turn.
+        boolean background = saveScrollPosition != null && previousCount == dialogsCount && dialogsCount >= 50
+                && dialogsType == DialogsActivity.DIALOGS_TYPE_DEFAULT && communityId == 0 && !isOnlySelect
+                && !hadHints && !hasHints && !hasChatlistHint && onlineContacts == null
+                && !dialogsListFrozen && !isReordering && !collapsedView && !isTransitionSupport
+                && recyclerListView != null && recyclerListView.getAdapter() == this;
+        if (!background) {
+            applyDiff(newItems, DiffUtil.calculateDiff(callback), saveScrollPosition);
+            return;
         }
+        diffPending = true;
+        Utilities.searchQueue.postRunnable(() -> {
+            DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
+            AndroidUtilities.runOnUIThread(() -> {
+                if (generation != diffGeneration) return;
+                diffPending = false;
+                Runnable pending = pendingScrollPosition;
+                pendingScrollPosition = null;
+                if (pending != null) {
+                    updateList(pending);
+                } else {
+                    applyDiff(newItems, result, saveScrollPosition);
+                }
+            });
+        });
+    }
 
+    private void applyDiff(ArrayList<ItemInternal> rows, DiffUtil.DiffResult diff, Runnable saveScrollPosition) {
+        itemInternals = rows;
+        if (saveScrollPosition != null) saveScrollPosition.run();
+        diff.dispatchUpdatesTo(this);
+    }
+
+    private void cancelPendingDiff() {
+        diffGeneration++;
+        diffPending = false;
+        pendingScrollPosition = null;
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
+        refreshOnAttach |= diffPending;
+        cancelPendingDiff();
+        super.onDetachedFromRecyclerView(recyclerView);
+    }
+
+    @Override
+    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+        if (refreshOnAttach) {
+            refreshOnAttach = false;
+            notifyDataSetChanged();
+        }
     }
 
     @Override
     public void notifyDataSetChanged() {
-        if (isCalculatingDiff) {
-            itemInternals = new ArrayList<>();
-        }
-        isCalculatingDiff = false;
+        cancelPendingDiff();
+        itemInternals = new ArrayList<>(itemInternals.size());
         updateItemList();
         super.notifyDataSetChanged();
     }
-
 
     @Override
     public void onViewAttachedToWindow(RecyclerView.ViewHolder holder) {

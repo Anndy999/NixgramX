@@ -387,4 +387,5 @@
     <string name="NgxDiagnosticsDropped">已丢弃</string>
     <string name="NgxDiagnosticsCapturingShort">捕获中</string>
     <string name="NixUpdateNoCompatibleApk">当前没有适用于此设备的更新包。</string>
+    <string name="CopyFrameInProgress">正在复制视频帧，请稍后再试。</string>
 </resources>

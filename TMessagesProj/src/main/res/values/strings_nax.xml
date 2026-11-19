@@ -398,4 +398,5 @@
     <string name="NgxDiagnosticsDropped">dropped</string>
     <string name="NgxDiagnosticsCapturingShort">capturing</string>
     <string name="NixUpdateNoCompatibleApk">No compatible update is available for this device.</string>
+    <string name="CopyFrameInProgress">A video frame is being copied. Try again in a moment.</string>
 </resources>

@@ -94,7 +94,6 @@ import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
-import android.view.PixelCopy;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceView;
@@ -358,6 +357,7 @@ import tw.nekomimi.nekogram.utils.AndroidUtil;
 import tw.nekomimi.nekogram.utils.ProxyUtil;
 import xyz.nextalone.nagram.NaConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
+import tw.nekomimi.nekogram.helpers.VideoFrameClipboard;
 import tw.nekomimi.nekogram.streaming.MediaStreamingProvider;
 
 import me.vkryl.android.animator.BoolAnimator;
@@ -5882,8 +5882,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     BooleanSupplier sameFrame = () -> sameVideo.getAsBoolean()
                             && Math.abs(requestedPlayer.getCurrentPosition() - requestedPosition) <= 100;
                     Runnable captureDisplayedFrame = () -> {
-                        if (sameVideo.getAsBoolean() && !captureCurrentVideoFrameToClipboard(sameFrame, sameVideo)) {
-                            showDownloadAlert();
+                        if (sameVideo.getAsBoolean()) {
+                            captureCurrentVideoFrameToClipboard(sameFrame, sameVideo);
                         }
                     };
                     final String videoPath = MessageHelper.getPathToMessage(requestedMessage);
@@ -24724,37 +24724,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         }
     }
 
-    private boolean captureCurrentVideoFrameToClipboard(BooleanSupplier sameFrame, BooleanSupplier sameVideo) {
-        if (!sameFrame.getAsBoolean()) return false;
-        if (usedSurfaceView) {
-            SurfaceView surfaceView = videoSurfaceView;
-            if (Build.VERSION.SDK_INT < 24 || ApplicationLoader.applicationHandler == null || surfaceView == null
-                    || surfaceView.getWidth() <= 0 || surfaceView.getHeight() <= 0
-                    || !surfaceView.getHolder().getSurface().isValid()) return false;
-
-            Bitmap bitmap = Bitmaps.createBitmap(surfaceView.getWidth(), surfaceView.getHeight(), Bitmap.Config.ARGB_8888);
-            try {
-                PixelCopy.request(surfaceView, bitmap, result -> {
-                    if (result == PixelCopy.SUCCESS && surfaceView == videoSurfaceView && sameFrame.getAsBoolean()) {
-                        MessageHelper.saveFrameBitmapToClipboard(bitmap, containerView, resourcesProvider);
-                    } else {
-                        bitmap.recycle();
-                        if (sameVideo.getAsBoolean()) showDownloadAlert();
-                    }
-                }, ApplicationLoader.applicationHandler);
-                return true;
-            } catch (IllegalArgumentException e) {
-                bitmap.recycle();
-                return false;
-            }
-        } else if (videoTextureView != null && videoTextureView.getWidth() > 0 && videoTextureView.getHeight() > 0) {
-            Bitmap bitmap = videoTextureView.getBitmap();
-            if (bitmap != null) {
-                MessageHelper.saveFrameBitmapToClipboard(bitmap, containerView, resourcesProvider);
-                return true;
-            }
-        }
-        return false;
+    private void captureCurrentVideoFrameToClipboard(BooleanSupplier sameFrame, BooleanSupplier sameVideo) {
+        SurfaceView surface = usedSurfaceView ? videoSurfaceView : null;
+        TextureView texture = usedSurfaceView ? null : videoTextureView;
+        VideoFrameClipboard.fromDisplay(surface, texture,
+                () -> sameFrame.getAsBoolean() && (usedSurfaceView ? surface != null && surface == videoSurfaceView
+                        : texture != null && texture == videoTextureView),
+                containerView, resourcesProvider, () -> {
+                    if (sameVideo.getAsBoolean()) showDownloadAlert();
+                });
     }
 
     private void setWindowHdrColorMode(boolean enabled) {

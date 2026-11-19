@@ -387,4 +387,5 @@
     <string name="NgxDiagnosticsDropped">已捨棄</string>
     <string name="NgxDiagnosticsCapturingShort">擷取中</string>
     <string name="NixUpdateNoCompatibleApk">目前沒有適用於此裝置的更新套件。</string>
+    <string name="CopyFrameInProgress">正在複製影片畫格，請稍後再試。</string>
 </resources>

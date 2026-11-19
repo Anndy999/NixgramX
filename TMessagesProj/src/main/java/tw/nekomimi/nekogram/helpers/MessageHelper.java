@@ -841,6 +841,11 @@ public class MessageHelper extends BaseController {
     }
 
     public static CharSequence getMessagePlainTextFull(MessageObject messageObject, MessageObject.GroupedMessages messageGroup) {
+        if (messageGroup == null && messageObject != null && messageObject.messageOwner != null
+                && !messageObject.isPoll() && TextUtils.isEmpty(messageObject.getVoiceTranscription())
+                && messageObject.messageOwner.message != null) {
+            return messageObject.messageOwner.message;
+        }
         StringBuilder text = new StringBuilder();
         if (messageGroup != null) {
             for (var groupedMessage : messageGroup.messages) {
@@ -1062,19 +1067,7 @@ public class MessageHelper extends BaseController {
     }
 
     public static void copyVideoFrameToClipboard(File videoFile, long positionMs, View bulletinContainer, Theme.ResourcesProvider resourcesProvider, Runnable fallbackAction) {
-        Utilities.globalQueue.postRunnable(() -> {
-            Bitmap bitmap = null;
-            if (videoFile != null && videoFile.exists()) {
-                bitmap = createVideoFrameBitmap(videoFile, positionMs);
-            }
-            if (bitmap == null) {
-                if (fallbackAction != null) {
-                    AndroidUtilities.runOnUIThread(fallbackAction);
-                }
-                return;
-            }
-            saveFrameBitmapToClipboard(bitmap, bulletinContainer, resourcesProvider);
-        });
+        VideoFrameClipboard.fromFile(videoFile, positionMs, bulletinContainer, resourcesProvider, fallbackAction);
     }
 
     public static Bitmap createVideoFrameBitmap(File videoFile, long positionMs) {
@@ -1094,49 +1087,6 @@ public class MessageHelper extends BaseController {
             bitmap = SendMessagesHelper.createVideoThumbnailAtTime(videoFile.getAbsolutePath(), positionMs * 1000);
         }
         return bitmap;
-    }
-
-    public static void saveFrameBitmapToClipboard(Bitmap bitmap, View bulletinContainer, Theme.ResourcesProvider resourcesProvider) {
-        if (bitmap == null) {
-            return;
-        }
-        Utilities.globalQueue.postRunnable(() -> {
-            File tempFile = null;
-            boolean saved = false;
-            try {
-                File cacheDir = FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE);
-                tempFile = new File(cacheDir, "frame_" + System.currentTimeMillis() + ".png");
-                try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                    saved = bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                }
-            } catch (Exception e) {
-                FileLog.e(e);
-            } finally {
-                try {
-                    bitmap.recycle();
-                } catch (Exception ignore) {
-                }
-            }
-            if (!saved) {
-                if (tempFile != null) {
-                    try {
-                        if (!tempFile.delete()) {
-                            tempFile.deleteOnExit();
-                        }
-                    } catch (Exception ignore) {
-                    }
-                }
-                return;
-            }
-            final File finalTempFile = tempFile;
-            AndroidUtilities.runOnUIThread(() -> {
-                Runnable callback = null;
-                if (bulletinContainer instanceof FrameLayout container) {
-                    callback = () -> BulletinFactory.of(container, resourcesProvider).createCopyBulletin(getString(R.string.PhotoCopied)).show();
-                }
-                addFileToClipboard(finalTempFile, callback);
-            });
-        });
     }
 
     public static ArrayList<TLRPC.MessageEntity> reparseMessageEntities(ArrayList<TLRPC.MessageEntity> translatedEntities) {
