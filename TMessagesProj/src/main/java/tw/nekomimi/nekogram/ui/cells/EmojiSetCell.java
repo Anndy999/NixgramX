@@ -8,8 +8,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -32,6 +32,7 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CheckBox2;
@@ -71,14 +72,14 @@ public class EmojiSetCell extends FrameLayout {
             optionsButton = new ImageView(context);
             optionsButton.setFocusable(false);
             optionsButton.setScaleType(ImageView.ScaleType.CENTER);
-            optionsButton.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addedIcon), PorterDuff.Mode.MULTIPLY));
+            ThemeBind.colorFilter(optionsButton, Theme.key_featuredStickers_addedIcon, PorterDuff.Mode.MULTIPLY);
             optionsButton.setImageResource(R.drawable.floating_check);
             optionsButton.setVisibility(GONE);
             addView(optionsButton, LayoutHelper.createFrame(40, 40, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP, (LocaleController.isRTL ? 10 : 0), 9, (LocaleController.isRTL ? 0 : 10), 0));
 
             radialProgress = new RadialProgressView(context);
             radialProgress.setNoProgress(false);
-            radialProgress.setProgressColor(Theme.getColor(Theme.key_featuredStickers_addedIcon));
+            radialProgress.setProgressColorKey(Theme.key_featuredStickers_addedIcon);
             radialProgress.setStrokeWidth(2.8F);
             radialProgress.setSize(AndroidUtilities.dp(30));
             radialProgress.setLayoutParams(new LinearLayout.LayoutParams(AndroidUtilities.dp(40), AndroidUtilities.dp(40)));
@@ -94,7 +95,7 @@ public class EmojiSetCell extends FrameLayout {
             }
         };
         NotificationCenter.listenEmojiLoading(textView);
-        textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        ThemeBind.textColor(textView, Theme.key_windowBackgroundWhiteBlackText);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         if (selection) {
             textView.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM));
@@ -107,7 +108,7 @@ public class EmojiSetCell extends FrameLayout {
         addView(textView, LayoutHelper.createFrameRelatively(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.START, !selection ? 21 : 71, 9, 70, 0));
 
         valueTextView = new AnimatedTextView(context);
-        valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        ThemeBind.textColor(valueTextView, Theme.key_windowBackgroundWhiteGrayText);
         valueTextView.setAnimationProperties(.55f, 0, 320, CubicBezierInterpolator.EASE_OUT_QUINT);
         valueTextView.setTextSize(AndroidUtilities.dp(13));
         valueTextView.setGravity(LayoutHelper.getAbsoluteGravityStart());
@@ -172,9 +173,13 @@ public class EmojiSetCell extends FrameLayout {
     private void setPackPreview(EmojiHelper.EmojiPackBase pack) {
         if (pack instanceof EmojiHelper.EmojiPackInfo) {
             var document = ((EmojiHelper.EmojiPackInfo) pack).getPreviewDocument();
+            if (document == null) {
+                imageView.setImageDrawable(null);
+                return;
+            }
             var thumbs = document.thumbs;
             BitmapDrawable strippedThumb = null;
-            for (int a = 0, N = thumbs.size(); a < N; a++) {
+            for (int a = 0, N = thumbs == null ? 0 : thumbs.size(); a < N; a++) {
                 TLRPC.PhotoSize photoSize = thumbs.get(a);
                 if (photoSize instanceof TLRPC.TL_photoStrippedSize) {
                     strippedThumb = new BitmapDrawable(ApplicationLoader.applicationContext.getResources(), ImageLoader.getStrippedPhotoBitmap(photoSize.bytes, "b"));
@@ -185,7 +190,11 @@ public class EmojiSetCell extends FrameLayout {
                 imageView.setImage(ImageLocation.getForDocument(document), "146_146", strippedThumb, pack);
             } else {
                 TLRPC.PhotoSize thumb = FileLoader.getClosestPhotoSizeWithSize(document.thumbs, 146);
-                imageView.setImage(ImageLocation.getForDocument(document), "146_146", ImageLocation.getForDocument(thumb, document), "146_146_B", thumb.size, pack);
+                if (thumb != null) {
+                    imageView.setImage(ImageLocation.getForDocument(document), "146_146", ImageLocation.getForDocument(thumb, document), "146_146_B", thumb.size, pack);
+                } else {
+                    imageView.setImage(ImageLocation.getForDocument(document), "146_146", (Drawable) null, pack);
+                }
             }
         } else {
             imageView.setImage(pack.getPreview(), null, null);

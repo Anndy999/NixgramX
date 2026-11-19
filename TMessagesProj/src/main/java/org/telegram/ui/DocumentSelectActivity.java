@@ -97,14 +97,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.StringTokenizer;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import kotlin.Unit;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.ChatsHelper;
 import tw.nekomimi.nekogram.translate.Translator;
 import tw.nekomimi.nekogram.translate.TranslatorKt;
-import tw.nekomimi.nekogram.utils.AlertUtil;
+import tw.nekomimi.nekogram.parts.InputTranslation;
 import xyz.nextalone.nagram.NaConfig;
 
 public class DocumentSelectActivity extends BaseFragment {
@@ -821,35 +820,11 @@ public class DocumentSelectActivity extends BaseFragment {
     }
 
     private void translateComment(Locale target) {
-        String origin = commentTextView.getText().toString();
-        Translator.translate(target, origin, new Translator.Companion.TranslateCallBack() {
-
-            final AtomicBoolean cancel = new AtomicBoolean();
-            AlertDialog status = AlertUtil.showProgress(getParentActivity());
-
-            {
-                status.setOnCancelListener((__) -> {
-                    cancel.set(true);
-                });
-                status.show();
-            }
-
-            @Override
-            public void onSuccess(@NotNull String translation) {
-                status.dismiss();
-                commentTextView.getEditText().setText(translation);
-            }
-
-            @Override
-            public void onFailed(boolean unsupported, @NotNull String message) {
-                status.dismiss();
-                AlertUtil.showTransFailedDialog(getParentActivity(), unsupported, message, () -> {
-                    status = AlertUtil.showProgress(getParentActivity());
-                    status.show();
-                    Translator.translate(origin, this);
-                });
-            }
-        });
+        final var field = commentTextView;
+        if (field == null) return;
+        final var editor = field.getEditText();
+        InputTranslation.start(getParentActivity(), editor, target, 0, 0, 0, null,
+                () -> commentTextView == field, editor::setText);
     }
 
     private boolean onItemClick(View view, ListItem item) {

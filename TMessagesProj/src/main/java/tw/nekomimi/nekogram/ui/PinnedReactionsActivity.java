@@ -12,7 +12,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Canvas;
 import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
 import android.os.Build;
 import android.text.Editable;
 import android.text.Layout;
@@ -32,6 +31,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.ColorUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -50,6 +50,7 @@ import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCheckCell;
@@ -186,7 +187,7 @@ public class PinnedReactionsActivity extends BaseFragment {
         frameLayout.addView(viewPager, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.FILL));
 
         actionBarContainer = new FrameLayout(context);
-        actionBarContainer.setBackgroundColor(Theme.getColor(Theme.key_actionBarDefault));
+        ThemeBind.backgroundColor(actionBarContainer, Theme.key_actionBarDefault, getResourceProvider());
         frameLayout.addView(actionBarContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL));
 
         tabsView = new FilledTabsView(context);
@@ -201,25 +202,43 @@ public class PinnedReactionsActivity extends BaseFragment {
                 onScrollEndCallback.run(false, tab == PAGE_CHANNELS ? PAGE_CHATS : PAGE_CHANNELS);
             }, 100);
         });
-        tabsView.setBackgroundColor(AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_actionBarDefault, getResourceProvider())) > .721f ? Theme.getColor(Theme.key_actionBarDefaultIcon, getResourceProvider()) : Theme.adaptHSV(Theme.getColor(Theme.key_actionBarDefault, getResourceProvider()), +.08f, -.08f));
-        actionBarContainer.addView(tabsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 40, Gravity.CENTER));
+        actionBarContainer.addView(tabsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 40, Gravity.CENTER, 54, 0, 54, 0));
 
         backButton = new ImageView(context);
         backButton.setScaleType(ImageView.ScaleType.CENTER);
-        backButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP));
+        ThemeBind.selectorBackground(backButton, Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP),
+                null, ThemeBind.of(Theme.key_listSelector), getResourceProvider());
+        backButton.setContentDescription(getString(R.string.Back));
         backButton.setImageResource(R.drawable.ic_ab_back);
-        backButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_actionBarDefaultIcon), PorterDuff.Mode.SRC_IN));
+        ThemeBind.colorFilter(backButton, Theme.key_actionBarDefaultIcon, getResourceProvider(), PorterDuff.Mode.SRC_IN);
         backButton.setOnClickListener(v -> {
             if (onBackPressed(true)) {
                 finishFragment();
             }
         });
-        actionBarContainer.addView(backButton, LayoutHelper.createFrame(54, 54, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+        actionBarContainer.addView(backButton, LayoutHelper.createFrameRelatively(54, 54, Gravity.START | Gravity.CENTER_VERTICAL));
 
         FrameLayout contentView;
         fragmentView = contentView = frameLayout;
+        onThemeColorsChanged();
 
         return contentView;
+    }
+
+    @Override
+    public void onThemeColorsChanged() {
+        if (tabsView != null) {
+            int background = getThemedColor(Theme.key_actionBarDefault);
+            int foreground = getThemedColor(Theme.key_actionBarDefaultIcon);
+            tabsView.setColors(ColorUtils.blendARGB(background, foreground, .10f),
+                    ColorUtils.blendARGB(background, foreground, .24f), foreground, foreground);
+        }
+        if (chatsPage != null) {
+            chatsPage.updateSwitchBackground();
+        }
+        if (channelsPage != null) {
+            channelsPage.updateSwitchBackground();
+        }
     }
 
     @NonNull
@@ -282,7 +301,7 @@ public class PinnedReactionsActivity extends BaseFragment {
         AlertDialog dialog = builder.show();
         TextView button = (TextView) dialog.getButton(DialogInterface.BUTTON_POSITIVE);
         if (button != null) {
-            button.setTextColor(getThemedColor(Theme.key_text_RedBold));
+            ThemeBind.textColor(button, Theme.key_text_RedBold, getResourceProvider());
         }
     }
 
@@ -374,6 +393,8 @@ public class PinnedReactionsActivity extends BaseFragment {
         private final ScrollView scrollView;
         private final LinkedHashMap<Long, AnimatedEmojiSpan> selectedEmojisMap = new LinkedHashMap<>();
         private final ArrayList<Long> selectedCustomEmojisList = new ArrayList<>();
+        private final ArrayList<Long> initialReactions;
+        private final boolean initiallyChecked;
         private SelectAnimatedEmojiDialog selectAnimatedEmojiDialog;
         private final int type;
         private final BaseFragment fragment;
@@ -387,7 +408,7 @@ public class PinnedReactionsActivity extends BaseFragment {
 
             this.type = type;
             this.fragment = fragment;
-            checked = getCurrentState().Bool();
+            initiallyChecked = checked = getCurrentState().Bool();
 
             scrollView = new ScrollView(context);
             scrollView.setFillViewport(true);
@@ -399,7 +420,6 @@ public class PinnedReactionsActivity extends BaseFragment {
 
             enableReactionsCell = new TextCheckCell(context);
             enableReactionsCell.setHeight(56);
-            enableReactionsCell.setBackgroundColor(Theme.getColor(enableReactionsCell.isChecked() ? Theme.key_windowBackgroundChecked : Theme.key_windowBackgroundUnchecked));
             enableReactionsCell.setTypeface(AndroidUtilities.bold());
             enableReactionsCell.setTextAndCheck(getString(type == PAGE_CHATS ? R.string.PinnedReactions_Status_Chats : R.string.PinnedReactions_Status_Channels), false, false);
             enableReactionsCell.setColors(Theme.key_windowBackgroundCheckText, Theme.key_switchTrackBlue, Theme.key_switchTrackBlueChecked, Theme.key_switchTrackBlueThumb, Theme.key_switchTrackBlueThumbChecked);
@@ -407,14 +427,14 @@ public class PinnedReactionsActivity extends BaseFragment {
             contentLayout.addView(enableReactionsCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             TextInfoPrivacyCell infoCell = new TextInfoPrivacyCell(context);
-            infoCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText4));
+            infoCell.setTextColorByKey(Theme.key_windowBackgroundWhiteGrayText4);
             infoCell.setTopPadding(12);
             infoCell.setBottomPadding(16);
             infoCell.setText(getString(type == PAGE_CHATS ? R.string.PinnedReactions_Description : R.string.PinnedReactions_Description_Channels));
             contentLayout.addView(infoCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             reactionsPreview = new ReactionsContainerPreviewCell(context, getParentLayout(), null);
-            contentLayout.addView(reactionsPreview, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, dp(45)));
+            contentLayout.addView(reactionsPreview, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             ShadowSectionCell shadowSectionCell = new ShadowSectionCell(context);
             shadowSectionCell.setBackground(Theme.getThemedDrawable(context, R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
@@ -422,7 +442,7 @@ public class PinnedReactionsActivity extends BaseFragment {
 
             HeaderCell headerCell = new HeaderCell(context);
             headerCell.setText(getString(R.string.PinnedReactions));
-            headerCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            ThemeBind.backgroundColor(headerCell, Theme.key_windowBackgroundWhite, getResourceProvider());
             headerCell.setTextSize(15);
             headerCell.setTopMargin(14);
 
@@ -460,7 +480,7 @@ public class PinnedReactionsActivity extends BaseFragment {
             actionButton.setOnClickListener(v -> buttonClick());
             addView(scrollView);
             addView(actionButton, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.BOTTOM, 13, 13, 13, 13));
-            setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            ThemeBind.backgroundColor(this, Theme.key_windowBackgroundGray, getResourceProvider());
 
             bottomDialogLayout = new FrameLayout(context) {
                 @Override
@@ -508,6 +528,7 @@ public class PinnedReactionsActivity extends BaseFragment {
             } catch (JSONException ignored) {
             }
 
+            initialReactions = new ArrayList<>(selectedCustomEmojisList);
             editText.append(editable);
             editText.setSelection(editText.getText().length());
             setCheckedEnableReactionCell(checked, false, true);
@@ -539,9 +560,11 @@ public class PinnedReactionsActivity extends BaseFragment {
         }
 
         public void save() {
-            JSONArray reactionsList = grabReactions();
-            getCurrentState().setConfigBool(checked && reactionsList.length() > 0);
-            getList().setConfigString(reactionsList.toString());
+            if (!hasChanges()) return;
+            if (!initialReactions.equals(selectedCustomEmojisList)) {
+                getList().setConfigString(grabReactions().toString());
+            }
+            getCurrentState().setConfigBool(checked && !selectedCustomEmojisList.isEmpty());
         }
 
         private ConfigItem getCurrentState() {
@@ -643,14 +666,14 @@ public class PinnedReactionsActivity extends BaseFragment {
                             });
                         }
                         animateChangesInNextRows(removedSpan);
-                        selectAnimatedEmojiDialog.setMultiSelected(documentId, true);
+                        selectAnimatedEmojiDialog.unselect(documentId);
                     }
                     reactionsPreview.tagSelector.setVisibleReactionsList(grabAsVisibleReactions(), true);
                 }
             };
             selectAnimatedEmojiDialog.setAnimationsEnabled(false);
             selectAnimatedEmojiDialog.setClipChildren(false);
-            selectAnimatedEmojiDialog.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            ThemeBind.backgroundColor(selectAnimatedEmojiDialog, Theme.key_windowBackgroundWhite, getResourceProvider());
             bottomDialogLayout.addView(selectAnimatedEmojiDialog, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
 
             BackSpaceButtonView backSpaceButtonView = getBackSpaceButtonView();
@@ -740,7 +763,7 @@ public class PinnedReactionsActivity extends BaseFragment {
             this.checked = checked;
 
             enableReactionsCell.setChecked(checked);
-            int clr = Theme.getColor(checked ? Theme.key_windowBackgroundChecked : Theme.key_windowBackgroundUnchecked);
+            int clr = getSwitchBackground();
             if (animated) {
                 if (checked) {
                     enableReactionsCell.setBackgroundColorAnimated(true, clr);
@@ -814,82 +837,16 @@ public class PinnedReactionsActivity extends BaseFragment {
             return true;
         }
 
-        public boolean hasChanges() {
-            if (checked != getCurrentState().Bool()) {
-                getCurrentState().setConfigBool(checked && !selectedCustomEmojisList.isEmpty());
-            }
-            return checkChangesInList();
+        private int getSwitchBackground() {
+            return getThemedColor(checked ? Theme.key_windowBackgroundChecked : Theme.key_windowBackgroundUnchecked);
         }
 
-        private boolean checkChangesInList() {
-            ArrayList<String> savedEmoticons = new ArrayList<>();
-            ArrayList<Long> savedDocumentIds = new ArrayList<>();
-            try {
-                String currentList = getList().String();
-                JSONArray object = new JSONArray(new JSONTokener(currentList));
+        private void updateSwitchBackground() {
+            enableReactionsCell.setBackgroundColor(getSwitchBackground());
+        }
 
-                for (int i = 0; i < object.length(); i++) {
-                    try {
-                        JSONObject jsonObject = object.getJSONObject(i);
-                        if (jsonObject.has("emoticon")) {
-                            savedEmoticons.add(jsonObject.getString("emoticon").replace("\uFE0F", ""));
-                        } else if (jsonObject.has("document_id")) {
-                            savedDocumentIds.add(jsonObject.getLong("document_id"));
-                        }
-                    } catch (JSONException ignored) {
-                    }
-
-                    if (i >= PINNED_REACTIONS_LIMIT) {
-                        break;
-                    }
-                }
-            } catch (JSONException ignored) {
-            }
-
-            JSONArray currentReactions = grabReactions();
-            ArrayList<String> currentEmoticons = new ArrayList<>();
-            ArrayList<Long> currentDocumentIds = new ArrayList<>();
-            for (int i = 0; i < currentReactions.length(); i++) {
-                try {
-                    JSONObject object = currentReactions.getJSONObject(i);
-                    if (object.has("document_id")) {
-                        currentDocumentIds.add(object.getLong("document_id"));
-                    } else if (object.has("emoticon")) {
-                        currentEmoticons.add(object.getString("emoticon").replace("\uFE0F", ""));
-                    }
-                } catch (JSONException ignored) {
-                }
-            }
-
-            if (currentEmoticons.size() != savedEmoticons.size() || currentDocumentIds.size() != savedDocumentIds.size()) {
-                return true;
-            }
-
-            for (String emoticon : currentEmoticons) {
-                if (!savedEmoticons.contains(emoticon)) {
-                    return true;
-                }
-            }
-
-            for (String emoticon : savedEmoticons) {
-                if (!currentEmoticons.contains(emoticon)) {
-                    return true;
-                }
-            }
-
-            for (Long documentId : savedDocumentIds) {
-                if (!currentDocumentIds.contains(documentId)) {
-                    return true;
-                }
-            }
-
-            for (Long documentId : currentDocumentIds) {
-                if (!savedDocumentIds.contains(documentId)) {
-                    return true;
-                }
-            }
-
-            return false;
+        public boolean hasChanges() {
+            return checked != initiallyChecked || !initialReactions.equals(selectedCustomEmojisList);
         }
 
         private JSONArray grabReactions() {

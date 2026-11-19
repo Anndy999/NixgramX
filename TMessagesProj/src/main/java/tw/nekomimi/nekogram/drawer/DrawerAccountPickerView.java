@@ -49,6 +49,7 @@ public class DrawerAccountPickerView extends FrameLayout {
     private int dragStartIndex = RecyclerView.NO_POSITION;
     private int dragCurrentIndex = RecyclerView.NO_POSITION;
     private boolean expanded;
+    private int heightLimit = Integer.MAX_VALUE;
     private Runnable onAccountSelected;
 
     public DrawerAccountPickerView(Context context) {
@@ -174,6 +175,17 @@ public class DrawerAccountPickerView extends FrameLayout {
         draggingItemView = null;
         recyclerView.setChildDrawingOrderCallback(null);
         recyclerView.stopScroll();
+    }
+
+    void setHeightLimit(int heightLimit) {
+        this.heightLimit = heightLimit;
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int limit = MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED
+                ? heightLimit : Math.min(heightLimit, MeasureSpec.getSize(heightMeasureSpec));
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
     }
 
     public void rebuild() {
@@ -307,34 +319,68 @@ public class DrawerAccountPickerView extends FrameLayout {
 
         AccountRowView(Context context) {
             super(context);
-            setLayoutParams(new RecyclerView.LayoutParams(LayoutHelper.MATCH_PARENT, dp(44)));
+            setLayoutParams(new RecyclerView.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            setMinimumHeight(dp(44));
 
             avatarView = new BackupImageView(context);
             avatarView.setRoundRadius(dp(17));
-            addView(avatarView, LayoutHelper.createFrame(34, 34, Gravity.START | Gravity.CENTER_VERTICAL, 8, 0, 0, 0));
+            addView(avatarView, LayoutHelper.createFrameRelatively(34, 34, Gravity.START | Gravity.CENTER_VERTICAL, 8, 0, 0, 0));
 
             nameView = new TextView(context);
             nameView.setTextSize(15);
             nameView.setTypeface(AndroidUtilities.bold());
-            nameView.setGravity(Gravity.CENTER_VERTICAL);
+            nameView.setGravity(LayoutHelper.getAbsoluteGravityStart() | Gravity.CENTER_VERTICAL);
             nameView.setSingleLine(true);
             nameView.setEllipsize(TextUtils.TruncateAt.END);
-            addView(nameView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT,
-                    Gravity.START, 54, 0, 70, 0));
+            addView(nameView, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
+                    Gravity.START | Gravity.CENTER_VERTICAL, 54, 4, 12, 4));
 
             unreadBadge = new TextView(context);
             unreadBadge.setTextSize(12);
             unreadBadge.setTypeface(Typeface.DEFAULT_BOLD);
             unreadBadge.setGravity(Gravity.CENTER);
             unreadBadge.setMinWidth(dp(24));
+            unreadBadge.setMinHeight(dp(24));
+            unreadBadge.setSingleLine(true);
+            unreadBadge.setEllipsize(TextUtils.TruncateAt.END);
             unreadBadge.setPadding(dp(7), 0, dp(7), 0);
-            addView(unreadBadge, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 24,
+            addView(unreadBadge, LayoutHelper.createFrameRelatively(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
                     Gravity.END | Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
 
             selectedView = new ImageView(context);
             selectedView.setImageResource(R.drawable.msg_check);
-            addView(selectedView, LayoutHelper.createFrame(18, 18,
+            addView(selectedView, LayoutHelper.createFrameRelatively(18, 18,
                     Gravity.END | Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            final boolean rtl = LocaleController.isRTL;
+            final int checkSpace = selectedView.getVisibility() == VISIBLE ? dp(28) : 0;
+            final int badgeEndMargin = dp(12) + checkSpace;
+            FrameLayout.LayoutParams badgeParams = (FrameLayout.LayoutParams) unreadBadge.getLayoutParams();
+            if (rtl) {
+                badgeParams.leftMargin = badgeEndMargin;
+            } else {
+                badgeParams.rightMargin = badgeEndMargin;
+            }
+
+            int nameEndMargin = badgeEndMargin;
+            if (unreadBadge.getVisibility() == VISIBLE) {
+                int maxBadgeWidth = MeasureSpec.getSize(widthMeasureSpec) / 3;
+                if (unreadBadge.getMaxWidth() != maxBadgeWidth) {
+                    unreadBadge.setMaxWidth(maxBadgeWidth);
+                }
+                measureChildWithMargins(unreadBadge, widthMeasureSpec, 0, heightMeasureSpec, 0);
+                nameEndMargin += unreadBadge.getMeasuredWidth() + dp(8);
+            }
+            FrameLayout.LayoutParams nameParams = (FrameLayout.LayoutParams) nameView.getLayoutParams();
+            if (rtl) {
+                nameParams.leftMargin = nameEndMargin;
+            } else {
+                nameParams.rightMargin = nameEndMargin;
+            }
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         }
 
         void bind(int account, boolean showUnread) {
@@ -359,10 +405,6 @@ public class DrawerAccountPickerView extends FrameLayout {
             unreadBadge.setText(Integer.toString(unread));
             unreadBadge.setTextColor(Theme.getColor(Theme.key_chats_unreadCounterText));
             unreadBadge.setBackground(Theme.createRoundRectDrawable(dp(12), Theme.getColor(Theme.key_chats_unreadCounter)));
-            FrameLayout.LayoutParams badgeParams = (FrameLayout.LayoutParams) unreadBadge.getLayoutParams();
-            badgeParams.rightMargin = dp(selected ? 40 : 12);
-            unreadBadge.setLayoutParams(badgeParams);
-
             selectedView.setVisibility(selected ? VISIBLE : GONE);
             selectedView.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlueIcon));
         }
@@ -376,9 +418,10 @@ public class DrawerAccountPickerView extends FrameLayout {
             setTextSize(15);
             setTypeface(AndroidUtilities.bold());
             setGravity(Gravity.CENTER_VERTICAL);
-            setCompoundDrawablesWithIntrinsicBounds(R.drawable.poll_add_circle, 0, 0, 0);
+            setCompoundDrawablesWithIntrinsicBounds(LocaleController.isRTL ? 0 : R.drawable.poll_add_circle, 0,
+                    LocaleController.isRTL ? R.drawable.poll_add_circle : 0, 0);
             setCompoundDrawablePadding(dp(16));
-            setPadding(dp(14), 0, dp(12), 0);
+            setPadding(dp(LocaleController.isRTL ? 12 : 14), 0, dp(LocaleController.isRTL ? 14 : 12), 0);
             updateColors();
         }
 

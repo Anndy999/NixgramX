@@ -19,7 +19,7 @@ jobs:
       CCACHE_MAXSIZE: "10G"
       NATIVE_TARGET: arm64-v8a
       NIXGRAMX_CHANNEL: beta
-      NIXGRAMX_VERSION_CODE: '1359'
+      NIXGRAMX_VERSION_CODE: '1360'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -105,10 +105,10 @@ jobs:
           BUILD_TIMESTAMP: ${{ steps.build.outputs.timestamp }}
           PRIVATE_BETA_APK: ${{ steps.apk.outputs.path }}
           RELEASE_NOTES: |
-            - 书签和历史消息页面随视图生命周期清理玻璃效果监听与渲染资源。
-            - 批量删除历史消息时分批查询媒体路径，并用事务删除消息和编辑记录。
-            - 修正后备推送定时器的服务启动类型并清理旧定时器。
-            - 修复输入框绘制异常时的状态恢复，并补录 Android 14+ 的替换文本诊断。
+            - 修复书签、历史消息、设置搜索、表情包、固定回应和云备份的深浅主题显示。
+            - 调整抽屉、书签、过滤列表和编辑页在小屏、大字体与键盘弹出时的布局。
+            - 修复取消翻译后的草稿覆盖、文章翻译错误反馈，以及固定回应保存和放弃逻辑。
+            - 包含上一轮云备份、历史消息与媒体、更新包选择和启动流程的稳定性修复。
         run: |
           set -euo pipefail
           python -m pip install -r Tools/scripts/requirements.txt

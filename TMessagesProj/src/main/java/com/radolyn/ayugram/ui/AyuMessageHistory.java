@@ -49,6 +49,7 @@ import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.ActionBarMenuSubItem;
 import org.telegram.ui.ActionBar.ActionBarPopupWindow;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
@@ -306,7 +307,7 @@ public class AyuMessageHistory extends NekoDelegateFragment {
         emptyView.setText(getString(R.string.NoMessages));
         emptyView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         emptyView.setTypeface(AndroidUtilities.bold());
-        emptyView.setTextColor(Theme.getColor(Theme.key_chat_serviceText, getResourceProvider()));
+        ThemeBind.textColor(emptyView, Theme.key_chat_serviceText, getResourceProvider());
         emptyView.setGravity(Gravity.CENTER);
         emptyView.setVisibility(View.GONE);
         emptyView.setPadding(dp(20), dp(4), dp(20), dp(6));

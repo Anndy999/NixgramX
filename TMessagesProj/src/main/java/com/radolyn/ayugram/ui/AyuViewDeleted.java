@@ -56,6 +56,7 @@ import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.ActionBarMenuSubItem;
 import org.telegram.ui.ActionBar.ActionBarPopupWindow;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Cells.ChatActionCell;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.ChatActivity;
@@ -134,6 +135,7 @@ public class AyuViewDeleted extends NekoDelegateFragment {
             applyMessageListNavigationBarInset(listView, windowInsetsStateHolder.getCurrentNavigationBarInset());
         }
         updatePagedownButtonPosition();
+        updatePagedownButtonVisibility(false);
     }
 
     @Override
@@ -164,7 +166,8 @@ public class AyuViewDeleted extends NekoDelegateFragment {
         if (!canScrollDown) {
             pagedownButtonManuallyHidden = false;
         }
-        boolean show = canScrollDown && !pagedownButtonManuallyHidden;
+        boolean keyboardVisible = windowInsetsStateHolder.getAnimatedImeBottomInset() > 0;
+        boolean show = canScrollDown && !pagedownButtonManuallyHidden && !keyboardVisible;
         sideControlsButtonsLayout.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_PAGE_DOWN, show, animated);
     }
 
@@ -493,7 +496,7 @@ public class AyuViewDeleted extends NekoDelegateFragment {
         emptyView.setText(getString(R.string.NoMessages));
         emptyView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         emptyView.setTypeface(AndroidUtilities.bold());
-        emptyView.setTextColor(Theme.getColor(Theme.key_chat_serviceText, getResourceProvider()));
+        ThemeBind.textColor(emptyView, Theme.key_chat_serviceText, getResourceProvider());
         emptyView.setGravity(Gravity.CENTER);
         emptyView.setVisibility(View.GONE);
         emptyView.setPadding(dp(20), dp(4), dp(20), dp(6));

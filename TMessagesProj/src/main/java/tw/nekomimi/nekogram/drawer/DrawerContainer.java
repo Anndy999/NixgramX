@@ -93,7 +93,17 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
         drawerPanel.setLayoutParams(panelParams);
         drawerPanel.setTranslationX(closedTranslation());
 
-        LinearLayout content = new LinearLayout(context);
+        LinearLayout content = new LinearLayout(context) {
+            @Override
+            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                if (MeasureSpec.getMode(heightMeasureSpec) != MeasureSpec.UNSPECIFIED) {
+                    int remaining = Math.max(0, MeasureSpec.getSize(heightMeasureSpec) - headerView.getLayoutParams().height);
+                    int minimumMenuHeight = Math.min(dp(96), remaining / 2);
+                    accountPickerView.setHeightLimit(remaining - minimumMenuHeight);
+                }
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+            }
+        };
         content.setOrientation(LinearLayout.VERTICAL);
         headerView = new DrawerHeaderView(context);
         content.addView(headerView, new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, dp(160)));

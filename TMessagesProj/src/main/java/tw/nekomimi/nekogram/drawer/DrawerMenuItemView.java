@@ -25,14 +25,14 @@ public class DrawerMenuItemView extends FrameLayout {
 
         iconView = new ImageView(context);
         iconView.setScaleType(ImageView.ScaleType.CENTER);
-        addView(iconView, LayoutHelper.createFrame(24, 24, Gravity.START | Gravity.CENTER_VERTICAL, 18, 0, 0, 0));
+        addView(iconView, LayoutHelper.createFrameRelatively(24, 24, Gravity.START | Gravity.CENTER_VERTICAL, 18, 0, 0, 0));
 
         textView = new TextView(context);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         textView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         textView.setLines(1);
         textView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.START | Gravity.CENTER_VERTICAL, 58, 0, 16, 0));
+        addView(textView, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.START | Gravity.CENTER_VERTICAL, 58, 0, 16, 0));
     }
 
     public void setItem(int iconRes, CharSequence text) {

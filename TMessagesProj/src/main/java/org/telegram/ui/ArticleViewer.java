@@ -4991,7 +4991,6 @@ public class ArticleViewer extends IArticleViewer implements NotificationCenter.
 
             if (id == WebActionBar.trans_item) {
                 if (!pages[0].adapter.trans) {
-                    updateTranslateButton(true);
                     ArticleTransKt.doTransLATE(this);
                 } else {
                     updateTranslateButton(false);
@@ -6536,6 +6535,10 @@ public class ArticleViewer extends IArticleViewer implements NotificationCenter.
 
         public boolean trans;
         public final HashMap<String, String> translatedTextCache = new HashMap<>();
+
+        public TLRPC.WebPage getTranslationSourcePage() {
+            return currentPage;
+        }
 
         public WebpageAdapter(Context ctx, boolean withPadding) {
             context = ctx;

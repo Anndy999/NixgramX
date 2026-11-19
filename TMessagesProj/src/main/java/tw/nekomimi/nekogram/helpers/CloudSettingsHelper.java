@@ -31,6 +31,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CheckBoxSquare;
@@ -123,13 +124,14 @@ public class CloudSettingsHelper {
         builder.setTitle(getString(R.string.CloudConfig));
         builder.setMessage(AndroidUtilities.replaceTags(getString(R.string.CloudConfigDesc)));
         builder.setTopImage(R.drawable.cloud, Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider));
+        builder.setTopBackgroundColorKey(Theme.key_featuredStickers_addButton, resourcesProvider);
 
         TextViewSwitcher syncedDate = new TextViewSwitcher(context);
         syncedDate.setFactory(() -> {
             TextView tv = new TextView(context);
             tv.setGravity(Gravity.START);
             tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-            tv.setTextColor(Theme.getColor(Theme.key_dialogTextGray3, resourcesProvider));
+            ThemeBind.textColor(tv, Theme.key_dialogTextGray3, resourcesProvider);
             return tv;
         });
         syncedDate.setInAnimation(context, R.anim.alpha_in);
@@ -142,7 +144,7 @@ public class CloudSettingsHelper {
         restoreButton.setText(getString(R.string.CloudConfigRestore), false);
         ButtonWithCounterView deleteButton = new ButtonWithCounterView(context, false, resourcesProvider).setRound();
         deleteButton.setText(getString(R.string.DeleteCloudBackup), false);
-        deleteButton.setTextColor(Theme.getColor(Theme.key_dialogTextRed, resourcesProvider));
+        deleteButton.setTextColorKey(Theme.key_dialogTextRed);
 
         class Actions {
             boolean busy = true;
@@ -528,7 +530,7 @@ public class CloudSettingsHelper {
             linearLayout.setOrientation(LinearLayout.VERTICAL);
 
             textView = new TextView(context);
-            textView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider));
+            ThemeBind.textColor(textView, Theme.key_dialogTextBlack, resourcesProvider);
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             textView.setLines(1);
             textView.setMaxLines(1);
@@ -538,7 +540,7 @@ public class CloudSettingsHelper {
             linearLayout.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             valueTextView = new TextView(context);
-            valueTextView.setTextColor(Theme.getColor(Theme.key_dialogIcon, resourcesProvider));
+            ThemeBind.textColor(valueTextView, Theme.key_dialogIcon, resourcesProvider);
             valueTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
             valueTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
             valueTextView.setEllipsize(TextUtils.TruncateAt.END);
