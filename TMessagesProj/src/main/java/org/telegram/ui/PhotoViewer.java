@@ -331,6 +331,7 @@ import org.telegram.ui.Stories.recorder.StoryEntry;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -6846,85 +6847,50 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             if (coverEditor.button.isLoading() || currentIndex < 0 || currentIndex >= imagesArrLocals.size() || !(imagesArrLocals.get(currentIndex) instanceof MediaController.PhotoEntry)) {
                 return;
             }
-            coverEditor.closeGallery();
-            coverEditor.button.setLoading(true);
+            final PhotoViewerCoverEditor editor = coverEditor;
+            editor.closeGallery();
+            editor.button.setLoading(true);
             final MediaController.PhotoEntry entry = (MediaController.PhotoEntry) imagesArrLocals.get(currentIndex);
-            final String coverPath = getTempFileAbsolutePath();
+            final File coverFile = new File(getTempFileAbsolutePath());
+            final int previewSize = dp(26);
             Utilities.globalQueue.postRunnable(() -> {
-                Bitmap frame = BitmapFactory.decodeFile(fromEntry.path);
-                if (frame == null) {
-                    AndroidUtilities.runOnUIThread(() -> {
-                        coverEditor.button.setLoading(false);
-                        switchToEditMode(EDIT_MODE_NONE);
-                    });
-                    return;
-                }
-
-                int[] params = new int[AnimatedFileInfo.PARAM_NUM_COUNT];
-                AnimatedFileNative.getVideoInfo(entry.path, params, 0);
-
-                int w = Math.max(params[AnimatedFileInfo.PARAM_NUM_WIDTH], entry.width);
-                int h = Math.max(params[AnimatedFileInfo.PARAM_NUM_HEIGHT], entry.height);
-                if ((params[AnimatedFileInfo.PARAM_NUM_ROTATION] / 90) % 2 == 1) {
-                    int t = w;
-                    w = h;
-                    h = t;
-                }
-                if (w <= 0 || h <= 0) {
-                    AndroidUtilities.runOnUIThread(() -> {
-                        coverEditor.button.setLoading(false);
-                        switchToEditMode(EDIT_MODE_NONE);
-                    });
-                    return;
-                }
-
-                float scale = Math.max((float) frame.getWidth() / w, (float) frame.getHeight() / h);
-                final Bitmap croppedFrame = Bitmap.createBitmap((int) (w * scale), (int) (h * scale), Bitmap.Config.ARGB_8888);
-                Canvas canvas = new Canvas(croppedFrame);
-                final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-                canvas.translate(croppedFrame.getWidth() / 2, croppedFrame.getHeight() / 2);
-                scale = Math.max((float) croppedFrame.getWidth() / frame.getWidth(), (float) croppedFrame.getHeight() / frame.getHeight());
-                canvas.scale(scale, scale);
-                canvas.drawBitmap(frame, -frame.getWidth() / 2, -frame.getHeight() / 2, paint);
-
+                Bitmap preview = null;
                 try {
-                    FileOutputStream stream = new FileOutputStream(new File(coverPath));
-                    croppedFrame.compress(Bitmap.CompressFormat.JPEG, 90, stream);
-                    stream.close();
-                } catch (Exception e) {
+                    preview = prepareGalleryVideoCover(fromEntry.path, entry, coverFile, previewSize);
+                } catch (IOException | RuntimeException | OutOfMemoryError e) {
                     FileLog.e(e);
-                    AndroidUtilities.runOnUIThread(() -> {
-                        coverEditor.button.setLoading(false);
-                        switchToEditMode(EDIT_MODE_NONE);
-                    });
-                    return;
                 }
-
-                final Bitmap bitmap = Bitmap.createBitmap(dp(26), dp(26), Bitmap.Config.ARGB_8888);
-                canvas = new Canvas(bitmap);
-                canvas.translate(bitmap.getWidth() / 2.0f, bitmap.getHeight() / 2.0f);
-                scale = Math.max((float) bitmap.getWidth() / croppedFrame.getWidth(), (float) bitmap.getHeight() / croppedFrame.getHeight());
-                canvas.scale(scale, scale);
-                canvas.drawBitmap(croppedFrame, -croppedFrame.getWidth() / 2.0f, -croppedFrame.getHeight() / 2.0f, paint);
-
+                final Bitmap bitmap = preview;
                 AndroidUtilities.runOnUIThread(() -> {
+                    if (!isVisible || coverEditor != editor || currentEditMode != EDIT_MODE_COVER
+                            || currentIndex < 0 || currentIndex >= imagesArrLocals.size()
+                            || imagesArrLocals.get(currentIndex) != entry) {
+                        editor.button.setLoading(false);
+                        if (bitmap != null) bitmap.recycle();
+                        Utilities.globalQueue.postRunnable(coverFile::delete);
+                        return;
+                    }
+                    editor.button.setLoading(false);
+                    if (bitmap == null) {
+                        Utilities.globalQueue.postRunnable(coverFile::delete);
+                        switchToEditMode(EDIT_MODE_NONE);
+                        return;
+                    }
                     if (entry.coverPath != null) {
-                        try {
-                            new File(entry.coverPath).delete();
-                        } catch (Exception e) {
-                            FileLog.e(e);
-                        }
+                        final File oldCover = new File(entry.coverPath);
+                        Utilities.globalQueue.postRunnable(oldCover::delete);
                     }
                     entry.coverSavedPosition = -1;
-                    entry.coverPath = coverPath;
+                    entry.coverPath = coverFile.getAbsolutePath();
                     entry.coverPhoto = null;
                     entry.coverPhotoParentObject = null;
-                    coverEditor.button.setLoading(false);
                     if (placeProvider != null) {
                         placeProvider.updatePhotoAtIndex(currentIndex);
                     }
                     if (editCoverButton != null) {
                         editCoverButton.setImage(bitmap);
+                    } else {
+                        bitmap.recycle();
                     }
                     switchToEditMode(EDIT_MODE_NONE);
                     if (!checkImageView.isChecked()) {
@@ -8770,6 +8736,80 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         });
         closePhoto(false, false);
         ((LaunchActivity) parentActivity).presentFragment(fragment, false, true);
+    }
+
+    private static final int GALLERY_COVER_MAX_SIDE = 1920;
+
+    private static Bitmap prepareGalleryVideoCover(String path, MediaController.PhotoEntry video, File output, int previewSize) throws IOException {
+        final int[] params = new int[AnimatedFileInfo.PARAM_NUM_COUNT];
+        AnimatedFileNative.getVideoInfo(video.path, params, 0);
+        int videoWidth = Math.max(params[AnimatedFileInfo.PARAM_NUM_WIDTH], video.width);
+        int videoHeight = Math.max(params[AnimatedFileInfo.PARAM_NUM_HEIGHT], video.height);
+        if ((params[AnimatedFileInfo.PARAM_NUM_ROTATION] / 90) % 2 != 0) {
+            int swap = videoWidth;
+            videoWidth = videoHeight;
+            videoHeight = swap;
+        }
+        if (videoWidth <= 0 || videoHeight <= 0) return null;
+
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(path, options);
+        if (options.outWidth <= 0 || options.outHeight <= 0) return null;
+
+        final Pair<Integer, Integer> orientation = AndroidUtilities.getImageOrientation(path);
+        final boolean rotated = orientation.first % 180 != 0;
+        final int sourceWidth = rotated ? options.outHeight : options.outWidth;
+        final int sourceHeight = rotated ? options.outWidth : options.outHeight;
+        final double scale = Math.min(1.0, Math.min((double) GALLERY_COVER_MAX_SIDE / Math.max(videoWidth, videoHeight),
+                Math.min((double) sourceWidth / videoWidth, (double) sourceHeight / videoHeight)));
+        final int coverWidth = Math.max(1, (int) Math.round(videoWidth * scale));
+        final int coverHeight = Math.max(1, (int) Math.round(videoHeight * scale));
+
+        options.inJustDecodeBounds = false;
+        options.inSampleSize = galleryCoverSampleSize(sourceWidth, sourceHeight, coverWidth, coverHeight);
+        final Bitmap frame = BitmapFactory.decodeFile(path, options);
+        if (frame == null) return null;
+        final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        Bitmap cover = null;
+        try {
+            try {
+                cover = Bitmap.createBitmap(coverWidth, coverHeight, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(cover);
+                final float cropScale = Math.max((float) coverWidth / (rotated ? frame.getHeight() : frame.getWidth()),
+                        (float) coverHeight / (rotated ? frame.getWidth() : frame.getHeight()));
+                canvas.translate(coverWidth / 2f, coverHeight / 2f);
+                canvas.scale(cropScale, cropScale);
+                canvas.rotate(orientation.first);
+                canvas.scale(orientation.second == 1 ? -1 : 1, orientation.second == 2 ? -1 : 1);
+                canvas.drawBitmap(frame, -frame.getWidth() / 2f, -frame.getHeight() / 2f, paint);
+            } finally {
+                frame.recycle();
+            }
+            try (FileOutputStream stream = new FileOutputStream(output)) {
+                if (!cover.compress(Bitmap.CompressFormat.JPEG, 90, stream)) return null;
+            }
+
+            final Bitmap preview = Bitmap.createBitmap(previewSize, previewSize, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(preview);
+            final float previewScale = (float) previewSize / Math.min(coverWidth, coverHeight);
+            canvas.translate(previewSize / 2f, previewSize / 2f);
+            canvas.scale(previewScale, previewScale);
+            canvas.drawBitmap(cover, -coverWidth / 2f, -coverHeight / 2f, paint);
+            return preview;
+        } finally {
+            if (cover != null) cover.recycle();
+        }
+    }
+
+    private static int galleryCoverSampleSize(int sourceWidth, int sourceHeight, int coverWidth, int coverHeight) {
+        final int detailLimit = Math.min(sourceWidth / coverWidth, sourceHeight / coverHeight);
+        final int longestSide = Math.max(sourceWidth, sourceHeight);
+        int sampleSize = 1;
+        while (sampleSize <= detailLimit / 2 || longestSide > (long) sampleSize * GALLERY_COVER_MAX_SIDE * 2) {
+            sampleSize *= 2;
+        }
+        return sampleSize;
     }
 
     public static String getTempFileAbsolutePath() {

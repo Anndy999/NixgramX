@@ -435,3 +435,143 @@ class Probe {
     }
 }
 ''')
+
+    def test_translation_scroll_visits_only_nearby_rows_and_album_members(self):
+        source = (JAVA / 'org/telegram/ui/ChatActivity.java').read_text()
+        production = section(source, '    private final Runnable checkTranslationRunnable =',
+                             '    private void checkSecretMessageForLocation')
+        run_java('''
+import java.util.*;
+class Probe {
+    static class SystemClock { static long uptimeMillis() { return 10; } }
+    static class RecyclerView { static final int NO_POSITION = -1; }
+    record MessageObject(int id, long groupId) {
+        long getGroupId() { return groupId; }
+        static class GroupedMessages { long groupId; List<MessageObject> messages; }
+    }
+    static class View { int row; View(int row) { this.row = row; } }
+    static class ChatMessageCell extends View { ChatMessageCell(int row) { super(row); } }
+    static class ChatList extends ArrayList<View> {
+        int getChildCount() { return size(); }
+        View getChildAt(int i) { return get(i); }
+        int getChildAdapterPosition(View v) { return v.row; }
+    }
+    static class Adapter extends ArrayList<MessageObject> {
+        int messagesStartRow = 5;
+        ArrayList<MessageObject> getMessages() { return this; }
+    }
+    ChatList chatListView = new ChatList();
+    Adapter chatAdapter = new Adapter();
+    Map<Long, MessageObject.GroupedMessages> groupedMessagesMap = new HashMap<>();
+    Map<Integer,MessageObject> pinnedMessageObjects = new HashMap<>();
+    List<Integer> checked = new ArrayList<>();
+    int currentPinnedMessageId;
+    long lastTranslationCheck;
+    Probe getMessagesController() { return this; }
+    Probe getTranslateController() { return this; }
+    void checkTranslation(MessageObject message, boolean onScreen) {
+        assert onScreen;
+        if (message != null) checked.add(message.id());
+    }
+    void updateTranslateItemVisibility() {}
+''' + production + '''
+    public static void main(String[] args) {
+        Probe p = new Probe();
+        for (int i = 0; i < 2000; i++) {
+            long group = (i == 993 || i == 1000 || i == 1001) ? 42 : 0;
+            p.chatAdapter.add(new MessageObject(i, group));
+        }
+        var album = new MessageObject.GroupedMessages();
+        album.groupId = 42;
+        album.messages = List.of(p.chatAdapter.get(993), p.chatAdapter.get(1000), p.chatAdapter.get(1001));
+        p.groupedMessagesMap.put(42L, album);
+        p.pinnedMessageObjects.put(10, p.chatAdapter.get(10));
+        p.currentPinnedMessageId = 10;
+        p.chatListView.add(new ChatMessageCell(1005));
+        p.chatListView.add(new ChatMessageCell(1007));
+        p.chatListView.add(new View(1500));
+        p.chatListView.add(new ChatMessageCell(-1));
+        p.checkTranslationRunnable.run();
+        assert p.checked.size() == 18 : p.checked;
+        assert Collections.frequency(p.checked, 1000) == 1;
+        assert p.checked.containsAll(List.of(993, 1002, 1009, 10));
+        assert !p.checked.contains(992) && !p.checked.contains(1010);
+        p.chatListView.clear();
+        p.checked.clear();
+        p.checkTranslationRunnable.run();
+        assert p.checked.equals(List.of(10));
+    }
+}
+''')
+
+    def test_header_clamp_and_transition_cleanup(self):
+        source = (JAVA / 'org/telegram/ui/Components/ChatAvatarContainer.java').read_text()
+        bounds = section(source, '    private int getHeaderTextLeft()', '    @Override\n    protected void onMeasure')
+        fade = section(source, '    private void fadeHeaderTextCopy(', '    private boolean glassMode;')
+        run_java('''
+import java.util.concurrent.atomic.AtomicReference;
+class Probe {
+    static final int VISIBLE = 0;
+    int leftPadding, rightAvatarPadding;
+    boolean centered, preview, glassMode;
+    static int dp(float n) { return (int) Math.ceil(n); }
+    boolean isCentered() { return centered; }
+    boolean isPreviewMode() { return preview; }
+    static class AndroidUtilities { static boolean isTablet() { return false; } }
+    static class Avatar { int getVisibility() { return VISIBLE; } }
+    Avatar avatarImageView = new Avatar();
+    static class CubicBezierInterpolator { static final Object EASE_OUT_QUINT = new Object(); }
+    static class SimpleTextView {
+        Runnable callback;
+        boolean attached, cancelled;
+        SimpleTextView animate() { return this; }
+        SimpleTextView alpha(int n) { return this; }
+        SimpleTextView setDuration(int n) { return this; }
+        SimpleTextView setInterpolator(Object n) { return this; }
+        SimpleTextView withEndAction(Runnable end) { callback = end; return this; }
+        void start() { assert attached; }
+        void cancel() { cancelled = true; }
+    }
+    void addView(SimpleTextView view) { view.attached = true; }
+    void removeView(SimpleTextView view) { view.attached = false; }
+''' + bounds + fade + '''
+    public static void main(String[] args) {
+        Probe p = new Probe();
+        p.leftPadding = 10;
+        assert p.getHeaderTextWidth(32) == 0;
+        assert p.getHeaderTextLeft() + p.getHeaderTextWidth(240) <= 228;
+        p.centered = true; p.preview = true;
+        assert p.getHeaderTextLeft() + p.getHeaderTextWidth(240) <= 186;
+        AtomicReference<SimpleTextView> current = new AtomicReference<>();
+        SimpleTextView a = new SimpleTextView(), b = new SimpleTextView();
+        p.fadeHeaderTextCopy(current, a);
+        p.fadeHeaderTextCopy(current, b);
+        a.callback.run();
+        assert a.cancelled && !a.attached && b.attached && current.get() == b;
+        b.callback.run();
+        assert !b.attached && current.get() == null;
+    }
+}
+''')
+
+    def test_gallery_cover_sampling_preserves_target_and_bounds_extreme_sources(self):
+        source = (JAVA / 'org/telegram/ui/PhotoViewer.java').read_text()
+        constant = section(source, '    private static final int GALLERY_COVER_MAX_SIDE',
+                           '    private static Bitmap prepareGalleryVideoCover')
+        production = section(source, '    private static int galleryCoverSampleSize(',
+                             '    public static String getTempFileAbsolutePath')
+        run_java('''
+class Probe {
+''' + constant + production + '''
+    public static void main(String[] args) {
+        assert galleryCoverSampleSize(6000, 4000, 1920, 1080) == 2;
+        assert galleryCoverSampleSize(4000, 6000, 1080, 1920) == 2;
+        assert galleryCoverSampleSize(800, 600, 800, 450) == 1;
+        assert galleryCoverSampleSize(9000, 9000, 1080, 1080) == 8;
+        int sample = galleryCoverSampleSize(32000, 1000, 1600, 900);
+        assert 32000 / sample <= 3840;
+        sample = galleryCoverSampleSize(Integer.MAX_VALUE, 1, 1, 1);
+        assert sample > 0 && Integer.MAX_VALUE / sample <= 3840;
+    }
+}
+''')

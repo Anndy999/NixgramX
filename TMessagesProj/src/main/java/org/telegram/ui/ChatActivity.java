@@ -3625,6 +3625,7 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        AndroidUtilities.cancelRunOnUIThread(checkTranslationRunnable);
         if (messageMetricsView != null) {
             messageMetricsView.finish();
         }
@@ -27017,64 +27018,51 @@ public class ChatActivity extends BaseFragment implements
 
     private long lastTranslationCheck;
     private void checkTranslation(boolean force) {
-        if (System.currentTimeMillis() - lastTranslationCheck > 1000) {
+        if (SystemClock.uptimeMillis() - lastTranslationCheck > 1000) {
             force = true;
         }
         AndroidUtilities.cancelRunOnUIThread(checkTranslationRunnable);
         AndroidUtilities.runOnUIThread(checkTranslationRunnable, force ? 0 : 150);
     }
-    private Runnable checkTranslationRunnable = () -> {
-        lastTranslationCheck = System.currentTimeMillis();
+    private final Runnable checkTranslationRunnable = () -> {
+        lastTranslationCheck = SystemClock.uptimeMillis();
+        final var translateController = getMessagesController().getTranslateController();
         if (chatListView != null && chatAdapter != null) {
-            int minId = Integer.MAX_VALUE, maxId = Integer.MIN_VALUE;
-            for (int i = 0; i < chatListView.getChildCount(); ++i) {
+            final ArrayList<MessageObject> displayedMessages = chatAdapter.getMessages();
+            int first = displayedMessages.size(), last = -1;
+            for (int i = 0, count = chatListView.getChildCount(); i < count; ++i) {
                 View child = chatListView.getChildAt(i);
-                if (child instanceof ChatMessageCell) {
-                    ChatMessageCell cell = (ChatMessageCell) child;
-                    if (cell.getCurrentMessagesGroup() != null) {
-                        for (int j = 0; j < cell.getCurrentMessagesGroup().messages.size(); ++j) {
-                            final int mid = cell.getCurrentMessagesGroup().messages.get(j).getId();
-                            minId = Math.min(minId, mid);
-                            maxId = Math.max(maxId, mid);
-                        }
-                    } else if (cell.getMessageObject() != null) {
-                        final int mid = cell.getMessageObject().getId();
-                        minId = Math.min(minId, mid);
-                        maxId = Math.max(maxId, mid);
-                    }
+                if (!(child instanceof ChatMessageCell)) continue;
+                final int position = chatListView.getChildAdapterPosition(child);
+                final int index = position - chatAdapter.messagesStartRow;
+                if (position != RecyclerView.NO_POSITION && index >= 0 && index < displayedMessages.size()) {
+                    first = Math.min(first, index);
+                    last = Math.max(last, index);
                 }
             }
 
-            if (minId <= maxId) {
-                ArrayList<Long> groupsChecked = new ArrayList<>();
-                for (int i = 0; i < messages.size(); ++i) {
-                    MessageObject messageObject = messages.get(i);
+            // Message arrival and replacement handle language detection. Scroll work only covers the viewport and its neighbors.
+            if (first <= last) {
+                HashSet<Long> groupsChecked = new HashSet<>();
+                final int end = Math.min(displayedMessages.size(), last + 8);
+                for (int i = Math.max(0, first - 7); i < end; ++i) {
+                    MessageObject messageObject = displayedMessages.get(i);
                     MessageObject.GroupedMessages group = groupedMessagesMap.get(messageObject.getGroupId());
                     if (group != null) {
-                        if (!groupsChecked.contains(group.groupId)) {
-                            for (int j = 0; j < group.messages.size(); ++j) {
-                                MessageObject messageObject1 = group.messages.get(j);
-                                if (messageObject1 != null) {
-                                    final int mid = messageObject1.getId();
-                                    getMessagesController().getTranslateController().checkTranslation(
-                                        messageObject1, mid >= minId - 7 && mid <= maxId + 7
-                                    );
-                                }
+                        if (groupsChecked.add(group.groupId)) {
+                            for (MessageObject member : group.messages) {
+                                translateController.checkTranslation(member, true);
                             }
-                            groupsChecked.add(group.groupId);
                         }
                     } else {
-                        final int mid = messageObject.getId();
-                        getMessagesController().getTranslateController().checkTranslation(
-                            messageObject, mid >= minId - 7 && mid <= maxId + 7
-                        );
+                        translateController.checkTranslation(messageObject, true);
                     }
                 }
             }
         }
 
         if (currentPinnedMessageId > 0 && pinnedMessageObjects != null) {
-            getMessagesController().getTranslateController().checkTranslation(pinnedMessageObjects.get(currentPinnedMessageId), true);
+            translateController.checkTranslation(pinnedMessageObjects.get(currentPinnedMessageId), true);
         }
 
         updateTranslateItemVisibility();
@@ -29016,6 +29004,7 @@ public class ChatActivity extends BaseFragment implements
                 if (messageObject.type >= 0) {
                     messageObject.reactionsChanged |= old.isBotPendingDraft && !messageObject.isBotPendingDraft;
                     messageObject.copyStableParams(old);
+                    getMessagesController().getTranslateController().checkTranslation(messageObject, false);
                     messages.set(index, messageObject);
                     if (chatAdapter != null && !chatAdapter.isFiltered) {
                         chatAdapter.updateRowAtPosition(chatAdapter.messagesStartRow + index);
