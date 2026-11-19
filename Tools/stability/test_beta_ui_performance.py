@@ -1,4 +1,4 @@
-"""Exercise production cache and asynchronous diff code with deterministic host queues."""
+"""Exercise production UI geometry, bookmark loading, filtering, and list updates on the host."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -159,6 +159,203 @@ class Probe extends Adapter {
         p.start = 7; p.onAttachedToRecyclerView(p.recyclerListView);
         Utilities.searchQueue.next(); AndroidUtilities.ui.next();
         assert p.itemInternals.get(0).id == 7 && p.applied.equals(List.of(3, 5));
+    }
+}
+''')
+
+    def test_compact_comment_budget_handles_rotation_and_album_tiles(self):
+        source = (JAVA / 'org/telegram/ui/Cells/ChatMessageCell.java').read_text()
+        production = section(source, '        final int rowWidth = isCompactAlbum() ?',
+                             '        final float textSize = compactHeaderTextPaint.getTextSize();')
+        constants = '\n'.join(line for line in source.splitlines() if any(
+            ('int ' + name + ' = ') in line for name in ['COMPACT_HEADER_ROW', 'COMPACT_HEADER_ICON_GAP',
+                                                         'COMPACT_HEADER_AVATAR_GAP', 'COMPACT_COMMENT_ARROW_INSET']))
+        run_java('''
+class Probe {
+    boolean album;
+    int parentWidth, tileWidth, sideColumn;
+    boolean isCompactAlbum() { return album; }
+    int getCompactContentWidth() { return parentWidth; }
+    int getCompactRight() { return 16 + tileWidth; }
+    int getCompactLeft() { return 16; }
+    int getCompactSideButtonColumn() { return sideColumn; }
+    static int dp(float n) { return (int) Math.ceil(n); }
+    record Budget(int width, int avatars, int textWidth) {}
+    Budget result;
+    static class Rect { void setEmpty() {} }
+    static class Paint { void setColor(int color) {} }
+    Rect commentButtonRect = new Rect();
+    Paint compactHeaderTextPaint = new Paint();
+    Budget budget(int avatars, boolean unread) {
+        result = new Budget(0, 0, 0);
+        measure(avatars, unread);
+        return result;
+    }
+    void measure(int avatars, boolean unread) {
+        int textColor = 0;
+        int size = dp(COMPACT_HEADER_ROW), avatarStep = dp(11);
+''' + production + '''
+        result = new Budget(contentWidth, avatars, textWidth);
+    }
+''' + constants + '''
+    public static void main(String[] args) {
+        Probe p = new Probe();
+        p.parentWidth = 380; p.tileWidth = 150;
+        Budget narrow = p.budget(3, true);
+        assert narrow.width() == 150 && narrow.avatars() == 3;
+        p.album = true;
+        assert p.budget(3, true).textWidth() - narrow.textWidth() == 230;
+        p.album = false; p.tileWidth = 620; p.parentWidth = 400; p.sideColumn = 40;
+        assert p.budget(3, true).width() == 360;
+        assert p.budget(3, false).textWidth() > p.budget(3, true).textWidth();
+        for (int tile = 0; tile <= 400; tile++) {
+            p.tileWidth = tile;
+            Budget b = p.budget(3, true);
+            assert b.width() == Math.max(0, tile - p.sideColumn);
+            assert b.textWidth() >= 0 && b.textWidth() <= b.width();
+            assert b.avatars() >= 0 && b.avatars() <= 3;
+            if (b.width() < 60) assert b.avatars() == 0;
+        }
+    }
+}
+''')
+
+    def test_settings_title_value_and_icon_bounds(self):
+        source = (JAVA / 'org/telegram/ui/Cells/TextSettingsCell.java').read_text()
+        production = section(source, '    protected void onMeasure(int', '    private void setMultilineTitle(')
+        run_java('''
+class Probe {
+    static final int VISIBLE = 0;
+    boolean multilineTitle, isRTL, imageViewIsColorful, betterLayout, needDivider;
+    int padding = 21, height;
+    static class AndroidUtilities { static int dp(int n) { return n; } }
+    static class MeasureSpec {
+        static final int EXACTLY = 1 << 30, AT_MOST = 2 << 30, UNSPECIFIED = 0, MASK = 3 << 30;
+        static int getSize(int spec) { return spec & ~MASK; }
+        static int makeMeasureSpec(int size, int mode) { assert size >= 0; return size | mode; }
+    }
+    static int resolveSize(int desired, int spec) {
+        int mode = spec & MeasureSpec.MASK, size = MeasureSpec.getSize(spec);
+        return mode == MeasureSpec.EXACTLY ? size : mode == MeasureSpec.AT_MOST ? Math.min(size, desired) : desired;
+    }
+    static class LayoutParams { int width = 24, height = 24, leftMargin, rightMargin; }
+    static class View {
+        LayoutParams params = new LayoutParams();
+        int width, height, natural, visibility;
+        View(int natural, int margin) {
+            this.natural = natural;
+            params.leftMargin = params.rightMargin = margin;
+        }
+        LayoutParams getLayoutParams() { return params; }
+        int getVisibility() { return visibility; }
+        int getMeasuredWidth() { return width; }
+        int getMeasuredHeight() { return height; }
+        void measure(int w, int h) { width = resolveSize(natural, w); height = resolveSize(87, h); }
+    }
+    View textView = new View(450, 21), imageView = new View(24, 16), valueTextView = new View(240, 17),
+         valueImageView = new View(24, 21), valueBackupImageView = new View(24, 17);
+    int getPaddingLeft() { return 3; }
+    int getPaddingRight() { return 7; }
+    void setMeasuredDimension(int w, int h) { height = h; }
+    int end(View v) { return isRTL ? v.params.leftMargin : v.params.rightMargin; }
+    int start(View v) { return isRTL ? v.params.rightMargin : v.params.leftMargin; }
+''' + production + '''
+    public static void main(String[] args) {
+        for (boolean rtl : new boolean[]{false, true}) {
+            for (boolean better : new boolean[]{false, true}) {
+                Probe p = new Probe(); p.isRTL = rtl; p.betterLayout = better; p.imageViewIsColorful = true;
+                for (int w : new int[]{48, 240, 320, 600}) {
+                    p.onMeasure(w, 0);
+                    assert p.height == 50;
+                    assert p.start(p.textView) >= p.start(p.imageView) + p.imageView.width + 8;
+                    assert p.end(p.valueTextView) >= p.end(p.valueImageView) + p.valueImageView.width + 8;
+                    assert p.end(p.valueImageView) >= p.end(p.valueBackupImageView) + p.valueBackupImageView.width + 8;
+                    if (w >= 240) {
+                        int inner = w - p.getPaddingLeft() - p.getPaddingRight();
+                        assert p.textView.width > 0 && p.valueTextView.width > 0;
+                        assert p.start(p.textView) + p.textView.width + 8 <= inner - p.end(p.valueTextView) - p.valueTextView.width;
+                    } else {
+                        assert p.textView.width == 0 && p.valueTextView.width == 0;
+                    }
+                }
+                p.multilineTitle = true; p.needDivider = true;
+                p.onMeasure(320, 0); assert p.height == 100;
+                p.onMeasure(320, MeasureSpec.makeMeasureSpec(80, MeasureSpec.AT_MOST)); assert p.height == 80;
+                p.multilineTitle = false;
+                p.onMeasure(320, 0); assert p.height == 51;
+            }
+        }
+    }
+}
+''')
+
+    def test_bookmarks_fetch_only_missing_and_preserve_order(self):
+        source = (JAVA / 'tw/nekomimi/nekogram/ui/BookmarksActivity.java').read_text()
+        production = section(source, '    private ArrayList<MessageObject> loadBookmarkRows(',
+                             '    private MessageObject createMissingMessagePlaceholder(')
+        run_java('''
+import java.util.*;
+class Probe {
+    long dialogId = -42;
+    static class SparseArray<T> extends HashMap<Integer,T> { SparseArray(int n) { super(n); } }
+    static class TLRPC {
+        static class Media { int ttl_seconds = 3; }
+        static class Message { int id; boolean ayuDeleted; Media media = new Media(); }
+        static class TL_message extends Message {}
+    }
+    static class MessageObject {
+        TLRPC.Message messageOwner;
+        boolean forceAvatar, placeholder;
+        MessageObject(int account, TLRPC.Message msg, boolean layout, boolean media) {
+            assert account == 2; messageOwner = msg;
+        }
+        int getId() { return messageOwner.id; }
+    }
+    record Flag(boolean Bool) {}
+    static class NaConfig {
+        static NaConfig INSTANCE = new NaConfig();
+        boolean history = true;
+        Flag getEnableSaveDeletedMessages() { return new Flag(history); }
+    }
+    static class HistoricalMessage { int messageId = 5; }
+    static class Deleted { HistoricalMessage message = new HistoricalMessage(); }
+    static boolean hasAyuDeletedContent(Deleted d) { return d != null; }
+    static class AyuMessageUtils {
+        static void map(HistoricalMessage m, TLRPC.Message tl, int account) { tl.id = m.messageId; }
+        static void mapMedia(HistoricalMessage m, TLRPC.Message tl, int account) {}
+    }
+    static class AyuMessagesController {
+        static AyuMessagesController controller = new AyuMessagesController();
+        static AyuMessagesController getInstance() { return controller; }
+        int queries;
+        List<Deleted> getMessagesByIds(long user, long dialog, ArrayList<Integer> ids) {
+            assert user == 104 && dialog == -42 && ids.equals(List.of(7, 5));
+            queries++;
+            return List.of(new Deleted());
+        }
+    }
+    MessageObject createMissingMessagePlaceholder(int account, long user, int id) {
+        TLRPC.Message tl = new TLRPC.Message(); tl.id = id;
+        MessageObject row = new MessageObject(account, tl, false, true); row.placeholder = true;
+        return row;
+    }
+''' + production + '''
+    public static void main(String[] args) {
+        Probe p = new Probe();
+        var local = new TLRPC.Message(); local.id = 3; local.ayuDeleted = true;
+        var stored = new ArrayList<>(List.of(local));
+        var ids = new ArrayList<>(List.of(7, 3, 5));
+        var rows = p.loadBookmarkRows(2, 104, ids, stored);
+        assert rows.stream().map(MessageObject::getId).toList().equals(List.of(3, 5, 7));
+        assert rows.stream().allMatch(row -> row.forceAvatar);
+        assert rows.get(0).messageOwner == local && local.media.ttl_seconds == 0;
+        assert rows.get(1).messageOwner.ayuDeleted && rows.get(1).messageOwner.media.ttl_seconds == 3;
+        assert rows.get(2).placeholder;
+        p.loadBookmarkRows(2, 104, new ArrayList<>(List.of(3)), stored);
+        NaConfig.INSTANCE.history = false;
+        rows = p.loadBookmarkRows(2, 104, ids, null);
+        assert rows.stream().allMatch(row -> row.placeholder);
+        assert AyuMessagesController.controller.queries == 1;
     }
 }
 ''')

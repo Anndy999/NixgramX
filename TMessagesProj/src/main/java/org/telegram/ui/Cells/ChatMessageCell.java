@@ -20880,7 +20880,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         final int avatarStep = dp(11);
         final TLRPC.MessageReplies replies = currentMessagesGroup != null && !currentMessagesGroup.messages.isEmpty() ? (currentMessagesGroup.messages.get(0).hasReplies() ? currentMessagesGroup.messages.get(0).messageOwner.replies : null) : (currentMessageObject.hasReplies() ? currentMessageObject.messageOwner.replies : null);
         final boolean unread = replies != null && replies.read_max_id != 0 && replies.read_max_id < replies.max_id;
-        final int contentWidth = Math.max(0, Math.min(getCompactContentWidth(), getCompactRight() - getCompactLeft()) - getCompactSideButtonColumn());
+        // The album footer spans the group, even when its drawing cell is a narrow tile.
+        final int rowWidth = isCompactAlbum() ? getCompactContentWidth()
+                : Math.min(getCompactContentWidth(), getCompactRight() - getCompactLeft());
+        final int contentWidth = Math.max(0, rowWidth - getCompactSideButtonColumn());
         if (contentWidth == 0) {
             commentButtonRect.setEmpty();
             compactHeaderTextPaint.setColor(textColor);

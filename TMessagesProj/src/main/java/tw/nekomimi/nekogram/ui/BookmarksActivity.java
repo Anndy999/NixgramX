@@ -233,9 +233,13 @@ public class BookmarksActivity extends NekoDelegateFragment {
 
     private ArrayList<MessageObject> loadBookmarkRows(int account, long userId, ArrayList<Integer> requested,
                                                       ArrayList<TLRPC.Message> stored) {
-        SparseArray<TLRPC.Message> messages = new SparseArray<>(requested.size());
+        SparseArray<MessageObject> messages = new SparseArray<>(requested.size());
         if (stored != null) {
-            for (var message : stored) messages.put(message.id, message);
+            for (var message : stored) {
+                MessageObject object = new MessageObject(account, message, false, true);
+                if (object.messageOwner.media != null) object.messageOwner.media.ttl_seconds = 0;
+                messages.put(message.id, object);
+            }
         }
         if (NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool() && messages.size() < requested.size()) {
             ArrayList<Integer> missing = new ArrayList<>();
@@ -248,17 +252,13 @@ public class BookmarksActivity extends NekoDelegateFragment {
                 AyuMessageUtils.map(deleted.message, tl, account);
                 AyuMessageUtils.mapMedia(deleted.message, tl, account);
                 tl.ayuDeleted = true;
-                messages.put(deleted.message.messageId, tl);
+                messages.put(deleted.message.messageId, new MessageObject(account, tl, false, true));
             }
         }
         ArrayList<MessageObject> rows = new ArrayList<>(requested.size());
         for (int id : requested) {
-            TLRPC.Message message = messages.get(id);
-            MessageObject object;
-            if (message != null) {
-                object = new MessageObject(account, message, false, true);
-                if (!message.ayuDeleted && message.media != null) message.media.ttl_seconds = 0;
-            } else {
+            MessageObject object = messages.get(id);
+            if (object == null) {
                 object = createMissingMessagePlaceholder(account, userId, id);
             }
             if (object != null) {
@@ -533,13 +533,16 @@ public class BookmarksActivity extends NekoDelegateFragment {
         }
 
         updateActionBarCount();
-        if (refreshOnResume && listView != null) updateBookmarks();
-        refreshOnResume = true;
+        if (refreshOnResume && listView != null) {
+            refreshOnResume = false;
+            updateBookmarks();
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        refreshOnResume = true;
 
         if (fragmentView instanceof SizeNotifierFrameLayout) {
             ((SizeNotifierFrameLayout) fragmentView).onPause();
