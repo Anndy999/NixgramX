@@ -130,6 +130,7 @@ public class FileLoadOperation {
         private TLRPC.TL_upload_webFile responseWeb;
         private TLRPC.TL_upload_cdnFile responseCdn;
         private boolean forceSmallChunk;
+        private boolean foreground;
         public boolean cancelling, cancelled;
         public Runnable whenCancelled;
     }
@@ -172,6 +173,7 @@ public class FileLoadOperation {
     private final static int stateFinished = 3;
     private final static int stateCanceled = 4;
     private final static int stateCancelling = 5;
+    private final static int stateFinishing = 6;
 
     private int downloadChunkSize = 1024 * 32;
     private int downloadChunkSizeBig = 1024 * 128;
@@ -196,7 +198,7 @@ public class FileLoadOperation {
     private int preloadStreamFileOffset;
     private int totalPreloadedBytes;
     private boolean isPreloadVideoOperation;
-    private boolean preloadFinished;
+    private volatile boolean preloadFinished;
     private File cacheFilePreload;
     private boolean supportsPreloading;
     private long nextPreloadDownloadOffset;
@@ -229,6 +231,7 @@ public class FileLoadOperation {
     private volatile int state = stateIdle;
     private volatile boolean paused;
     private long downloadedBytes;
+    private volatile long readableSequentialBytes;
     public long totalBytesCount;
     private long bytesCountPadding;
     private long streamStartOffset;
@@ -240,7 +243,6 @@ public class FileLoadOperation {
     private int currentDownloadChunkSize;
     private int currentMaxDownloadRequests;
     private int requestsCount;
-    private int renameRetryCount;
     private static int globalRequestPointer;
 
     private boolean encryptFile;
@@ -281,7 +283,7 @@ public class FileLoadOperation {
     private File cacheFileFinal;
     private File cacheIvTemp;
     private File cacheFileParts;
-    private boolean cacheFileFinalReady;
+    private volatile boolean cacheFileFinalReady;
 
     private String ext;
     private RandomAccessFile fileOutputStream;
@@ -290,7 +292,7 @@ public class FileLoadOperation {
     private File tempPath;
     private boolean isForceRequest;
     private int priority;
-    private int userDownloadPriority;
+    private volatile int userDownloadPriority;
 
     int resolvePriority(int requestedPriority, boolean userDownload) {
         if (userDownload) userDownloadPriority = requestedPriority;
@@ -745,11 +747,7 @@ public class FileLoadOperation {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         final File[] result = new File[1];
         Utilities.stageQueue.postRunnable(() -> {
-            if (state == stateFinished && !preloadFinished) {
-                result[0] = cacheFileFinal;
-            } else {
-                result[0] = cacheFileTemp;
-            }
+            result[0] = getCurrentFileFast();
             countDownLatch.countDown();
         });
         try {
@@ -761,7 +759,7 @@ public class FileLoadOperation {
     }
 
     protected File getCurrentFileFast() {
-        if (state == stateFinished && !preloadFinished && cacheFileFinalReady) {
+        if (isStreamDownloadComplete()) {
             return cacheFileFinal;
         } else {
             return cacheFileTemp;
@@ -812,27 +810,29 @@ public class FileLoadOperation {
         return progress + getDownloadedLengthFromOffsetInternal(ranges, offset, totalBytesCount) / (float) totalBytesCount;
     }
 
-    protected long[] getDownloadedLengthFromOffset(final long offset, final long length) {
-        final CountDownLatch countDownLatch = new CountDownLatch(1);
-        final long[] result = new long[2];
-        Utilities.stageQueue.postRunnable(() -> {
-            try {
-                result[0] = getDownloadedLengthFromOffsetInternal(notLoadedBytesRanges, offset, length);
-            } catch (Throwable e) {
-                FileLog.e(e);
-                result[0] = 0;
-            }
-            if (state == stateFinished) {
-                result[1] = 1;
-            }
-            countDownLatch.countDown();
-        });
-        try {
-            countDownLatch.await();
-        } catch (Exception ignore) {
+    long getReadableLength(long offset, long length) {
+        if (offset < 0 || length <= 0 || hasStreamDownloadFailed()) return 0;
+        if (isStreamDownloadComplete()) return Math.min(length, Math.max(0, totalBytesCount - offset));
+        final ArrayList<Range> snapshot = notLoadedBytesRangesCopy;
+        if (snapshot == null) return Math.min(length, Math.max(0, readableSequentialBytes - offset));
+        return getReadableRange(snapshot, totalBytesCount, offset, length);
+    }
 
+    private static long getReadableRange(ArrayList<Range> missing, long total, long offset, long length) {
+        long available = Math.min(length, Math.max(0, total - offset));
+        for (Range gap : missing) {
+            if (gap.start <= offset && offset < gap.end) return 0;
+            if (gap.start > offset) available = Math.min(available, gap.start - offset);
         }
-        return result;
+        return available;
+    }
+
+    boolean hasStreamDownloadFailed() {
+        return state == stateFailed || state == stateCanceled;
+    }
+
+    boolean isStreamDownloadComplete() {
+        return cacheFileFinalReady && !preloadFinished && (state == stateFinishing || state == stateFinished);
     }
 
     public String getFileName() {
@@ -876,6 +876,7 @@ public class FileLoadOperation {
         Utilities.stageQueue.postRunnable(() -> {
             if (!paused || state != stateDownloading) return;
             speedStartTime = 0;
+            proxySampleStarted = 0;
             flushCheckpointOrFail();
             if (state != stateDownloading) return;
             if (isStory) {
@@ -983,7 +984,7 @@ public class FileLoadOperation {
                     startDownloadRequest(-1);
                     nextPartWasPreloaded = false;
                 }
-                if (notLoadedBytesRanges != null && getDownloadedLengthFromOffsetInternal(notLoadedBytesRanges, streamOffset, 1) > 0) {
+                if (getReadableLength(streamOffset, 1) > 0) {
                     notifyStreamListeners();
                 }
             });
@@ -1106,7 +1107,7 @@ public class FileLoadOperation {
             if (!delegate.hasAnotherRefOnFile(cacheFileFinal.toString())) {
                 cacheFileFinal.delete();
             }
-            finalFileExist = false;
+            finalFileExist = cacheFileFinalReady = false;
         }
 
 
@@ -1334,6 +1335,7 @@ public class FileLoadOperation {
                 onFail(true, 0);
                 return false;
             }
+            readableSequentialBytes = isPreloadVideoOperation ? 0 : downloadedBytes;
             started = true;
             Utilities.stageQueue.postRunnable(() -> {
                 boolean videoPreloaded = isPreloadVideoOperation && preloaded[0];
@@ -1434,6 +1436,7 @@ public class FileLoadOperation {
     }
 
     private void cancelOnStage(boolean deleteFiles) {
+        if (state == stateFinishing) return;
         if (state != stateFinished && state != stateFailed) {
             state = stateCancelling;
             cancelRequests(() -> {
@@ -1623,11 +1626,12 @@ public class FileLoadOperation {
             onFail(false, AndroidUtilities.isENOSPC(e) ? -1 : 0);
             return;
         }
-        state = stateFinished;
+        final boolean partial = isPreloadVideoOperation || preload;
+        preloadFinished = partial;
+        state = partial ? stateFinished : stateFinishing;
         notifyStreamListeners();
         cleanup();
-        if (isPreloadVideoOperation || preload) {
-            preloadFinished = true;
+        if (partial) {
             if (BuildVars.DEBUG_VERSION) {
                 if (finishCode == FINISH_CODE_FILE_ALREADY_EXIST) {
                     FileLog.d("file already exist " + cacheFileTemp);
@@ -1651,108 +1655,47 @@ public class FileLoadOperation {
             final File cacheFilePreloadFinal = cacheFilePreload;
             final File cacheFileTempFinal = cacheFileTemp;
             filesQueue.postRunnable(() -> {
-                if (cacheIvTempFinal != null) {
-                    cacheIvTempFinal.delete();
-                }
-                if (cacheFilePreloadFinal != null) {
-                    cacheFilePreloadFinal.delete();
-                }
-                File cacheFileTempLocal = cacheFileTempFinal;
-                if (cacheFileTempLocal != null) {
-                    if (ungzip) {
-                        try {
-                            GZIPInputStream gzipInputStream = new GZIPInputStream(new FileInputStream(cacheFileTempLocal));
-                            FileLoader.copyFile(gzipInputStream, cacheFileGzipTemp, 1024 * 1024 * 2);
-                            gzipInputStream.close();
-                            cacheFileTempLocal.delete();
-                            cacheFileTempLocal = cacheFileGzipTemp;
+                File source = cacheFileTempFinal;
+                try {
+                    if (source != null) {
+                        if (ungzip) {
+                            try (GZIPInputStream stream = new GZIPInputStream(new FileInputStream(source))) {
+                                FileLoader.copyFile(stream, cacheFileGzipTemp, 1024 * 1024 * 2);
+                                source = cacheFileGzipTemp;
+                            } catch (ZipException e) {
+                                cacheFileGzipTemp.delete();
+                            }
                             ungzip = false;
-                        } catch (ZipException zipException) {
-                            ungzip = false;
-                        } catch (Throwable e) {
-                            FileLog.e(e, !AndroidUtilities.isFilNotFoundException(e));
-                            if (BuildVars.LOGS_ENABLED) {
-                                FileLog.e("unable to ungzip temp = " + cacheFileTempFinal + " to final = " + cacheFileFinal);
-                            }
                         }
-                    }
-                    if (!ungzip) {
-                        boolean renameResult;
-                        if (parentObject instanceof TLRPC.TL_theme) {
-                            try {
-                                renameResult = AndroidUtilities.copyFile(cacheFileTempLocal, cacheFileFinal);
-                            } catch (Exception e) {
-                                renameResult = false;
-                                FileLog.e(e);
-                            }
-                        } else {
-                            try {
-                                if (pathSaveData != null) {
-                                    synchronized (lockObject) {
-                                        cacheFileFinal = new File(storePath, storeFileName);
-                                        int count = 1;
-                                        while (cacheFileFinal.exists()) {
-                                            int lastDotIndex = storeFileName.lastIndexOf('.');
-                                            String newFileName;
-                                            if (lastDotIndex > 0) {
-                                                newFileName = storeFileName.substring(0, lastDotIndex) + " (" + count + ")" + storeFileName.substring(lastDotIndex);
-                                            } else {
-                                                newFileName = storeFileName + " (" + count + ")";
-                                            }
-                                            cacheFileFinal = new File(storePath, newFileName);
-                                            count++;
-                                        }
-                                    }
+                        if (pathSaveData != null) {
+                            synchronized (lockObject) {
+                                cacheFileFinal = new File(storePath, storeFileName);
+                                int count = 1;
+                                while (cacheFileFinal.exists()) {
+                                    int dot = storeFileName.lastIndexOf('.');
+                                    String name = dot > 0 ? storeFileName.substring(0, dot) + " (" + count + ")" + storeFileName.substring(dot)
+                                            : storeFileName + " (" + count + ")";
+                                    cacheFileFinal = new File(storePath, name);
+                                    count++;
                                 }
-                                renameResult = cacheFileTempLocal.renameTo(cacheFileFinal);
-                            } catch (Exception e) {
-                                renameResult = false;
-                                FileLog.e(e);
                             }
                         }
-                        if (!renameResult && renameRetryCount == 3) {
-                            try {
-                                renameResult = AndroidUtilities.copyFile(cacheFileTempLocal, cacheFileFinal);
-                                if (renameResult) {
-                                    cacheFileFinal.delete();
-                                }
-                            } catch (Throwable e) {
-                                FileLog.e(e);
-                            }
-                        }
-                        if (!renameResult) {
-                            if (BuildVars.LOGS_ENABLED) {
-                                FileLog.e("unable to rename temp = " + cacheFileTempLocal + " to final = " + cacheFileFinal + " retry = " + renameRetryCount);
-                            }
-                            renameRetryCount++;
-                            if (renameRetryCount < 3) {
-                                state = stateDownloading;
-                                Utilities.stageQueue.postRunnable(() -> {
-                                    try {
-                                        onFinishLoadingFile(increment, FINISH_CODE_DEFAULT, false);
-                                    } catch (Exception e) {
-                                        onFail(false, 0);
-                                    }
-                                }, 200);
-                                return;
-                            }
-                            cacheFileFinal = cacheFileTempLocal;
-                            cacheFileFinalReady = false;
-                        } else {
-                            cacheFileFinalReady = true;
-                            if (cacheFilePartsFinal != null) cacheFilePartsFinal.delete();
-                            if (pathSaveData != null && cacheFileFinal.exists()) {
-                                delegate.saveFilePath(pathSaveData, cacheFileFinal);
-                            }
-                        }
-                    } else {
-                        Utilities.stageQueue.postRunnable(() -> {
-                            onFail(false, 0);
-                        });
-                        return;
+                        DownloadedFileStore.publish(source, cacheFileFinal);
+                        cacheFileFinalReady = true;
+                        if (!cacheFileTempFinal.equals(source)) cacheFileTempFinal.delete();
+                        if (pathSaveData != null) delegate.saveFilePath(pathSaveData, cacheFileFinal);
                     }
+                    if (cacheIvTempFinal != null) cacheIvTempFinal.delete();
+                    if (cacheFilePartsFinal != null) cacheFilePartsFinal.delete();
+                    if (cacheFilePreloadFinal != null) cacheFilePreloadFinal.delete();
+                } catch (IOException | RuntimeException e) {
+                    FileLog.e(e, !AndroidUtilities.isENOSPC(e));
+                    Utilities.stageQueue.postRunnable(() -> onFail(false, AndroidUtilities.isENOSPC(e) ? -1 : 0));
+                    return;
                 }
                 Utilities.stageQueue.postRunnable(() -> {
+                    state = stateFinished;
+                    notifyStreamListeners();
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("finished downloading file to " + cacheFileFinal + " time = " + (System.currentTimeMillis() - startTime) + " dc = " + datacenterId + " size = " + AndroidUtilities.formatFileSize(totalBytesCount));
                     }
@@ -2098,8 +2041,9 @@ public class FileLoadOperation {
                         fiv.write(iv);
                     }
                     noteCheckpointProgress(currentBytesSize);
+                    readableSequentialBytes = downloadedBytes;
                     copyNotLoadedRanges();
-                    if (notLoadedBytesRanges != null) notifyStreamListeners();
+                    notifyStreamListeners();
                     if (totalBytesCount > 0 && state == stateDownloading) {
                         delegate.didChangedLoadProgress(FileLoadOperation.this, downloadedBytes, totalBytesCount);
                     }
@@ -2383,6 +2327,16 @@ public class FileLoadOperation {
             }
         }
 
+        boolean foregroundSlot = !isPreloadVideoOperation && !isStory
+                && (userDownloadPriority != 0 || stream != null && streamPriority && priority >= FileLoaderPriorityQueue.PRIORITY_VALUE_MAX);
+        if (foregroundSlot && streamPriorityStartOffset == 0) {
+            for (RequestInfo info : requestInfos) {
+                if (info.foreground) {
+                    foregroundSlot = false;
+                    break;
+                }
+            }
+        }
         for (int a = 0; a < count; a++) {
             long downloadOffset;
             if (isPreloadVideoOperation) {
@@ -2566,6 +2520,11 @@ public class FileLoadOperation {
                 }
             }
             requestInfo.forceSmallChunk = forceSmallChunk;
+            if (foregroundSlot) {
+                requestInfo.foreground = true;
+                flags |= ConnectionsManager.RequestFlagForegroundDownload;
+                foregroundSlot = false;
+            }
             if (BuildVars.LOGS_ENABLED) {
                 requestInfo.requestStartTime = System.currentTimeMillis();
             }
@@ -2775,10 +2734,29 @@ public class FileLoadOperation {
     private long speedStartTime, speedLastTime, speedBytes;
     private long speedRouteGeneration;
     private int speedChunks;
+    private long proxySampleStarted, proxySampleBytes, proxySampleRoute;
 
     private void measureSpeed(int bytes, long generation) {
         if (generation != DownloadSpeedEstimator.getRouteGeneration()) return;
         long now = SystemClock.elapsedRealtime();
+        if (userDownloadPriority != 0 && totalBytesCount >= bigFileSizeFrom && SharedConfig.proxyRotationEnabled
+                && !paused && !caughtPremiumFloodWait) {
+            if (proxySampleStarted == 0 || proxySampleRoute != generation || now - proxySampleStarted > 15_000) {
+                proxySampleStarted = now;
+                proxySampleBytes = 0;
+                proxySampleRoute = generation;
+            } else {
+                proxySampleBytes += bytes;
+                long elapsed = now - proxySampleStarted;
+                if (elapsed >= 1000) {
+                    ProxyRotationController.onForegroundDownloadSample(currentAccount, generation, proxySampleBytes * 8000 / elapsed);
+                    proxySampleStarted = now;
+                    proxySampleBytes = 0;
+                }
+            }
+        } else {
+            proxySampleStarted = 0;
+        }
         if (speedRouteGeneration != generation || speedStartTime == 0 || now - speedLastTime > 2000) {
             speedRouteGeneration = generation;
             speedStartTime = now;

@@ -122,6 +122,7 @@ public class ConnectionsManager extends BaseController {
     public final static int RequestFlagFailOnServerErrorsExceptFloodWait = 65536;
     public final static int RequestFlagSmallDownload = 131072;
     public final static int RequestFlagDownloadByteBudget = 262144;
+    public final static int RequestFlagForegroundDownload = 524288;
 
     public final static int ConnectionStateConnecting = 1;
     public final static int ConnectionStateWaitingForNetwork = 2;

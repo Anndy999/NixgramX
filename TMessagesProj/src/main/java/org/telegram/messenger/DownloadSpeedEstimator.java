@@ -18,6 +18,7 @@ public class DownloadSpeedEstimator {
     private static double bitrate;
     private static long updatedAt;
     private static volatile long routeGeneration;
+    private static volatile long networkGeneration;
     private static long conservativeUntil;
     private static Network network;
     private static int networkSubtype = -1;
@@ -26,6 +27,7 @@ public class DownloadSpeedEstimator {
         if (!Objects.equals(network, activeNetwork) || networkSubtype != subtype) {
             network = activeNetwork;
             networkSubtype = subtype;
+            networkGeneration++;
             onRouteChanged();
         }
     }
@@ -39,6 +41,10 @@ public class DownloadSpeedEstimator {
 
     public static long getRouteGeneration() {
         return routeGeneration;
+    }
+
+    static long getNetworkGeneration() {
+        return networkGeneration;
     }
 
     public static synchronized void onSample(long bits, long durationMs, long generation) {

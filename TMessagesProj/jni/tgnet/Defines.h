@@ -181,7 +181,8 @@ enum RequestFlag {
     RequestFlagIsCancel = 32768,
     RequestFlagFailOnServerErrorsExceptFloodWait = 65536,
     RequestFlagSmallDownload = 131072,
-    RequestFlagDownloadByteBudget = 262144
+    RequestFlagDownloadByteBudget = 262144,
+    RequestFlagForegroundDownload = 524288
 };
 
 inline std::string to_string_int32(int32_t value) {

@@ -26,31 +26,33 @@ import androidx.media3.datasource.TransferListener;
 
 import org.telegram.tgnet.TLRPC;
 
-import java.io.EOFException;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @OptIn(markerClass = UnstableApi.class)
 public class FileStreamLoadOperation implements DataSource, FileLoadOperationStream {
 
     public static final ConcurrentHashMap<Long, FileStreamLoadOperation> allStreams = new ConcurrentHashMap<>();
 
-    private FileLoadOperation loadOperation;
+    private volatile FileLoadOperation loadOperation;
 
     private Uri uri;
     private long bytesRemaining;
     private long bytesTransferred;
     private long requestedLength;
-    private boolean opened;
+    private volatile boolean opened;
     private long currentOffset;
-    private CountDownLatch countDownLatch;
+    private final AtomicReference<CountDownLatch> dataWaiter = new AtomicReference<>();
     private RandomAccessFile file;
     private TLRPC.Document document;
     private Object parentObject;
@@ -104,36 +106,21 @@ public class FileStreamLoadOperation implements DataSource, FileLoadOperationStr
         } else if (document.mime_type.startsWith("audio")) {
             document.attributes.add(new TLRPC.TL_documentAttributeAudio());
         }
-        allStreams.put(document.id, this);
         currentOffset = dataSpec.position;
         requestedLength = dataSpec.length;
-        loadOperation = FileLoader.getInstance(currentAccount).loadStreamFile(this, document, null, parentObject, currentOffset, false, getCurrentPriority());
+        loadOperation = FileLoader.getInstance(currentAccount).loadStreamFile(this, document, null, parentObject,
+                currentOffset, true, getCurrentPriority());
+        if (loadOperation == null) throw new IOException("Unable to open the video download");
         bytesTransferred = 0;
-        bytesRemaining = document.size - dataSpec.position;
+        isNetwork = !loadOperation.isStreamDownloadComplete();
+        File completed = isNetwork ? null : loadOperation.getCurrentFileFast();
+        bytesRemaining = Math.max(0, (completed == null ? document.size : completed.length()) - currentOffset);
         if (requestedLength != C.LENGTH_UNSET) {
-            bytesRemaining = Math.min(bytesRemaining, requestedLength - bytesTransferred);
+            bytesRemaining = Math.min(bytesRemaining, requestedLength);
         }
+        allStreams.put(document.id, this);
         opened = true;
         transferStarted(dataSpec);
-        if (loadOperation != null) {
-            currentFile = loadOperation.getCurrentFile();
-            if (currentFile != null) {
-                try {
-                    file = new RandomAccessFile(currentFile, "r");
-                    file.seek(currentOffset);
-                    if (loadOperation.isFinished()) {
-                        isNetwork = false;
-                        bytesRemaining = currentFile.length() - currentOffset;
-                        if (requestedLength != C.LENGTH_UNSET) {
-                            bytesRemaining = Math.min(bytesRemaining, requestedLength - bytesTransferred);
-                        }
-                    }
-                } catch (Throwable e) {
-                }
-            }
-        }
-        FileLog.e("FileStreamLoadOperation " + document.id + " open operation=" + loadOperation + " currentFile=" + currentFile + " file=" + file + " bytesRemaining=" + bytesRemaining + " me=" + this);
-        FileLog.e("FileStreamLoadOperation " + document.id + " " + MessageObject.getVideoWidth(document) + "x" + MessageObject.getVideoWidth(document) + " mime_type="+document.mime_type+" codec="+MessageObject.getVideoCodec(document)+" size="+ document.size);
         return bytesRemaining;
     }
 
@@ -147,95 +134,83 @@ public class FileStreamLoadOperation implements DataSource, FileLoadOperationStr
 
     @Override
     public int read(byte[] buffer, int offset, int readLength) throws IOException {
-        if (readLength == 0) {
-//            FileLog.e("FileStreamLoadOperation " + document.id + " read 0 return");
-            return 0;
-        } else if (bytesRemaining == 0) {
-//            FileLog.e("FileStreamLoadOperation " + document.id + " read RESULT_END_OF_INPUT");
-            return C.RESULT_END_OF_INPUT;
-        } else {
-            int availableLength = 0;
-            int bytesRead;
-            try {
-                if (bytesRemaining < readLength) {
-                    readLength = (int) bytesRemaining;
-                }
-                while ((availableLength == 0 && opened) || file == null) {
-                    availableLength = (int) loadOperation.getDownloadedLengthFromOffset(currentOffset, readLength)[0];
-                    if (availableLength == 0) {
-                        countDownLatch = new CountDownLatch(1);
-                        FileLoadOperation loadOperation = FileLoader.getInstance(currentAccount).loadStreamFile(this, document, null, parentObject, currentOffset, false, getCurrentPriority());
-                        if (this.loadOperation != loadOperation) {
-//                            FileLog.e("FileStreamLoadOperation " + document.id + " read: changed operation!");
-                            this.loadOperation.removeStreamListener(this);
-                            this.loadOperation = loadOperation;
-                        }
-//                        FileLog.e("FileStreamLoadOperation " + document.id + " read sleeping.... Zzz");
-                        if (countDownLatch != null) {
-                            countDownLatch.await();
-                            countDownLatch = null;
-                        }
-                    }
-//                    FileLog.e("FileStreamLoadOperation " + document.id + " read availableLength=" + availableLength);
-                    File currentFileFast = loadOperation.getCurrentFileFast();
-                    if (file == null || !Objects.equals(currentFile, currentFileFast)) {
-                        if (BuildVars.LOGS_ENABLED) {
-                            FileLog.d("check stream file " + currentFileFast);
-                        }
-                        if (file != null) {
-                            try {
-                                file.close();
-                            } catch (Exception ignore) {
-
-                            }
-                        }
-//                        FileLog.e("FileStreamLoadOperation " + document.id + " read update file from " + currentFile + " to " + currentFileFast + " me=" + this);
-                        currentFile = currentFileFast;
-                        if (currentFile != null) {
-                            try {
-                                file = new RandomAccessFile(currentFile, "r");
-                                file.seek(currentOffset);
-                                if (loadOperation.isFinished()) {
-                                    isNetwork = false;
-                                    bytesRemaining = currentFile.length() - currentOffset;
-                                    if (requestedLength != C.LENGTH_UNSET) {
-                                        bytesRemaining = Math.min(bytesRemaining, requestedLength - bytesTransferred);
-                                    }
-                                }
-                            } catch (Throwable e) {
-                                if (loadOperation.isFinished() && !currentFile.exists()) {
-                                    FileLoader.getInstance(currentAccount).cancelLoadFile(loadOperation.getFileName());
-                                    FileLoadOperation newLoadOperation = FileLoader.getInstance(currentAccount).loadStreamFile(this, document, null, parentObject, currentOffset, false, getCurrentPriority());
-                                    if (this.loadOperation != newLoadOperation) {
-//                            FileLog.e("FileStreamLoadOperation " + document.id + " read: changed operation!");
-                                        this.loadOperation.removeStreamListener(this);
-                                        this.loadOperation = newLoadOperation;
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-//                        FileLog.e("FileStreamLoadOperation " + document.id + " read have exact same file");
-                    }
-                }
-                if (!opened) {
-//                    FileLog.e("FileStreamLoadOperation " + document.id + " read return, not opened");
-                    return 0;
-                }
-                bytesRead = file.read(buffer, offset, availableLength);
-                if (bytesRead > 0) {
-                    currentOffset += bytesRead;
-                    bytesRemaining -= bytesRead;
-                    bytesTransferred += bytesRead;
-                    bytesTransferred(bytesRead);
-                }
-            } catch (InterruptedException e) {
-                FileLog.e(e);
-                return C.RESULT_NOTHING_READ;
-            } catch (Exception e) {
-                throw new IOException(e);
+        if (readLength == 0) return 0;
+        if (bytesRemaining <= 0) return C.RESULT_END_OF_INPUT;
+        final int length = (int) Math.min(bytesRemaining, readLength);
+        while (opened) {
+            final FileLoadOperation operation = loadOperation;
+            if (operation == null || operation.hasStreamDownloadFailed()) {
+                throw new IOException("Video download failed");
             }
-            return bytesRead;
+            final int available = (int) operation.getReadableLength(currentOffset, length);
+            if (available > 0) return readBuffered(operation, buffer, offset, available);
+            if (operation.isStreamDownloadComplete()) return C.RESULT_END_OF_INPUT;
+            awaitVideoData(operation);
+        }
+        return C.RESULT_END_OF_INPUT;
+    }
+
+    private synchronized int readBuffered(FileLoadOperation operation, byte[] buffer, int offset, int length) throws IOException {
+        if (!opened) return C.RESULT_END_OF_INPUT;
+        if (file == null) {
+            currentFile = operation.getCurrentFileFast();
+            if (currentFile == null) throw new FileNotFoundException("Video file is unavailable");
+            // A rename can race the first open. A descriptor already open on the
+            // temporary file stays valid after publication, even across a copy.
+            try {
+                file = new RandomAccessFile(currentFile, "r");
+            } catch (FileNotFoundException e) {
+                File published = operation.getCurrentFileFast();
+                if (published == null || published.equals(currentFile)) throw e;
+                currentFile = published;
+                file = new RandomAccessFile(currentFile, "r");
+            }
+            file.seek(currentOffset);
+        }
+        int bytesRead = file.read(buffer, offset, length);
+        if (bytesRead < 0 && !operation.isStreamDownloadComplete()) {
+            throw new IOException("The video cache ended inside a downloaded range");
+        }
+        if (bytesRead > 0) {
+            currentOffset += bytesRead;
+            bytesRemaining -= bytesRead;
+            bytesTransferred += bytesRead;
+            bytesTransferred(bytesRead);
+        }
+        return bytesRead;
+    }
+
+    private void awaitVideoData(FileLoadOperation operation) throws IOException {
+        final CountDownLatch waiter = new CountDownLatch(1);
+        dataWaiter.set(waiter);
+        try {
+            // Register before checking again so arrivals between read and wait are visible.
+            if (!opened || operation.getReadableLength(currentOffset, 1) != 0
+                    || operation.hasStreamDownloadFailed() || operation.isStreamDownloadComplete()) return;
+            final FileLoadOperation resumed = FileLoader.getInstance(currentAccount).loadStreamFile(this, document, null,
+                    parentObject, currentOffset, true, getCurrentPriority());
+            if (resumed == null) throw new IOException("Unable to continue the video download");
+            if (resumed != operation) {
+                synchronized (this) {
+                    if (!opened) {
+                        resumed.removeStreamListener(this);
+                        return;
+                    }
+                    operation.removeStreamListener(this);
+                    closeStreamFile();
+                    loadOperation = resumed;
+                }
+            }
+            if (opened && resumed.getReadableLength(currentOffset, 1) == 0
+                    && !resumed.isStreamDownloadComplete() && !resumed.hasStreamDownloadFailed()
+                    && !waiter.await(30, TimeUnit.SECONDS)) {
+                throw new SocketTimeoutException("Waiting for video download data");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Video read interrupted", e);
+        } finally {
+            dataWaiter.compareAndSet(waiter, null);
         }
     }
 
@@ -245,40 +220,36 @@ public class FileStreamLoadOperation implements DataSource, FileLoadOperationStr
     }
 
     @Override
-    public void close() {
-        FileLog.e("FileStreamLoadOperation " + document.id + " close me=" + this);
+    public synchronized void close() {
+        boolean wasOpened = opened;
+        opened = false;
+        newDataAvailable();
         if (loadOperation != null) {
             loadOperation.removeStreamListener(this);
+            loadOperation = null;
         }
+        closeStreamFile();
+        uri = null;
+        if (document != null) allStreams.remove(document.id, this);
+        if (wasOpened) transferEnded();
+    }
+
+    private void closeStreamFile() {
         if (file != null) {
             try {
                 file.close();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 FileLog.e(e);
             }
             file = null;
         }
-        uri = null;
-        allStreams.remove(document.id);
-        if (opened) {
-            opened = false;
-            transferEnded();
-        }
-        if (countDownLatch != null) {
-         //   FileLog.d("FileStreamLoadOperation count down");
-            countDownLatch.countDown();
-            countDownLatch = null;
-        }
+        currentFile = null;
     }
 
     @Override
     public void newDataAvailable() {
-//        FileLog.e("FileStreamLoadOperation " + document.id + " newDataAvailable me=" + this);
-        CountDownLatch latch = countDownLatch;
-        countDownLatch = null;
-        if (latch != null) {
-            latch.countDown();
-        }
+        CountDownLatch waiter = dataWaiter.getAndSet(null);
+        if (waiter != null) waiter.countDown();
     }
 
     public static void setPriorityForDocument(TLRPC.Document document, int priority) {

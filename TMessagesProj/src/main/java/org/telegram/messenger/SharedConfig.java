@@ -343,7 +343,7 @@ public class SharedConfig {
     public static boolean fontSizeIsDefault;
     public static int bubbleRadius = 17;
     public static int ivFontSize = 16;
-    public static boolean proxyRotationEnabled;
+    public static volatile boolean proxyRotationEnabled;
     public static int proxyRotationTimeout;
     public static int messageSeenHintCount;
     public static int emojiInteractionsHintCount;

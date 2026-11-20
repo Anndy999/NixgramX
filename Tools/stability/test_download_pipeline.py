@@ -107,7 +107,7 @@ class Probe {
         queue = source[source.index('public class FileLoaderPriorityQueue'):].replace(
             'public class FileLoaderPriorityQueue', 'class FileLoaderPriorityQueue', 1)
         operation = (MESSENGER / 'FileLoadOperation.java').read_text()
-        priority = section(operation, '    private int userDownloadPriority;', '    private FilePathDatabase.FileMeta')
+        priority = section(operation, '    int resolvePriority(', '    private FilePathDatabase.FileMeta')
         run_java('''
 import java.util.*;
 class SystemClock {
@@ -126,6 +126,7 @@ class MessagesController {
 class DownloadSpeedEstimator { static boolean isFast() { return true; } }
 class FileLoadOperation {
     int priority;
+    int userDownloadPriority;
     boolean isStory, preFinished, started, running, hasStartData;
     Object parentObject = new Object();
     FileLoadOperation(int priority) { this.priority = priority; }
@@ -212,3 +213,229 @@ class Probe {
     }
 }
 ''')
+
+    def test_cached_stream_reads_and_publishes_without_partial_destination(self):
+        source = (MESSENGER / 'FileStreamLoadOperation.java').read_text()
+        read = section(source, '    public int read(byte[] buffer', '    @Override\n    public Uri getUri()')
+        close = section(source, '    private void closeStreamFile()', '    public static void setPriorityForDocument')
+        store = (MESSENGER / 'DownloadedFileStore.java').read_text()
+        store = store[store.index('final class DownloadedFileStore'):]
+        run_java('''
+import java.io.*;
+import java.net.SocketTimeoutException;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+class C { static final int RESULT_END_OF_INPUT = -1; }
+class FileLoadOperation {
+    long received = 4;
+    File path;
+    boolean failed, finished;
+    long getReadableLength(long offset, long limit) { return Math.min(limit, Math.max(0, received - offset)); }
+    boolean hasStreamDownloadFailed() { return failed; }
+    boolean isStreamDownloadComplete() { return finished; }
+    File getCurrentFileFast() { return path; }
+    void removeStreamListener(Probe player) {}
+}
+class FileLoader {
+    static final FileLoader INSTANCE = new FileLoader();
+    int loads;
+    static FileLoader getInstance(int id) { return INSTANCE; }
+    FileLoadOperation loadStreamFile(Probe player, Object document, Object location, Object parent, long offset, boolean priority, int p) {
+        assert priority;
+        loads++;
+        player.loadOperation.received = 8;
+        player.newDataAvailable(); // arrival races the wait registration
+        return player.loadOperation;
+    }
+}
+class FileLog { static void e(IOException e) { throw new AssertionError(e); } }
+''' + store + '''
+class Probe {
+    FileLoadOperation loadOperation = new FileLoadOperation();
+    boolean opened = true;
+    RandomAccessFile file;
+    File currentFile;
+    long bytesRemaining = 8, currentOffset, bytesTransferred;
+    int currentAccount;
+    Object parentObject, document;
+    AtomicReference<CountDownLatch> dataWaiter = new AtomicReference<>();
+    int getCurrentPriority() { return 3; }
+    void bytesTransferred(int bytes) {}
+    static class CrossVolumeFile extends File {
+        CrossVolumeFile(Path path) { super(path.toString()); }
+        @Override public boolean renameTo(File destination) { return false; }
+    }
+''' + read + close.replace('    @Override\n','') + '''
+    public static void main(String[] args) throws Exception {
+        Path dir = Files.createTempDirectory("media-publish");
+        byte[] contents = {0, 1, 2, 3, 4, 5, 6, 7};
+        Probe p = new Probe();
+        try {
+            Path cache = dir.resolve("data.tmp"), target = dir.resolve("final.bin");
+            Files.write(cache, contents);
+            p.loadOperation.path = cache.toFile();
+            byte[] read = new byte[8];
+            assert p.read(read, 0, 2) == 2;
+            assert p.read(read, 2, 2) == 2;
+            assert FileLoader.INSTANCE.loads == 0;
+            DownloadedFileStore.publish(new CrossVolumeFile(cache), target.toFile());
+            assert !Files.exists(cache) && Arrays.equals(contents, Files.readAllBytes(target));
+            p.loadOperation.path = target.toFile();
+            assert p.read(read, 4, 4) == 4 && FileLoader.INSTANCE.loads == 1;
+            assert Arrays.equals(read, contents);
+            assert p.read(read, 0, 1) == C.RESULT_END_OF_INPUT;
+            p.closeStreamFile();
+
+            Files.write(cache, contents);
+            Path occupied = Files.createDirectory(dir.resolve("occupied"));
+            try {
+                DownloadedFileStore.publish(new CrossVolumeFile(cache), occupied.toFile());
+                throw new AssertionError("expected publish failure");
+            } catch (IOException expected) {
+                assert Files.isDirectory(occupied) && Files.isRegularFile(cache);
+                try (var paths = Files.list(dir)) {
+                    assert paths.noneMatch(path -> path.getFileName().toString().endsWith(".part"));
+                }
+            }
+        } finally {
+            p.closeStreamFile();
+            try (var paths = Files.list(dir)) {
+                for (Path path : paths.toList()) Files.delete(path);
+            }
+            Files.delete(dir);
+        }
+    }
+}
+''')
+
+    def test_proxy_rotation_requires_a_recent_faster_route_and_sustained_slowness(self):
+        source = (MESSENGER / 'ProxyRotationController.java').read_text()
+        controller = source[source.index('public class ProxyRotationController'):].replace(
+            'public class ProxyRotationController', 'class ProxyRotationController', 1)
+        run_java('''
+import java.util.*;
+import java.util.function.LongConsumer;
+class SystemClock { static long time = 10_000; static long elapsedRealtime() { return time; } }
+class SharedPreferences {
+    static class Editor {
+        void putBoolean(String key, boolean value) {}
+        void apply() {}
+    }
+    Editor edit() { return new Editor(); }
+}
+class SharedConfig {
+    static boolean proxyRotationEnabled = true;
+    static boolean isProxyEnabled() { return true; }
+    static int proxyRotationTimeout;
+    static class ProxyInfo {
+        boolean checking, available = true;
+        long availableCheckTime, ping;
+        ProxyInfo(long ping) { this.ping = ping; }
+        final Settings settings = new Settings();
+    }
+    static class Settings { void toSharedPreferences(SharedPreferences.Editor editor) {} }
+    static ProxyInfo currentProxy;
+    static List<ProxyInfo> proxyList = new ArrayList<>();
+}
+class UserConfig { static int selectedAccount; static final int MAX_ACCOUNT_COUNT = 1; }
+class DownloadSpeedEstimator {
+    static long route = 1, network = 1;
+    static long getRouteGeneration() { return route; }
+    static long getNetworkGeneration() { return network; }
+}
+class MessagesController {
+    static SharedPreferences getGlobalMainSettings() { return new SharedPreferences(); }
+}
+class ConnectionsManager {
+    static final int ConnectionStateConnectingToProxy = 2, ConnectionStateConnected = 3;
+    static int switches;
+    static ConnectionsManager getInstance(int account) { return new ConnectionsManager(); }
+    int getConnectionState() { return ConnectionStateConnected; }
+    void checkProxy(SharedConfig.Settings settings, LongConsumer callback) {}
+    static void setProxySettings(boolean enabled, SharedConfig.Settings settings) { switches++; DownloadSpeedEstimator.route++; }
+}
+class AndroidUtilities {
+    static void runOnUIThread(Runnable r) { r.run(); }
+    static void runOnUIThread(Runnable r, long delay) {}
+    static void cancelRunOnUIThread(Runnable r) {}
+}
+class NotificationCenter {
+    interface NotificationCenterDelegate { void didReceivedNotification(int id, int account, Object... args); }
+    static final int didUpdateConnectionState = 1, proxyCheckDone = 2, proxySettingsChanged = 3, proxyChangedByRotation = 4;
+    static NotificationCenter getInstance(int account) { return new NotificationCenter(); }
+    static NotificationCenter getGlobalInstance() { return new NotificationCenter(); }
+    void addObserver(NotificationCenterDelegate observer, int id) {}
+    void postNotificationName(int id, Object... args) {}
+}
+''' + controller + '''
+class Probe {
+    static void sample(long advance, long rate) {
+        SystemClock.time += advance;
+        ProxyRotationController.onForegroundDownloadSample(0, DownloadSpeedEstimator.route, rate);
+    }
+    public static void main(String[] args) {
+        var quickPing = new SharedConfig.ProxyInfo(5);
+        var fastDownload = new SharedConfig.ProxyInfo(100);
+        var slow = new SharedConfig.ProxyInfo(15);
+        SharedConfig.proxyList = List.of(quickPing, fastDownload, slow);
+        SharedConfig.currentProxy = fastDownload;
+        sample(0, 6_000_000);
+
+        SharedConfig.currentProxy = slow;
+        DownloadSpeedEstimator.route++;
+        sample(0, 200_000);
+        sample(4000, 250_000);
+        assert ConnectionsManager.switches == 0;
+        sample(4000, 180_000);
+        assert ConnectionsManager.switches == 1 && SharedConfig.currentProxy == fastDownload;
+
+        // Even a known better alternative does not trigger an immediate second switch.
+        SharedConfig.currentProxy = slow;
+        DownloadSpeedEstimator.route++;
+        sample(0, 200_000); sample(4000, 250_000); sample(4000, 180_000);
+        assert ConnectionsManager.switches == 1 && SharedConfig.currentProxy == slow;
+        DownloadSpeedEstimator.network++;
+        DownloadSpeedEstimator.route++;
+        sample(61_000, 200_000); sample(4000, 250_000); sample(4000, 180_000);
+        assert ConnectionsManager.switches == 1 && SharedConfig.currentProxy == slow;
+        SharedConfig.proxyRotationEnabled = false;
+        sample(1000, 100_000);
+        assert ConnectionsManager.switches == 1;
+    }
+}
+''')
+
+    def test_native_foreground_request_gets_next_slot_without_expanding_budget(self):
+        from pathlib import Path
+        import subprocess
+        import tempfile
+
+        root = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as scratch:
+            probe = Path(scratch) / 'probe.cpp'
+            output = Path(scratch) / 'probe'
+            probe.write_text('''
+#include "TMessagesProj/jni/tgnet/DownloadRequestBudget.h"
+#include <cassert>
+#include <vector>
+struct Request { int id; bool download; bool foreground; };
+int main() {
+    std::list<Request> queue{{0, false, false}, {1, true, false}, {2, false, false},
+                             {3, true, true}, {4, true, false}, {5, true, true}};
+    prioritizeForegroundDownloads(queue, [](auto &r) { return r.download; }, [](auto &r) { return r.foreground; });
+    std::vector<int> result;
+    for (const auto &r : queue) result.push_back(r.id);
+    assert((result == std::vector<int>{0, 3, 5, 1, 2, 4}));
+    constexpr uint32_t block = 128 * 1024;
+    DownloadRequestBudget budget(false);
+    for (int i = 0; i < 15; ++i) budget.account(1, false, block);
+    assert(queue.begin()->id == 0 && std::next(queue.begin())->foreground);
+    assert(budget.acquire(1, false, block));
+    assert(!budget.acquire(1, false, block)); // The same 2 MiB cap applies after reordering.
+    assert(budget.acquire(1, true, block) && budget.acquire(2, false, block));
+}
+''')
+            subprocess.run(['c++', '-std=c++17', '-I', str(root), str(probe), '-o', str(output)], check=True)
+            subprocess.run([str(output)], check=True)
