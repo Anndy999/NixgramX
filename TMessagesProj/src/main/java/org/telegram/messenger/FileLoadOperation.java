@@ -766,6 +766,15 @@ public class FileLoadOperation {
         }
     }
 
+    synchronized File getPublishedFileForStream() {
+        return isStreamDownloadComplete() ? cacheFileFinal : null;
+    }
+
+    private synchronized void publishFinalFile(File source) throws IOException {
+        DownloadedFileStore.publish(source, cacheFileFinal);
+        cacheFileFinalReady = true;
+    }
+
     private long getDownloadedLengthFromOffsetInternal(ArrayList<Range> ranges, final long offset, final long length) {
         if (ranges == null || state == stateFinished || ranges.isEmpty()) {
             if (state == stateFinished) {
@@ -1680,8 +1689,7 @@ public class FileLoadOperation {
                                 }
                             }
                         }
-                        DownloadedFileStore.publish(source, cacheFileFinal);
-                        cacheFileFinalReady = true;
+                        publishFinalFile(source);
                         if (!cacheFileTempFinal.equals(source)) cacheFileTempFinal.delete();
                         if (pathSaveData != null) delegate.saveFilePath(pathSaveData, cacheFileFinal);
                     }

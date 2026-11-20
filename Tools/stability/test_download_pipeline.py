@@ -218,6 +218,10 @@ class Probe {
         source = (MESSENGER / 'FileStreamLoadOperation.java').read_text()
         read = section(source, '    public int read(byte[] buffer', '    @Override\n    public Uri getUri()')
         close = section(source, '    private void closeStreamFile()', '    public static void setPriorityForDocument')
+        publish = section((MESSENGER / 'FileLoadOperation.java').read_text(),
+                          '    synchronized File getPublishedFileForStream()',
+                          '    private long getDownloadedLengthFromOffsetInternal(')
+        publish = publish.replace('private synchronized void publishFinalFile', 'synchronized void publishFinalFile')
         store = (MESSENGER / 'DownloadedFileStore.java').read_text()
         store = store[store.index('final class DownloadedFileStore'):]
         run_java('''
@@ -230,13 +234,15 @@ import java.util.concurrent.atomic.*;
 class C { static final int RESULT_END_OF_INPUT = -1; }
 class FileLoadOperation {
     long received = 4;
-    File path;
-    boolean failed, finished;
+    File path, cacheFileFinal;
+    boolean failed;
+    volatile boolean cacheFileFinalReady;
     long getReadableLength(long offset, long limit) { return Math.min(limit, Math.max(0, received - offset)); }
     boolean hasStreamDownloadFailed() { return failed; }
-    boolean isStreamDownloadComplete() { return finished; }
-    File getCurrentFileFast() { return path; }
+    boolean isStreamDownloadComplete() { return cacheFileFinalReady; }
+    File getCurrentFileFast() { return cacheFileFinalReady ? cacheFileFinal : path; }
     void removeStreamListener(Probe player) {}
+''' + publish + '''
 }
 class FileLoader {
     static final FileLoader INSTANCE = new FileLoader();
@@ -286,6 +292,45 @@ class Probe {
             assert p.read(read, 4, 4) == 4 && FileLoader.INSTANCE.loads == 1;
             assert Arrays.equals(read, contents);
             assert p.read(read, 0, 1) == C.RESULT_END_OF_INPUT;
+            p.closeStreamFile();
+
+            Path moving = Files.write(dir.resolve("moving.tmp"), contents);
+            p = new Probe();
+            Probe opening = p;
+            opening.loadOperation.path = moving.toFile();
+            opening.loadOperation.cacheFileFinal = dir.resolve("moved.bin").toFile();
+            CountDownLatch moved = new CountDownLatch(1), finishPublish = new CountDownLatch(1);
+            try (var executor = Executors.newFixedThreadPool(2)) {
+                var publisher = executor.submit(() -> {
+                    opening.loadOperation.publishFinalFile(new File(moving.toString()) {
+                        @Override public boolean renameTo(File destination) {
+                            boolean renamed = super.renameTo(destination);
+                            moved.countDown();
+                            try {
+                                assert finishPublish.await(5, TimeUnit.SECONDS);
+                            } catch (InterruptedException e) {
+                                throw new AssertionError(e);
+                            }
+                            return renamed;
+                        }
+                    });
+                    return null;
+                });
+                try {
+                    assert moved.await(5, TimeUnit.SECONDS) && !Files.exists(moving);
+                    var reader = executor.submit(() -> opening.read(read, 0, 2));
+                    try {
+                        reader.get(100, TimeUnit.MILLISECONDS);
+                        throw new AssertionError("reader must wait for the renamed file");
+                    } catch (TimeoutException expected) {
+                        finishPublish.countDown();
+                    }
+                    publisher.get(5, TimeUnit.SECONDS);
+                    assert reader.get(5, TimeUnit.SECONDS) == 2;
+                } finally {
+                    finishPublish.countDown();
+                }
+            }
             p.closeStreamFile();
 
             Files.write(cache, contents);

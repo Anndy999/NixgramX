@@ -160,7 +160,7 @@ public class FileStreamLoadOperation implements DataSource, FileLoadOperationStr
             try {
                 file = new RandomAccessFile(currentFile, "r");
             } catch (FileNotFoundException e) {
-                File published = operation.getCurrentFileFast();
+                File published = operation.getPublishedFileForStream();
                 if (published == null || published.equals(currentFile)) throw e;
                 currentFile = published;
                 file = new RandomAccessFile(currentFile, "r");
