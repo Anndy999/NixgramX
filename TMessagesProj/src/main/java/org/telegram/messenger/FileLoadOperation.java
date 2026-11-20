@@ -10,6 +10,7 @@ package org.telegram.messenger;
 
 import android.os.SystemClock;
 
+import org.telegram.messenger.diagnostics.Diagnostics;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLObject;
@@ -56,7 +57,11 @@ public class FileLoadOperation {
     long streamOffset;
 
     public static volatile DispatchQueue2 filesQueue = new DispatchQueue2("writeFileQueue");
+    private static final int SMALL_FALLBACK_CHUNK_BYTES = 32 * 1024;
+    private static final int SMALL_FALLBACK_INITIAL_REQUESTS = 4;
+    private static final int SMALL_FALLBACK_MAX_REQUESTS = 16;
     private boolean forceSmallChunk;
+    private int successfulSmallChunks;
     private boolean useDownloadByteBudget;
     private int downloadConnectionsCount = 2;
     private boolean paceDocumentRequests;
@@ -931,8 +936,8 @@ public class FileLoadOperation {
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d("debug_loading: restart with small chunk");
                 }
-                currentDownloadChunkSize =  1024 * 32;
-                currentMaxDownloadRequests = 4;
+                currentDownloadChunkSize = SMALL_FALLBACK_CHUNK_BYTES;
+                currentMaxDownloadRequests = SMALL_FALLBACK_INITIAL_REQUESTS;
             } else if (isStory) {
                 currentDownloadChunkSize = downloadChunkSizeBig;
                 currentMaxDownloadRequests = maxDownloadRequestsBig;
@@ -1320,8 +1325,8 @@ public class FileLoadOperation {
             }
             updateProgress();
             try {
-                bufferedFileWrites = cacheFileParts != null && totalBytesCount >= bigFileSizeFrom
-                        && key == null && !encryptFile && !isStory && !isPreloadVideoOperation && preloadPrefixSize == 0;
+                bufferedFileWrites = cacheFileParts != null && (totalBytesCount >= bigFileSizeFrom || userDownloadPriority != 0)
+                        && key == null && !encryptFile && !isStory && !isPreloadVideoOperation;
                 fileOutputStream = new RandomAccessFile(cacheFileTemp, bufferedFileWrites ? "rw" : "rws");
                 if (cacheFileParts != null && fileOutputStream.length() > totalBytesCount) {
                     fileOutputStream.setLength(totalBytesCount);
@@ -1837,11 +1842,46 @@ public class FileLoadOperation {
         }, null, null, 0, datacenterId, ConnectionsManager.ConnectionTypeGeneric, true);
     }
 
+    private void restartWithSmallChunks(RequestInfo rejected) {
+        final long savedBytes = downloadedBytes;
+        clearOperation(rejected, false, false);
+        if (!isPreloadVideoOperation && notLoadedBytesRanges == null) {
+            requestedBytesCount = downloadedBytes = savedBytes;
+        }
+        priorityRequestInfo = null;
+        forceSmallChunk = true;
+        currentDownloadChunkSize = SMALL_FALLBACK_CHUNK_BYTES;
+        currentMaxDownloadRequests = SMALL_FALLBACK_INITIAL_REQUESTS;
+        Diagnostics.event(Diagnostics.Event.MEDIA_DOWNLOAD_SMALL_CHUNKS, currentMaxDownloadRequests);
+        startDownloadRequest(-1);
+    }
+
+    private void noteSuccessfulSmallChunk(RequestInfo requestInfo, long bytes) {
+        // Only increase concurrency after the server has accepted one full window at the current size.
+        if (!forceSmallChunk || !requestInfo.forceSmallChunk || bytes != SMALL_FALLBACK_CHUNK_BYTES
+                || paused || !useDownloadByteBudget || userDownloadPriority == 0 || isCdn
+                || totalBytesCount < bigFileSizeFrom || notLoadedBytesRanges == null) return;
+        if (caughtPremiumFloodWait) {
+            currentMaxDownloadRequests = SMALL_FALLBACK_INITIAL_REQUESTS;
+            successfulSmallChunks = 0;
+        } else if (currentMaxDownloadRequests < SMALL_FALLBACK_MAX_REQUESTS
+                && ++successfulSmallChunks >= currentMaxDownloadRequests) {
+            currentMaxDownloadRequests *= 2;
+            successfulSmallChunks = 0;
+            Diagnostics.event(Diagnostics.Event.MEDIA_DOWNLOAD_SMALL_CHUNKS, currentMaxDownloadRequests);
+        }
+    }
+
     protected boolean processRequestResult(RequestInfo requestInfo, TLRPC.TL_error error) {
         if (state != stateDownloading && state != stateCancelling) {
             if (BuildVars.DEBUG_VERSION && state == stateFinished) {
                 FileLog.e(new FileLog.IgnoreSentException("trying to write to finished file " + fileName + " offset " + requestInfo.offset + " " + totalBytesCount + " reqToken="+requestInfo.requestToken+" (state=" + state + ")"));
             }
+            return false;
+        }
+        if (forceSmallChunk && !requestInfo.forceSmallChunk) return false;
+        if (error != null && error.text.contains("LIMIT_INVALID") && !forceSmallChunk) {
+            if (state == stateDownloading) restartWithSmallChunks(requestInfo);
             return false;
         }
         final int requestToken = requestInfo.requestToken;
@@ -1978,8 +2018,10 @@ public class FileLoadOperation {
                     while (bytes.buffer.hasRemaining()) {
                         if (channel.write(bytes.buffer) <= 0) throw new IOException("Unable to write the full download part");
                     }
+                    long addedBytes = currentBytesSize;
                     if (notLoadedBytesRanges != null) {
-                        downloadedBytes += addPart(notLoadedBytesRanges, requestInfo.offset, requestInfo.offset + currentBytesSize);
+                        addedBytes = addPart(notLoadedBytesRanges, requestInfo.offset, requestInfo.offset + currentBytesSize);
+                        downloadedBytes += addedBytes;
                         finishPreload = downloadedBytes < totalBytesCount && preloadPrefixSize > 0
                                 && downloadedBytes >= preloadPrefixSize && canFinishPreload() && requestInfos.isEmpty();
                         finishedDownloading = notLoadedBytesRanges.isEmpty() || finishPreload;
@@ -2049,6 +2091,7 @@ public class FileLoadOperation {
                         fiv.write(iv);
                     }
                     noteCheckpointProgress(currentBytesSize);
+                    if (!finishedDownloading && state == stateDownloading) noteSuccessfulSmallChunk(requestInfo, addedBytes);
                     readableSequentialBytes = downloadedBytes;
                     copyNotLoadedRanges();
                     notifyStreamListeners();
@@ -2080,7 +2123,7 @@ public class FileLoadOperation {
                 if (finishedDownloading) {
                     onFinishLoadingFile(true, FINISH_CODE_DEFAULT, finishPreload);
                 } else if (state != stateCanceled && state != stateCancelling) {
-                    startDownloadRequest(requestInfo.connectionType);
+                    startDownloadRequest(forceSmallChunk ? -1 : requestInfo.connectionType);
                 }
             } catch (Exception e) {
                 FileLog.e(e, !AndroidUtilities.isFilNotFoundException(e) && !AndroidUtilities.isENOSPC(e));
@@ -2094,18 +2137,7 @@ public class FileLoadOperation {
                 }
             }
         } else {
-            if (error.text.contains("LIMIT_INVALID") && !requestInfo.forceSmallChunk) {
-                if (requestInfo.whenCancelled != null) {
-                    requestInfo.whenCancelled.run();
-                }
-                removePart(notRequestedBytesRanges, requestInfo.offset, requestInfo.offset + requestInfo.chunkSize);
-                if (!forceSmallChunk) {
-                    forceSmallChunk = true;
-                    currentDownloadChunkSize =  1024 * 32;
-                    currentMaxDownloadRequests = 4;
-                }
-                startDownloadRequest(requestInfo.connectionType);
-            } else if (error.text.contains("FILE_MIGRATE_")) {
+            if (error.text.contains("FILE_MIGRATE_")) {
                 String errorMsg = error.text.replace("FILE_MIGRATE_", "");
                 Scanner scanner = new Scanner(errorMsg);
                 scanner.useDelimiter("");
@@ -2489,7 +2521,7 @@ public class FileLoadOperation {
             requestInfo.forceSmallChunk = forceSmallChunk;
             requestInfo.connectionType = connectionType;
 
-            if (!isPreloadVideoOperation && supportsPreloading && preloadStream != null && preloadedBytesRanges != null) {
+            if (!forceSmallChunk && !isPreloadVideoOperation && supportsPreloading && preloadStream != null && preloadedBytesRanges != null) {
                 PreloadRange range = preloadedBytesRanges.get(requestInfo.offset);
                 if (range != null) {
                     requestInfo.response = new TLRPC.TL_upload_file();
@@ -2540,6 +2572,7 @@ public class FileLoadOperation {
             int datacenterId = isCdn ? cdnDatacenterId : this.datacenterId;
             requestInfo.speedRouteGeneration = DownloadSpeedEstimator.getRouteGeneration();
             final int requestToken = requestInfo.requestToken = ConnectionsManager.getInstance(currentAccount).sendRequestSync(request, (response, error) -> {
+                if (forceSmallChunk && !requestInfo.forceSmallChunk) return;
                 if (requestInfo.cancelled) {
                     FileLog.e("received chunk but definitely cancelled offset=" + requestInfo.offset + " size=" + requestInfo.chunkSize + " token=" + requestInfo.requestToken);
                     return;

@@ -7,6 +7,103 @@ MESSENGER = JAVA / 'org/telegram/messenger'
 
 
 class DownloadPipelineTest(unittest.TestCase):
+    def test_rejected_limit_requeues_inflight_ranges_and_recovers_small_chunk_concurrency(self):
+        source = (MESSENGER / 'FileLoadOperation.java').read_text()
+        constants = section(source, '    private static final int SMALL_FALLBACK_CHUNK_BYTES', '    private boolean useDownloadByteBudget;')
+        ranges = section(source, '    public static class Range {', '    private static final Object lockObject')
+        restore = section(source, '    private void removePart(', '    long totalTime;')
+        reset = section(source, '    private void clearOperation(', '    private void requestReference(')
+        fallback = section(source, '    private void restartWithSmallChunks(', '        final int requestToken = requestInfo.requestToken;')
+        run_java('''
+import java.util.*;
+class TLRPC {
+    static class TL_error { String text = "LIMIT_INVALID"; }
+    static class Response { boolean disableFree; void freeResources() {} }
+}
+class BuildVars { static final boolean DEBUG_VERSION = false; }
+class FileLog { static void e(Exception e) {} static class IgnoreSentException extends Exception { IgnoreSentException(String s) {} } }
+class DownloadSpeedEstimator { static boolean isFast() { return true; } }
+class Diagnostics {
+    enum Event { MEDIA_DOWNLOAD_SMALL_CHUNKS }
+    static List<Integer> windows = new ArrayList<>();
+    static void event(Event e, int requests) { windows.add(requests); }
+}
+class ConnectionsManager {
+    static final int DownloadConnectionsCount = 8, ConnectionTypeDownload = 2;
+    static ConnectionsManager getInstance(int i) { return new ConnectionsManager(); }
+    void cancelRequest(int token, boolean notify) {}
+    void cancelRequest(int token, boolean notify, Runnable onCancel) { throw new AssertionError(); }
+    void discardConnection(int dc, int type) { throw new AssertionError(); }
+}
+class Probe {
+    static final int BIG_PART = 128 * 1024;
+    static class RequestInfo {
+        long offset;
+        int requestToken = 1, chunkSize = BIG_PART, connectionType = 2;
+        boolean forceSmallChunk, cancelling, cancelled;
+        Runnable whenCancelled;
+        TLRPC.Response response, responseWeb, responseCdn;
+        RequestInfo(long offset) { this.offset = offset; }
+    }
+    int stateDownloading = 1, stateCancelling = 2, stateFinished = 3, state = 1;
+    int currentAccount, datacenterId, cdnDatacenterId, currentDownloadChunkSize = BIG_PART;
+    int currentMaxDownloadRequests = 16, requestsCount, userDownloadPriority = 1, restartCount;
+    int bigFileSizeFrom = 10 * 1024 * 1024;
+    long downloadedBytes, requestedBytesCount, totalPreloadedBytes, totalBytesCount = 12 * 1024 * 1024;
+    boolean paused, isPreloadVideoOperation, useDownloadByteBudget = true, isCdn, caughtPremiumFloodWait;
+    ArrayList<Range> notRequestedBytesRanges, notLoadedBytesRanges;
+    ArrayList<RequestInfo> requestInfos = new ArrayList<>(), delayedRequestInfos = new ArrayList<>(), cancelledRequestInfos = new ArrayList<>();
+    Map<Long, Integer> requestedPreloadedBytesRanges = new HashMap<>();
+    Set<Integer> activeRequestTokens = new HashSet<>();
+    RequestInfo priorityRequestInfo;
+    String fileName = "fixture";
+    int getMaxCancelledBytesPerConnection() { return 1024 * 1024; }
+    void startDownloadRequest(int type) { assert type == -1; restartCount++; }
+''' + constants + ranges + restore + reset + fallback + '''
+        throw new AssertionError("unexpected response after the fallback guard");
+    }
+    public static void main(String[] args) {
+        Probe p = new Probe();
+        var rejected = new RequestInfo(BIG_PART);
+        var waiting = new RequestInfo(2L * BIG_PART);
+        p.requestInfos.addAll(List.of(rejected, waiting));
+        p.downloadedBytes = 2L * BIG_PART;
+        p.notLoadedBytesRanges = new ArrayList<>(List.of(new Range(BIG_PART, 3L * BIG_PART), new Range(4L * BIG_PART, p.totalBytesCount)));
+        p.notRequestedBytesRanges = new ArrayList<>(List.of(new Range(4L * BIG_PART, p.totalBytesCount)));
+        assert !p.processRequestResult(rejected, new TLRPC.TL_error());
+        assert p.restartCount == 1 && waiting.cancelled && p.requestInfos.isEmpty();
+        assert p.downloadedBytes == 2L * BIG_PART && p.notRequestedBytesRanges.size() == 2;
+        assert p.notRequestedBytesRanges.get(0).start == BIG_PART && p.notRequestedBytesRanges.get(0).end == 3L * BIG_PART;
+        assert p.currentDownloadChunkSize == 32 * 1024 && p.currentMaxDownloadRequests == 4;
+        assert !p.processRequestResult(waiting, null) && p.restartCount == 1;
+
+        var accepted = new RequestInfo(BIG_PART);
+        accepted.forceSmallChunk = true;
+        p.noteSuccessfulSmallChunk(accepted, 0);
+        for (int i = 0; i < 3; i++) p.noteSuccessfulSmallChunk(accepted, SMALL_FALLBACK_CHUNK_BYTES);
+        assert p.currentMaxDownloadRequests == 4;
+        for (int i = 0; i < 29; i++) p.noteSuccessfulSmallChunk(accepted, SMALL_FALLBACK_CHUNK_BYTES);
+        assert Diagnostics.windows.equals(List.of(4, 8, 16));
+        assert p.currentMaxDownloadRequests * p.currentDownloadChunkSize == 512 * 1024;
+        p.caughtPremiumFloodWait = true;
+        p.noteSuccessfulSmallChunk(accepted, SMALL_FALLBACK_CHUNK_BYTES);
+        assert p.currentMaxDownloadRequests == 4;
+
+        Probe sequential = new Probe();
+        sequential.downloadedBytes = BIG_PART;
+        var rejectedLater = new RequestInfo(2L * BIG_PART);
+        sequential.requestInfos.add(rejectedLater);
+        sequential.processRequestResult(rejectedLater, new TLRPC.TL_error());
+        assert sequential.downloadedBytes == BIG_PART && sequential.requestedBytesCount == BIG_PART;
+
+        Probe cancelling = new Probe();
+        cancelling.state = cancelling.stateCancelling;
+        assert !cancelling.processRequestResult(new RequestInfo(0), new TLRPC.TL_error());
+        assert cancelling.restartCount == 0;
+    }
+}
+''')
+
     def test_checkpoint_requires_valid_ranges_and_groups_writes(self):
         source = (MESSENGER / 'FileLoadOperation.java').read_text()
         ranges = section(source, '    public static class Range {', '    private static final Object lockObject')
