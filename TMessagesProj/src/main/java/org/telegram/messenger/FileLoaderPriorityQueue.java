@@ -1,6 +1,6 @@
 package org.telegram.messenger;
 
-
+import android.os.SystemClock;
 
 import java.util.ArrayList;
 
@@ -16,12 +16,15 @@ public class FileLoaderPriorityQueue {
     public ArrayList<FileLoadOperation> tmpListOperations = new ArrayList<>();
 
     public final static int PRIORITY_VALUE_MAX = (1 << 20);
+    public final static int PRIORITY_VALUE_USER_DOWNLOAD = (1 << 19);
     public final static int PRIORITY_VALUE_NORMAL = (1 << 16);
     public final static int PRIORITY_VALUE_LOW = 0;
 
     final DispatchQueue2 workerQueue;
 
     boolean checkOperationsScheduled = false;
+    private static final long STORY_START_EXCLUSIVE_MS = 1500;
+    private long storyExclusiveUntil;
     private final Runnable checkVisibleStoryRunnable = () -> checkLoadingOperations();
 
     Runnable checkOperationsRunnable = () -> {
@@ -41,12 +44,7 @@ public class FileLoaderPriorityQueue {
             return;
         }
         int index = -1;
-        for (int i = 0; i < allOperations.size(); i++) {
-            if (allOperations.get(i) == operation) {
-                allOperations.remove(i);
-                i--;
-            }
-        }
+        allOperations.remove(operation);
         for (int i = 0; i < allOperations.size(); i++) {
             if (operation.getPriority() > allOperations.get(i).getPriority()) {
                 index = i;
@@ -93,15 +91,25 @@ public class FileLoaderPriorityQueue {
         boolean pauseAllNextOperations = false;
         int max = type == TYPE_LARGE ? MessagesController.getInstance(currentAccount).largeQueueMaxActiveOperations : MessagesController.getInstance(currentAccount).smallQueueMaxActiveOperations;
         tmpListOperations.clear();
-        // Until the visible story can be shown, other large downloads wait, as they would share its bandwidth.
+        // Reserve bandwidth for the first frame for a bounded interval across consecutive stories.
         FileLoadOperation visibleStory = null;
+        boolean waitingForStory = false;
         if (type == TYPE_LARGE && !allOperations.isEmpty()) {
             FileLoadOperation first = allOperations.get(0);
             if (first.isStory && first.getPriority() >= PRIORITY_VALUE_MAX && !first.preFinished && !first.hasStoryStartData()) {
-                visibleStory = first;
-                workerQueue.cancelRunnable(checkVisibleStoryRunnable);
-                workerQueue.postRunnable(checkVisibleStoryRunnable, 250);
+                waitingForStory = true;
+                long now = SystemClock.elapsedRealtime();
+                if (storyExclusiveUntil == 0) storyExclusiveUntil = now + STORY_START_EXCLUSIVE_MS;
+                if (now < storyExclusiveUntil) {
+                    visibleStory = first;
+                    workerQueue.cancelRunnable(checkVisibleStoryRunnable);
+                    workerQueue.postRunnable(checkVisibleStoryRunnable, Math.min(250, storyExclusiveUntil - now));
+                }
             }
+        }
+        if (!waitingForStory) {
+            storyExclusiveUntil = 0;
+            workerQueue.cancelRunnable(checkVisibleStoryRunnable);
         }
         for (int i = 0; i < allOperations.size(); i++) {
             FileLoadOperation prevOperation = i > 0 ? allOperations.get(i - 1) : null;
@@ -126,11 +134,10 @@ public class FileLoaderPriorityQueue {
             if (operation.preFinished) {
                 //operation will not use connections
                 //just skip
-                max++;
 //                if (BuildVars.DEBUG_PRIVATE_VERSION)
 //                    FileLog.d("{"+name+"}.checkLoadingOperationInternal: #" + i + " "+operation.getFileName()+" priority="+operation.getPriority()+" isStory="+operation.isStory+" preFinished="+ operation.preFinished+" pauseAllNextOperations=" + pauseAllNextOperations + " max=" + max + " => skip");
                 continue;
-            } else if (!pauseAllNextOperations && i < max) {
+            } else if (!pauseAllNextOperations && activeCount < max) {
 //                if (BuildVars.DEBUG_PRIVATE_VERSION)
 //                    FileLog.d("{"+name+"}.checkLoadingOperationInternal: #" + i + " " +operation.getFileName()+" priority="+operation.getPriority()+" isStory="+operation.isStory+" preFinished="+ operation.preFinished+" pauseAllNextOperations=" + pauseAllNextOperations + " max=" + max + " => start");
                 tmpListOperations.add(operation);

@@ -34,6 +34,7 @@ import org.telegram.messenger.BaseController;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.CaptchaController;
+import org.telegram.messenger.DownloadSpeedEstimator;
 import org.telegram.messenger.EmuDetector;
 import org.telegram.messenger.FileLoadOperation;
 import org.telegram.messenger.FileLoader;
@@ -1030,6 +1031,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setProxySettings(boolean enabled, ProxySettings settings) {
+        DownloadSpeedEstimator.onRouteChanged();
         org.telegram.messenger.diagnostics.Diagnostics.event(
                 org.telegram.messenger.diagnostics.Diagnostics.Event.PROXY_CHANGE, enabled ? 1 : 0);
         String address = "";

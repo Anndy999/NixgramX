@@ -36,11 +36,13 @@ public class FileLoader extends BaseController {
 
     private static final int PRIORITY_STREAM = 4;
     public static final int PRIORITY_HIGH = 3;
+    public static final int PRIORITY_USER_DOWNLOAD = 5;
     public static final int PRIORITY_NORMAL_UP = 2;
     public static final int PRIORITY_NORMAL = 1;
     public static final int PRIORITY_LOW = 0;
 
     private int priorityIncreasePointer;
+    private static final int PRIORITY_ORDER_MASK = (1 << 18) - 1;
 
     private static Pattern sentPattern;
 
@@ -109,11 +111,11 @@ public class FileLoader extends BaseController {
         if (priorityType == PRIORITY_STREAM) {
             return Integer.MAX_VALUE;
         } else if (priorityType == PRIORITY_HIGH) {
-            priorityIncreasePointer++;
-            return FileLoaderPriorityQueue.PRIORITY_VALUE_MAX + priorityIncreasePointer;
+            return FileLoaderPriorityQueue.PRIORITY_VALUE_MAX + (++priorityIncreasePointer & PRIORITY_ORDER_MASK);
+        } else if (priorityType == PRIORITY_USER_DOWNLOAD) {
+            return FileLoaderPriorityQueue.PRIORITY_VALUE_USER_DOWNLOAD + (++priorityIncreasePointer & PRIORITY_ORDER_MASK);
         } else if (priorityType == PRIORITY_NORMAL_UP) {
-            priorityIncreasePointer++;
-            return FileLoaderPriorityQueue.PRIORITY_VALUE_NORMAL + priorityIncreasePointer;
+            return FileLoaderPriorityQueue.PRIORITY_VALUE_NORMAL + (++priorityIncreasePointer & PRIORITY_ORDER_MASK);
         } else if (priorityType == PRIORITY_NORMAL) {
             return FileLoaderPriorityQueue.PRIORITY_VALUE_NORMAL;
         } else {
@@ -667,7 +669,7 @@ public class FileLoader extends BaseController {
         fileLoaderQueue.postRunnable(() -> {
             FileLoadOperation operation = loadOperationPaths.get(fileName);
             if (operation != null) {
-                int newPriority = getPriorityValue(priority);
+                int newPriority = operation.resolvePriority(getPriorityValue(priority), priority == PRIORITY_USER_DOWNLOAD);
                 if (operation.getPriority() == newPriority) {
                     return;
                 }
@@ -726,7 +728,7 @@ public class FileLoader extends BaseController {
 
     public FileLoadOperation findLoadOperationByRequestToken(final int requestToken) {
         for (FileLoadOperation operation : loadOperationPaths.values()) {
-            if (operation != null && operation.uiRequestTokens.contains(requestToken)) {
+            if (operation != null && operation.hasRequestToken(requestToken)) {
                 return operation;
             }
         }
@@ -852,22 +854,26 @@ public class FileLoader extends BaseController {
         final String finalFileName = fileName;
         FileLoadOperation operation = loadOperationPaths.get(finalFileName);
 
+        final boolean userDownload = priority == PRIORITY_USER_DOWNLOAD;
         priority = getPriorityValue(priority);
 
         if (operation != null) {
             if (cacheType != 10 && operation.isPreloadVideoOperation()) {
                 operation.setIsPreloadVideoOperation(false);
             }
+            priority = operation.resolvePriority(priority, userDownload);
             operation.setForceRequest(priority > 0);
-            operation.setStream(stream, streamPriority, streamOffset);
+            if (stream != null || !userDownload) {
+                operation.setStream(stream, streamPriority, streamOffset);
+            }
             boolean priorityChanged = false;
             if (operation.getPriority() != priority) {
                 priorityChanged = true;
                 operation.setPriority(priority);
+                operation.getQueue().add(operation);
             }
-            operation.getQueue().add(operation);
             operation.updateProgress();
-            if (priorityChanged) {
+            if (priorityChanged || stream != null) {
                 operation.getQueue().checkLoadingOperations();
             }
 //            FileLog.d("load operation update position fileName=" + finalFileName + " position in queue " + operation.getPositionInQueue() + " preloadFinish " + operation.isPreloadFinished() + " priority=" + operation.getPriority());
@@ -1069,7 +1075,7 @@ public class FileLoader extends BaseController {
         operation.setDelegate(fileLoadOperationDelegate);
 
         loadOperationPaths.put(finalFileName, operation);
-        operation.setPriority(priority);
+        operation.setPriority(operation.resolvePriority(priority, userDownload));
         if (stream == null) {
             stream = FileStreamLoadOperation.allStreams.get(documentId);
         }

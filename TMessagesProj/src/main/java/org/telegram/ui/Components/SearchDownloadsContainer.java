@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DownloadController;
 import org.telegram.messenger.FileLoader;
@@ -167,11 +166,11 @@ public class SearchDownloadsContainer extends FrameLayout implements Notificatio
                     AndroidUtilities.openDocument(message, parentActivity, parentFragment);
                 } else if (!cell.isLoading()) {
                     messageObject.putInDownloadsStore = true;
-                    AccountInstance.getInstance(UserConfig.selectedAccount).getFileLoader().loadFile(document, messageObject, FileLoader.PRIORITY_LOW, 0);
+                    FileLoader.getInstance(currentAccount).loadFile(document, messageObject, FileLoader.PRIORITY_USER_DOWNLOAD, 0);
                     cell.updateFileExistIcon(true);
                     DownloadController.getInstance(currentAccount).updateFilesLoadingPriority();
                 } else {
-                    AccountInstance.getInstance(UserConfig.selectedAccount).getFileLoader().cancelLoadFile(document);
+                    FileLoader.getInstance(currentAccount).cancelLoadFile(document);
                     cell.updateFileExistIcon(true);
                 }
                 update(true);
@@ -554,9 +553,9 @@ public class SearchDownloadsContainer extends FrameLayout implements Notificatio
                                 for (int i = 0; i < currentLoadingFiles.size(); i++) {
                                     MessageObject messageObject = currentLoadingFiles.get(i);
                                     if (hasCurrentDownload) {
-                                        AccountInstance.getInstance(UserConfig.selectedAccount).getFileLoader().cancelLoadFile(messageObject.getDocument());
+                                        FileLoader.getInstance(currentAccount).cancelLoadFile(messageObject.getDocument());
                                     } else {
-                                        AccountInstance.getInstance(UserConfig.selectedAccount).getFileLoader().loadFile(messageObject.getDocument(), messageObject, FileLoader.PRIORITY_LOW, 0);
+                                        FileLoader.getInstance(currentAccount).loadFile(messageObject.getDocument(), messageObject, FileLoader.PRIORITY_USER_DOWNLOAD, 0);
                                         DownloadController.getInstance(currentAccount).updateFilesLoadingPriority();
                                     }
                                 }

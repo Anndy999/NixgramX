@@ -1697,7 +1697,7 @@ public class DownloadController extends BaseController implements NotificationCe
     public void updateFilesLoadingPriority() {
         for (int i = downloadingFiles.size() - 1; i >= 0 ; i--) {
             if (getFileLoader().isLoadingFile(downloadingFiles.get(i).getFileName())) {
-                getFileLoader().loadFile(downloadingFiles.get(i).getDocument(), downloadingFiles.get(i), FileLoader.PRIORITY_NORMAL_UP, 0);
+                getFileLoader().loadFile(downloadingFiles.get(i).getDocument(), downloadingFiles.get(i), FileLoader.PRIORITY_USER_DOWNLOAD, 0);
             }
         }
     }
