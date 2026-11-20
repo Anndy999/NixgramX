@@ -85,23 +85,27 @@ public class GlassEngine {
             }
             return false;
         })) {
-            externalCapturePositionInvalidated = true;
+            capturePositionsInvalidated = true;
         }
     }
 
     private final RectF externalCapturePosition = new RectF();
-    private boolean externalCapturePositionInvalidated;
+    private boolean capturePositionsInvalidated;
+
+    public void invalidateCapturePositions() {
+        capturePositionsInvalidated = true;
+    }
 
     /** The area of a glass that is not in the root's views, e.g. the tabs over a page: in the root's coordinates, null for none. */
     public void setExternalCapturePosition(@Nullable RectF position) {
         if (position == null) {
             if (!externalCapturePosition.isEmpty()) {
                 externalCapturePosition.setEmpty();
-                externalCapturePositionInvalidated = true;
+                capturePositionsInvalidated = true;
             }
         } else if (!externalCapturePosition.equals(position)) {
             externalCapturePosition.set(position);
-            externalCapturePositionInvalidated = true;
+            capturePositionsInvalidated = true;
         }
     }
 
@@ -311,7 +315,7 @@ public class GlassEngine {
             lastGlassSettingsGenerationId = glassSettingsGenerationId;
             flags |= FLAG_INVALIDATED_LITE_MODE;
             // a glass may go over to a source without a capture and back
-            externalCapturePositionInvalidated = true;
+            capturePositionsInvalidated = true;
         }
 
         final long themeGenerationId = Theme.getThemeGenerationId();
@@ -453,8 +457,8 @@ public class GlassEngine {
             lastRootHeight = H;
             hasInvalidatedPositionsOrVisibility = true;
         }
-        if (externalCapturePositionInvalidated) {
-            externalCapturePositionInvalidated = false;
+        if (capturePositionsInvalidated) {
+            capturePositionsInvalidated = false;
             hasInvalidatedPositionsOrVisibility = true;
         }
 

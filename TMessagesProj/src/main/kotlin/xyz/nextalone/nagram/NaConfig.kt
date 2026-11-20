@@ -1284,6 +1284,12 @@ object NaConfig {
             ConfigItem.configTypeBool,
             false
         )
+    val iosInputGlass =
+        addConfig(
+            "IosInputGlass",
+            ConfigItem.configTypeBool,
+            true
+        )
     val compactInputSize =
         addConfig(
             "CompactInputSize",

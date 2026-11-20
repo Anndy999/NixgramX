@@ -117,6 +117,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
     private final AbstractConfigCell inputBarPreviewRow = cellGroup.appendCell(new ConfigCellCustom("InputBarPreview", ConfigCellCustom.CUSTOM_ITEM_InputBarPreview, false));
     private final AbstractConfigCell iosButtonPlacementRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getIosButtonPlacement()));
     private final AbstractConfigCell iosInputAppearanceRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getIosInputAppearance()));
+    private final AbstractConfigCell iosInputGlassRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getIosInputGlass(), getString(R.string.IosInputGlassDescription)));
     private final AbstractConfigCell compactInputSizeRow = cellGroup.appendCell(new ConfigCellTextCheck(NaConfig.INSTANCE.getCompactInputSize()));
     private final AbstractConfigCell actionButtonStyleRow = cellGroup.appendCell(new ConfigCellSelectBox(null, NaConfig.INSTANCE.getActionButtonStyle(), new String[]{
             getString(R.string.ActionButtonStyleAccent),
@@ -529,6 +530,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         checkSkipOpenLinkConfirmRows();
         checkConfirmAVRows();
         if (!NaConfig.INSTANCE.getIosInputAppearance().Bool()) {
+            cellGroup.rows.remove(iosInputGlassRow);
             cellGroup.rows.remove(compactInputSizeRow);
         }
         // NIXGRAMX_POLICY_ONLINE: online-status enhance removed-by-policy
@@ -564,13 +566,16 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         cellGroup.callBackSettingsChanged = (key, newValue) -> {
             if (key.equals(NaConfig.INSTANCE.getIosButtonPlacement().getKey())
                     || key.equals(NaConfig.INSTANCE.getIosInputAppearance().getKey())
+                    || key.equals(NaConfig.INSTANCE.getIosInputGlass().getKey())
                     || key.equals(NaConfig.INSTANCE.getCompactInputSize().getKey())
                     || key.equals(NaConfig.INSTANCE.getActionButtonStyle().getKey())) {
                 if (inputBarPreviewCell != null) {
                     inputBarPreviewCell.updateInputBarState();
                 }
             }
-            if (key.equals(NekoConfig.disableProximityEvents.getKey())) {
+            if (key.equals(NaConfig.INSTANCE.getIosInputGlass().getKey())) {
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.chatInputGlassChanged);
+            } else if (key.equals(NekoConfig.disableProximityEvents.getKey())) {
                 MediaController.getInstance().recreateProximityWakeLock();
             } else if (key.equals(NekoConfig.showSeconds.getKey())) {
                 tooltip.showWithAction(0, UndoView.ACTION_NEED_RESTART, null, null);
@@ -621,12 +626,17 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
             } else if (key.equals(NaConfig.INSTANCE.getIosInputAppearance().getKey())) {
                 boolean iosOn = NaConfig.INSTANCE.getIosInputAppearance().Bool();
                 if (iosOn) {
+                    if (!cellGroup.rows.contains(iosInputGlassRow)) {
+                        cellGroup.rows.add(cellGroup.rows.indexOf(iosInputAppearanceRow) + 1, iosInputGlassRow);
+                    }
                     if (!cellGroup.rows.contains(compactInputSizeRow)) {
-                        cellGroup.rows.add(cellGroup.rows.indexOf(dividerInputBar), compactInputSizeRow);
+                        cellGroup.rows.add(cellGroup.rows.indexOf(iosInputGlassRow) + 1, compactInputSizeRow);
                     }
                 } else {
+                    cellGroup.rows.remove(iosInputGlassRow);
                     cellGroup.rows.remove(compactInputSizeRow);
                 }
+                addRowsToMap(cellGroup);
                 listAdapter.notifyDataSetChanged();
             }
         };
@@ -935,6 +945,14 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
             capsuleDrawable = createBubble();
             leftBubbleDrawable = createBubble();
             rightBubbleDrawable = createBubble();
+            updateGlassMaterial();
+        }
+
+        private void updateGlassMaterial() {
+            final boolean solid = !NaConfig.INSTANCE.getIosInputGlass().Bool();
+            capsuleDrawable.setSolidBackground(solid);
+            leftBubbleDrawable.setSolidBackground(solid);
+            rightBubbleDrawable.setSolidBackground(solid);
         }
 
         private BlurredBackgroundDrawable createBubble() {
@@ -947,6 +965,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
             isPlacementEnabled = NaConfig.INSTANCE.getIosButtonPlacement().Bool();
             isAppearanceEnabled = NaConfig.INSTANCE.getIosInputAppearance().Bool();
             isCompactEnabled = NaConfig.INSTANCE.getCompactInputSize().Bool() && isAppearanceEnabled;
+            updateGlassMaterial();
             int gapDp = isCompactEnabled ? GAP_COMPACT_DP : GAP_NORMAL_DP;
             gapPx = AndroidUtilities.dp(gapDp);
 
@@ -1025,7 +1044,7 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
         public void didReceivedNotification(int id, int account, Object... args) {
             if (id == NotificationCenter.didSetNewWallpapper) {
                 buildGlassFactory();
-                invalidate();
+                updateInputBarState();
             }
         }
     }
