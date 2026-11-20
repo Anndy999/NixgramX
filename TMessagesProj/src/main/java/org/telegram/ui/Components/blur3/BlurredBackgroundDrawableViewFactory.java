@@ -62,6 +62,12 @@ public class BlurredBackgroundDrawableViewFactory {
         this.engine = engine;
     }
 
+    public void invalidateCapturePositions() {
+        if (engine != null) {
+            engine.invalidateCapturePositions();
+        }
+    }
+
     public void setOutset(int outset) {
         setOutset(outset, outset);
     }

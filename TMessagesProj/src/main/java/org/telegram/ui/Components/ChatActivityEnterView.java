@@ -2735,6 +2735,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         observersGroup = NotificationCenter.getInstance(currentAccount)
             .createWeakObserversGroup(this)
             .addGlobal(NotificationCenter.emojiLoaded)
+            .addGlobal(NotificationCenter.chatInputGlassChanged)
             .add(NotificationCenter.recordStarted)
             .add(NotificationCenter.recordPaused)
             .add(NotificationCenter.recordResumed)
@@ -2826,6 +2827,9 @@ public class ChatActivityEnterView extends FrameLayout implements
         FrameLayout frameLayout = messageEditTextContainer = new FrameLayout(context) {
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                if (!isIosButtonPlacement() && editingMessageObject == null) {
+                    updateFieldRight(lastAttachVisible);
+                }
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec);
                 final int height = Math.max(dp(44), getMeasuredHeight());
                 if (animatorInputFieldHeight.getFactor() > 0) {
@@ -4011,11 +4015,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (isIosButtonPlacement()) {
             newRightMargin = dp(iosGapDp);
         } else {
-            boolean isPaperclipVisible = attachButton != null && attachButton.getVisibility() == VISIBLE;
-            boolean isBotVisible = botButton != null && botButton.getVisibility() == VISIBLE;
-            boolean isGiftVisible = giftButton != null && giftButton.getVisibility() == VISIBLE;
-            int slotsDp = (isPaperclipVisible ? DEFAULT_HEIGHT : 0) + (isBotVisible ? DEFAULT_HEIGHT : 0) + (isGiftVisible ? DEFAULT_HEIGHT : 0);
-            newRightMargin = dp(slotsDp);
+            newRightMargin = getRightAttachmentExtent();
         }
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) scheduledButton.getLayoutParams();
         if (layoutParams.rightMargin != newRightMargin) {
@@ -5118,6 +5118,28 @@ public class ChatActivityEnterView extends FrameLayout implements
         whiteSendBubbleColorProvider = whiteColorProvider;
         accentSendBubbleColorProvider = accentColorProvider;
         initIosBubbles(factory, colorProvider);
+        updateInputBarGlass();
+    }
+
+    private void updateInputBarGlass() {
+        if (fieldPillDrawable == null) return;
+        final boolean solid = !NaConfig.INSTANCE.getIosInputGlass().Bool();
+        for (BlurredBackgroundDrawable drawable : new BlurredBackgroundDrawable[]{
+                fieldPillDrawable, attachBubbleDrawable, topViewBubbleDrawable, sendBubbleDrawable,
+                voiceBubbleDrawable, doneBubbleDrawable, emojiBubbleDrawable, expandStickersBubbleDrawable,
+                cancelBotBubbleDrawable, aiBubbleDrawable, richBubbleDrawable, recordDeleteBubbleDrawable}) {
+            if (drawable != null) {
+                drawable.setSolidBackground(solid);
+            }
+        }
+        glassBackgroundDrawableFactory.invalidateCapturePositions();
+        messageEditTextContainer.invalidate();
+        textFieldContainer.invalidate();
+        sendButtonContainer.invalidate();
+        if (recordedAudioPanel != null) {
+            recordedAudioPanel.invalidate();
+        }
+        invalidate();
     }
 
     private BlurredBackgroundColorProviderThemed resolveSendBubbleColorProvider() {
@@ -5178,6 +5200,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (recordDeleteBubbleDrawable == null && recordedAudioPanel != null && glassBackgroundDrawableFactory != null && blurredBackgroundColorProvider != null) {
             recordDeleteBubbleDrawable = glassBackgroundDrawableFactory.create(recordedAudioPanel, blurredBackgroundColorProvider);
             recordDeleteBubbleDrawable.setRadius(dp(IOS_BUBBLE_RADIUS_DP));
+            recordDeleteBubbleDrawable.setSolidBackground(!NaConfig.INSTANCE.getIosInputGlass().Bool());
         }
     }
 
@@ -10242,6 +10265,30 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
     }
 
+    // Distance from the container's right edge to the left edge of the attachment controls.
+    private int getRightAttachmentExtent() {
+        int extent = 0;
+        if (attachButton != null && attachButton.getVisibility() == VISIBLE) {
+            MarginLayoutParams params = (MarginLayoutParams) attachButton.getLayoutParams();
+            extent = params.rightMargin + params.width;
+        }
+        if (attachLayout != null && attachLayout.getVisibility() == VISIBLE) {
+            int width = 0;
+            for (int i = 0; i < attachLayout.getChildCount(); i++) {
+                View child = attachLayout.getChildAt(i);
+                if (child.getVisibility() != GONE) {
+                    MarginLayoutParams params = (MarginLayoutParams) child.getLayoutParams();
+                    width += params.width + params.leftMargin + params.rightMargin;
+                }
+            }
+            if (width > 0) {
+                MarginLayoutParams params = (MarginLayoutParams) attachLayout.getLayoutParams();
+                extent = Math.max(extent, params.rightMargin + width);
+            }
+        }
+        return extent;
+    }
+
     private void updateFieldRight(int attachVisible) {
         lastAttachVisible = attachVisible;
         if (messageEditText == null || (!isIosButtonPlacement() && editingMessageObject != null && !editingMessageObject.needResendWhenEdit())) {
@@ -10279,13 +10326,13 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (isStories && isLiveComment) {
             layoutParams.rightMargin = dp(suggestButtonVisible ? 50 : 2) + Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT));
         } else {
+            int attachmentExtent = getRightAttachmentExtent();
             boolean isScheduledVisible = scheduledButton != null && scheduledButton.getVisibility() == VISIBLE;
-            boolean isPaperclipVisible = attachButton != null && attachButton.getVisibility() == VISIBLE;
             if (isScheduledVisible) {
                 int scheduledRightMargin = ((FrameLayout.LayoutParams) scheduledButton.getLayoutParams()).rightMargin;
                 layoutParams.rightMargin = scheduledRightMargin + dp(DEFAULT_HEIGHT + RIGHT_CLUSTER_GAP_DP);
-            } else if (isPaperclipVisible) {
-                layoutParams.rightMargin = dp(DEFAULT_HEIGHT + RIGHT_CLUSTER_GAP_DP);
+            } else if (attachmentExtent > 0) {
+                layoutParams.rightMargin = attachmentExtent + dp(RIGHT_CLUSTER_GAP_DP);
             } else {
                 layoutParams.rightMargin = isIosInputAppearance()
                         ? dp(iosGapDp + CAPSULE_INSET_DP + NO_ICON_TEXT_INSET_DP)
@@ -10301,8 +10348,11 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         if (recordedAudioPanel != null) {
             FrameLayout.LayoutParams layoutParams2 = (FrameLayout.LayoutParams) recordedAudioPanel.getLayoutParams();
-            layoutParams2.rightMargin = editingMessageObject == null ? Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)) : 0;
-            recordedAudioPanel.setLayoutParams(layoutParams2);
+            int rightMargin = editingMessageObject == null ? Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)) : 0;
+            if (layoutParams2.rightMargin != rightMargin) {
+                layoutParams2.rightMargin = rightMargin;
+                recordedAudioPanel.setLayoutParams(layoutParams2);
+            }
         }
     }
 
@@ -15172,7 +15222,9 @@ public class ChatActivityEnterView extends FrameLayout implements
     @SuppressWarnings("unchecked")
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.emojiLoaded) {
+        if (id == NotificationCenter.chatInputGlassChanged) {
+            updateInputBarGlass();
+        } else if (id == NotificationCenter.emojiLoaded) {
             if (emojiView != null) {
                 emojiView.invalidateViews();
             }

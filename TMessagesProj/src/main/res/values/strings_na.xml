@@ -131,6 +131,8 @@
     <string name="InputBar">Input Bar</string>
     <string name="IosButtonPlacement">Button Placement (iOS)</string>
     <string name="IosInputAppearance">Appearance (iOS)</string>
+    <string name="IosInputGlass">Input Bar Glass Effect</string>
+    <string name="IosInputGlassDescription">Turn off to use solid theme colors for the iOS-style input bar.</string>
     <string name="CompactInputSize">Compact Size</string>
     <string name="ActionButtonStyle">Action Button Style</string>
     <string name="ActionButtonStyleAccent">Accent</string>

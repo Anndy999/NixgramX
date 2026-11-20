@@ -124,6 +124,8 @@
     <string name="InputBar">輸入欄</string>
     <string name="IosButtonPlacement">按鈕位置（iOS）</string>
     <string name="IosInputAppearance">外觀（iOS）</string>
+    <string name="IosInputGlass">輸入框玻璃效果</string>
+    <string name="IosInputGlassDescription">關閉後，iOS 外觀輸入框會使用主題純色。</string>
     <string name="CompactInputSize">緊湊尺寸</string>
     <string name="ActionButtonStyle">操作按鈕樣式</string>
     <string name="ActionButtonStyleAccent">強調色</string>

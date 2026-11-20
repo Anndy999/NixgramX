@@ -70,6 +70,7 @@ import xyz.nextalone.nagram.NaConfig;
  * The rim is always a nine-patch over the result ({@link GlassRimRenderer}).
  */
 public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Colorable {
+    private static final GlassSource SOLID_COLOR_SOURCE = new GlassSourceColor();
     private final GlassSource glassSource;
     private final GlassSource frostedSource;
     private final GlassSource staticSource;
@@ -317,7 +318,8 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
             ((BlurredBackgroundColorProviderThemed) colorProvider).updateColors();
         }
 
-        backgroundColor = colorProvider.getBackgroundColor();
+        int themeColor = colorProvider.getBackgroundColor();
+        backgroundColor = solidBackground ? ColorUtils.setAlphaComponent(themeColor, 255) : themeColor;
         shadowColor = colorProvider.getShadowColor();
         strokeColorTop = colorProvider.getStrokeColorTop();
         strokeColorBottom = colorProvider.getStrokeColorBottom();
@@ -728,6 +730,7 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     /* Liquid glass and the glass settings */
 
     private boolean liquidGlassEffectAllowed;
+    private boolean solidBackground;
     private int glassSettingsGeneration = GlassEngine.getGlassSettingsGenerationId();
 
     /** The screen wants the liquid glass here: it is drawn while the glass settings have it on (Android 13+). */
@@ -739,10 +742,21 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     }
 
     private boolean isLiquidGlassEffectEnabled() {
-        return liquidGlassEffectAllowed && getGlassSettings().isLiquidGlassEnabled && Build.VERSION.SDK_INT >= 33;
+        return !solidBackground && liquidGlassEffectAllowed && getGlassSettings().isLiquidGlassEnabled && Build.VERSION.SDK_INT >= 33;
+    }
+
+    public void setSolidBackground(boolean solid) {
+        if (solidBackground == solid) return;
+        solidBackground = solid;
+        implInvalidated = true;
+        updateColors();
+        invalidateSelf();
     }
 
     private GlassSource pickSource() {
+        if (solidBackground) {
+            return SOLID_COLOR_SOURCE;
+        }
         if (!getGlassSettings().isBlurEnabled) {
             return staticSource;
         }
