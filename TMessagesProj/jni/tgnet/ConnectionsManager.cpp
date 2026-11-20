@@ -2795,6 +2795,12 @@ void ConnectionsManager::processRequestQueue(uint32_t connectionTypes, uint32_t 
         }
     }
 
+    prioritizeForegroundDownloads(requestsQueue,
+        [](const auto &request) {
+            return (request->connectionType & 0xffff) == ConnectionTypeDownload
+                && !request->cancelled && !request->isCancelRequest();
+        },
+        [](const auto &request) { return (request->requestFlags & RequestFlagForegroundDownload) != 0; });
     for (auto iter = requestsQueue.begin(); iter != requestsQueue.end();) {
         Request *request = iter->get();
         if (request->cancelled) {

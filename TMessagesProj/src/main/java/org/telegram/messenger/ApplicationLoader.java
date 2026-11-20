@@ -239,6 +239,8 @@ public class ApplicationLoader extends Application {
                 public void onReceive(Context context, Intent intent) {
                     try {
                         currentNetworkInfo = connectivityManager.getActiveNetworkInfo();
+                        DownloadSpeedEstimator.onNetworkChanged(connectivityManager.getActiveNetwork(),
+                                currentNetworkInfo != null ? currentNetworkInfo.getSubtype() : -1);
                     } catch (Throwable ignore) {
 
                     }

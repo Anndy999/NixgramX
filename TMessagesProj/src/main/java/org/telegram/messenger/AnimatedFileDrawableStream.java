@@ -1,16 +1,14 @@
 package org.telegram.messenger;
 
-import androidx.media3.exoplayer.ExoPlayer;
-
-
 import org.telegram.tgnet.TLRPC;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class AnimatedFileDrawableStream implements FileLoadOperationStream {
 
     private FileLoadOperation loadOperation;
-    private CountDownLatch countDownLatch;
+    private final AtomicReference<CountDownLatch> dataWaiter = new AtomicReference<>();
     private TLRPC.Document document;
     private ImageLocation location;
     private Object parentObject;
@@ -18,7 +16,7 @@ public class AnimatedFileDrawableStream implements FileLoadOperationStream {
     private volatile boolean canceled;
     private final Object sync = new Object();
     private long lastOffset;
-    private boolean waitingForLoad;
+    private volatile boolean waitingForLoad;
     private boolean preview;
     private boolean finishedLoadingFile;
     private String finishedFilePath;
@@ -62,11 +60,16 @@ public class AnimatedFileDrawableStream implements FileLoadOperationStream {
             long availableLength = 0;
             try {
                 while (availableLength == 0) {
-                    long[] result = loadOperation.getDownloadedLengthFromOffset(offset, readLength);
-                    availableLength = result[0];
-                    if (!finishedLoadingFile && result[1] != 0) {
-                        finishedLoadingFile = true;
-                        finishedFilePath = loadOperation.getCacheFileFinal().getAbsolutePath();
+                    if (loadOperation == null || loadOperation.hasStreamDownloadFailed()) return 0;
+                    if (loadOperation.isStreamDownloadComplete()) {
+                        if (!finishedLoadingFile) {
+                            finishedFilePath = loadOperation.getCacheFileFinal().getAbsolutePath();
+                            finishedLoadingFile = true;
+                        }
+                        // The native reader handles EOF on the published file.
+                        availableLength = readLength;
+                    } else {
+                        availableLength = loadOperation.getReadableLength(offset, readLength);
                     }
                     if (availableLength == 0) {
                         synchronized (sync) {
@@ -75,29 +78,33 @@ public class AnimatedFileDrawableStream implements FileLoadOperationStream {
                                 return 0;
                             }
                         }
-                        countDownLatch = new CountDownLatch(1);
-                        if (loadOperation.isPaused() || lastOffset != offset || preview) {
-                            FileLoadOperation loadOperation = FileLoader.getInstance(currentAccount).loadStreamFile(this, document, location, parentObject, offset, preview, loadingPriority);
-                            if (this.loadOperation != loadOperation) {
-                                this.loadOperation.removeStreamListener(this);
-                                this.loadOperation = loadOperation;
+                        CountDownLatch waiter = new CountDownLatch(1);
+                        dataWaiter.set(waiter);
+                        try {
+                            if (loadOperation.isPaused() || lastOffset != offset || preview) {
+                                FileLoadOperation resumed = FileLoader.getInstance(currentAccount).loadStreamFile(this, document, location, parentObject, offset, preview, loadingPriority);
+                                if (loadOperation != resumed) {
+                                    loadOperation.removeStreamListener(this);
+                                    loadOperation = resumed;
+                                }
+                                lastOffset = offset;
                             }
-                            lastOffset = offset + availableLength;
-                        }
-                        synchronized (sync) {
-                            if (canceled) {
-                                countDownLatch = null;
-                                cancelLoadingInternal();
-                                return 0;
+                            synchronized (sync) {
+                                if (canceled) {
+                                    cancelLoadingInternal();
+                                    return 0;
+                                }
                             }
-                        }
-                        if (!preview) {
-                            FileLoader.getInstance(currentAccount).setLoadingVideo(document, false, true);
-                        }
-                        if (countDownLatch != null) {
+                            if (loadOperation == null || loadOperation.hasStreamDownloadFailed()) return 0;
+                            if (loadOperation.isStreamDownloadComplete() || loadOperation.getReadableLength(offset, 1) != 0) continue;
+                            if (!preview) {
+                                FileLoader.getInstance(currentAccount).setLoadingVideo(document, false, true);
+                            }
                             waitingForLoad = true;
-                            countDownLatch.await();
+                            waiter.await();
+                        } finally {
                             waitingForLoad = false;
+                            dataWaiter.compareAndSet(waiter, null);
                         }
                     }
                 }
@@ -118,9 +125,9 @@ public class AnimatedFileDrawableStream implements FileLoadOperationStream {
             return;
         }
         synchronized (sync) {
-            if (countDownLatch != null) {
-                countDownLatch.countDown();
-                countDownLatch = null;
+            CountDownLatch waiter = dataWaiter.getAndSet(null);
+            if (waiter != null) {
+                waiter.countDown();
                 if (removeLoading && !canceled && !preview) {
                     FileLoader.getInstance(currentAccount).removeLoadingVideo(document, false, true);
                 }
@@ -177,10 +184,8 @@ public class AnimatedFileDrawableStream implements FileLoadOperationStream {
 
     @Override
     public void newDataAvailable() {
-        if (countDownLatch != null) {
-            countDownLatch.countDown();
-            countDownLatch = null;
-        }
+        CountDownLatch waiter = dataWaiter.getAndSet(null);
+        if (waiter != null) waiter.countDown();
     }
 
     public boolean isCanceled() {

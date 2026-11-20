@@ -34,6 +34,7 @@ import org.telegram.messenger.BaseController;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.CaptchaController;
+import org.telegram.messenger.DownloadSpeedEstimator;
 import org.telegram.messenger.EmuDetector;
 import org.telegram.messenger.FileLoadOperation;
 import org.telegram.messenger.FileLoader;
@@ -121,6 +122,7 @@ public class ConnectionsManager extends BaseController {
     public final static int RequestFlagFailOnServerErrorsExceptFloodWait = 65536;
     public final static int RequestFlagSmallDownload = 131072;
     public final static int RequestFlagDownloadByteBudget = 262144;
+    public final static int RequestFlagForegroundDownload = 524288;
 
     public final static int ConnectionStateConnecting = 1;
     public final static int ConnectionStateWaitingForNetwork = 2;
@@ -1030,6 +1032,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setProxySettings(boolean enabled, ProxySettings settings) {
+        DownloadSpeedEstimator.onRouteChanged();
         org.telegram.messenger.diagnostics.Diagnostics.event(
                 org.telegram.messenger.diagnostics.Diagnostics.Event.PROXY_CHANGE, enabled ? 1 : 0);
         String address = "";

@@ -1,8 +1,27 @@
 #pragma once
 
 #include <cstdint>
+#include <list>
 #include <map>
 #include <utility>
+
+// Keep pending foreground chunks ahead of older background chunks. Control
+// requests keep their own ordering and all downloads still use the same caps.
+template <typename Item, typename IsDownload, typename IsForeground>
+void prioritizeForegroundDownloads(std::list<Item> &queue, IsDownload isDownload, IsForeground isForeground) {
+    auto firstBackground = queue.end();
+    std::list<Item> foreground;
+    for (auto item = queue.begin(); item != queue.end();) {
+        auto current = item++;
+        if (!isDownload(*current)) continue;
+        if (isForeground(*current)) {
+            if (firstBackground != queue.end()) foreground.splice(foreground.end(), queue, current);
+        } else if (firstBackground == queue.end()) {
+            firstBackground = current;
+        }
+    }
+    queue.splice(firstBackground, foreground);
+}
 
 // Rebuilt from running requests on each scheduling pass, so cancellation,
 // retries and DC migration cannot leak reservations.

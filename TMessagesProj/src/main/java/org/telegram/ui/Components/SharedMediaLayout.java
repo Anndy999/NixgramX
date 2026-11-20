@@ -7718,7 +7718,7 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
                     } else if (!cell.isLoading()) {
                         MessageObject messageObject = cell.getMessage();
                         messageObject.putInDownloadsStore = true;
-                        profileActivity.getFileLoader().loadFile(document, messageObject, FileLoader.PRIORITY_LOW, 0);
+                        profileActivity.getFileLoader().loadFile(document, messageObject, FileLoader.PRIORITY_USER_DOWNLOAD, 0);
                         cell.updateFileExistIcon(true);
                     } else {
                         profileActivity.getFileLoader().cancelLoadFile(document);

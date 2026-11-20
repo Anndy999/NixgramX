@@ -15129,11 +15129,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentMessageObject.putInDownloadsStore = true;
             }
             if (documentAttachType == DOCUMENT_ATTACH_TYPE_AUDIO || documentAttachType == DOCUMENT_ATTACH_TYPE_MUSIC) {
-                FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_NORMAL_UP, currentMessageObject.shouldEncryptPhotoOrVideo() ? 2 : 0);
+                FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_USER_DOWNLOAD, currentMessageObject.shouldEncryptPhotoOrVideo() ? 2 : 0);
                 currentMessageObject.loadingCancelled = false;
             } else if (documentAttachType == DOCUMENT_ATTACH_TYPE_VIDEO || documentAttachType == DOCUMENT_ATTACH_TYPE_ROUND) {
                 createLoadingProgressLayout(documentAttach);
-                FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_NORMAL_UP, currentMessageObject.shouldEncryptPhotoOrVideo() ? 2 : 0);
+                FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_USER_DOWNLOAD, currentMessageObject.shouldEncryptPhotoOrVideo() ? 2 : 0);
                 currentMessageObject.loadingCancelled = false;
             }
             radialProgress.setMiniIcon(getMiniIconForCurrentState(), false, true);
@@ -15213,12 +15213,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     wouldBeInPip = true;
                     ChatMessageCell.this.invalidate();
                 } else if (currentMessageObject.type == MessageObject.TYPE_FILE) {
-                    FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_NORMAL_UP, 0);
+                    FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_USER_DOWNLOAD, 0);
                     if (currentMessageObject.loadedFileSize > 0) {
                         createLoadingProgressLayout(documentAttach);
                     }
                 } else if (documentAttachType == DOCUMENT_ATTACH_TYPE_VIDEO) {
-                    FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_NORMAL, cacheType);
+                    FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_USER_DOWNLOAD, cacheType);
                     if (currentMessageObject.loadedFileSize > 0) {
                         createLoadingProgressLayout(currentMessageObject.getDocument());
                     }
@@ -15231,7 +15231,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             createLoadingProgressLayout(currentMessageObject.getDocument());
                         }
                     } else if (documentAttachType == DOCUMENT_ATTACH_TYPE_DOCUMENT) {
-                        FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_NORMAL_UP, 0);
+                        FileLoader.getInstance(currentAccount).loadFile(documentAttach, currentMessageObject, FileLoader.PRIORITY_USER_DOWNLOAD, 0);
                     } else if (documentAttachType == DOCUMENT_ATTACH_TYPE_WALLPAPER) {
                         photoImage.setImage(ImageLocation.getForDocument(documentAttach), currentPhotoFilter, ImageLocation.getForDocument(currentPhotoObject, documentAttach), "b1", 0, "jpg", currentMessageObject, 1);
                     }

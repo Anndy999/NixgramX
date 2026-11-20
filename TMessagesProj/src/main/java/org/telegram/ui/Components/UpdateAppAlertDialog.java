@@ -309,7 +309,7 @@ public class UpdateAppAlertDialog extends BottomSheet {
         doneButton.setText(hasDocument ? LocaleController.formatString("AppUpdateDownloadNow", R.string.AppUpdateDownloadNow) : LocaleController.getString(R.string.Open), false);
         doneButton.setOnClickListener(v -> {
             if (hasDocument) {
-                FileLoader.getInstance(accountNum).loadFile(appUpdate.document, "update", FileLoader.PRIORITY_NORMAL, 1);
+                FileLoader.getInstance(accountNum).loadFile(appUpdate.document, "update", FileLoader.PRIORITY_USER_DOWNLOAD, 1);
             } else if (!TextUtils.isEmpty(appUpdate.url)) {
                 Browser.openUrl(getContext(), appUpdate.url);
             }
