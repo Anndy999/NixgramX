@@ -4173,7 +4173,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public void captureCalculateHash(IBlur3Hash builder, RectF position) {
-                hashDialogsBlurCapture(builder, position);
+                hashDialogsBlurCapture(builder, position, contentView);
             }
         };
 
@@ -14342,7 +14342,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             ? Math.round(searchViewPager.getAlpha() * 255) : 0;
     }
 
-    private void hashDialogsBlurCapture(IBlur3Hash builder, RectF position) {
+    private void hashDialogsBlurCapture(IBlur3Hash builder, RectF position, ContentView contentView) {
         builder.addF(position.left);
         builder.addF(position.top);
         builder.addF(position.right);

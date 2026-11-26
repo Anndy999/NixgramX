@@ -25,7 +25,7 @@ class DialogsBlurCaptureHashTest(unittest.TestCase):
         source = DIALOGS.read_text(encoding='utf-8')
         self.assertIn('iBlur3Capture = new IBlur3Capture()', source)
         self.assertIn('public void captureCalculateHash(IBlur3Hash builder, RectF position)', source)
-        self.assertIn('hashDialogsBlurCapture(builder, position)', source)
+        self.assertIn('hashDialogsBlurCapture(builder, position, contentView)', source)
         self.assertIn('list.computeVerticalScrollOffset()', source)
         self.assertNotIn('iBlur3Capture = (canvas, position) ->', source)
 
