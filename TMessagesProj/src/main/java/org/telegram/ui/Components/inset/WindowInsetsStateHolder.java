@@ -263,6 +263,7 @@ public class WindowInsetsStateHolder implements WindowInsetsProvider, WindowInse
     private @Nullable WindowAnimatedInsetsProvider animatedInsetsProvider;
     private @Nullable View animatedInsetsProviderTarget;
     private int animatedImeInset;
+    private boolean hasReportedAnimatedImeInset;
 
     public void setupAnimatedInsetsProvider(WindowAnimatedInsetsProvider provider, View target) {
         animatedInsetsProvider = provider;
@@ -278,7 +279,10 @@ public class WindowInsetsStateHolder implements WindowInsetsProvider, WindowInse
     @Override
     public void onAnimatedInsetsChanged(View view, WindowInsetsCompat insets) {
         insets = filterInsets(insets);
-        animatedImeInset = insets != null ? insets.getInsets(WindowInsetsCompat.Type.ime()).bottom : 0;
+        final int imeInset = insets != null ? insets.getInsets(WindowInsetsCompat.Type.ime()).bottom : 0;
+        if (hasReportedAnimatedImeInset && animatedImeInset == imeInset) return;
+        animatedImeInset = imeInset;
+        hasReportedAnimatedImeInset = true;
         onUpdateListener.run();
     }
 
@@ -286,6 +290,7 @@ public class WindowInsetsStateHolder implements WindowInsetsProvider, WindowInse
 
     @Override
     public void onAnimatedInsetsStarted() {
+        hasReportedAnimatedImeInset = false;
         activeAnimations++;
     }
 

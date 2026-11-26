@@ -9688,7 +9688,8 @@ public class ChatActivity extends BaseFragment implements
 
         final int insetsLeft = systemInsets.left;
         final int insetsRight = systemInsets.right;
-        if (insetSystemLeft != insetsLeft || insetSystemRight != insetsRight) {
+        final boolean horizontalInsetsChanged = insetSystemLeft != insetsLeft || insetSystemRight != insetsRight;
+        if (horizontalInsetsChanged) {
             insetSystemLeft = insetsLeft;
             insetSystemRight = insetsRight;
             contentView.requestLayout();
@@ -9700,9 +9701,12 @@ public class ChatActivity extends BaseFragment implements
             messagesSearchListContainer.setPadding(insetsLeft, 0, insetsRight, 0);
         }
         
-        checkUi_chatListViewPaddings();
-        checkUi_messagesSearchListPadding();
-        invalidateClipRectForBackgroundAndChatList();
+        if (horizontalInsetsChanged) {
+            // The insets holder already refreshes these for IME and navigation-bar changes.
+            checkUi_chatListViewPaddings();
+            checkUi_messagesSearchListPadding();
+            invalidateClipRectForBackgroundAndChatList();
+        }
 
         final boolean keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
         if (lastImeVisible != keyboardVisible) {

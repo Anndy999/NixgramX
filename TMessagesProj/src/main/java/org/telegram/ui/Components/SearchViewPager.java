@@ -67,6 +67,7 @@ import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.Premium.PremiumFeatureBottomSheet;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
 import org.telegram.ui.Components.blur3.utils.Blur3Utils;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.FilteredSearchView;
@@ -1517,20 +1518,39 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
 
     @Override
     public void capture(Canvas canvas, RectF position) {
+        // The parent's capture uses a shared temporary rectangle, which child captures also write.
+        capturePosition.set(position);
+        processCaptureLayers(canvas, null, capturePosition);
+    }
+
+    private final RectF capturePosition = new RectF();
+
+    @Override
+    public void captureCalculateHash(IBlur3Hash builder, RectF position) {
+        processCaptureLayers(null, builder, position);
+    }
+
+    private void processCaptureLayers(@Nullable Canvas canvas, @Nullable IBlur3Hash builder, RectF position) {
         final View[] views = getViewPages();
-        if (views == null) {
-            return;
-        }
+        if (views == null) return;
         for (View view : views) {
-            RecyclerListView listView = getRecyclerViewFromPage(view);
-            if (listView != null) {
-                Blur3Utils.captureRelativeParent(listView, canvas, position, listView, this);
+            if (view == null || view.getVisibility() != VISIBLE) continue;
+            final boolean filtered = view == searchContainer && noMediaFiltersSearchView.getVisibility() == VISIBLE;
+            final float filteredAlpha = filtered ? noMediaFiltersSearchView.getAlpha() : 0f;
+            processCaptureList(canvas, builder, position, getRecyclerViewFromPage(view), view.getAlpha() * (1f - filteredAlpha));
+            if (filtered) {
+                processCaptureList(canvas, builder, position, noMediaFiltersSearchView.recyclerListView, view.getAlpha() * filteredAlpha);
             }
-            if (view == searchContainer && noMediaFiltersSearchView.getVisibility() == VISIBLE) {
-                Blur3Utils.captureRelativeParent(
-                    noMediaFiltersSearchView.recyclerListView, canvas, position,
-                    noMediaFiltersSearchView.recyclerListView, this);
-            }
+        }
+    }
+
+    private void processCaptureList(@Nullable Canvas canvas, @Nullable IBlur3Hash builder, RectF position, RecyclerListView list, float alpha) {
+        if (list == null || list.getVisibility() != VISIBLE) return;
+        final int listAlpha = Math.round(alpha * list.getAlpha() * 255);
+        if (canvas != null) {
+            Blur3Utils.captureRelativeParent(list, canvas, position, list, this, listAlpha);
+        } else {
+            Blur3Utils.hashRelativeParent(list, builder, position, list, this, listAlpha);
         }
     }
 
