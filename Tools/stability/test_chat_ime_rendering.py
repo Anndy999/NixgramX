@@ -45,6 +45,7 @@ class Probe {
         source = (UI / 'Components/chat/ChatInputViewsContainer.java').read_text()
         draw = section(source, '    protected void dispatchDraw(@NonNull Canvas canvas) {\n        // The glass engine',
                        '    @Override\n    protected boolean drawChild(')
+        touch = source[source.index('    private boolean captured;'):].rstrip().removesuffix('}')
         self.assertNotIn('underKeyboardPath', source)
         run_java('''
 class Canvas {}
@@ -54,6 +55,7 @@ class Rect {
     void inset(int dx, int dy) { left += dx; top += dy; right -= dx; bottom -= dy; }
     void offset(int dx, int dy) { left += dx; right += dx; top += dy; bottom += dy; }
     boolean isEmpty() { return left >= right || top >= bottom; }
+    boolean contains(int x, int y) { return x >= left && x < right && y >= top && y < bottom; }
 }
 class Background {
     Rect bounds = new Rect();
@@ -61,9 +63,20 @@ class Background {
     void setBounds(Rect rect) { setBounds(rect.left, rect.top, rect.right, rect.bottom); }
     void setBounds(int l, int t, int r, int b) { bounds.set(l, t, r, b); }
     void draw(Canvas canvas) { draws++; }
+    int getAlpha() { return 255; }
+    Rect getBounds() { return bounds; }
+}
+class MotionEvent {
+    static final int ACTION_DOWN = 0, ACTION_UP = 1, ACTION_CANCEL = 3;
+    final int x, y;
+    MotionEvent(int x, int y) { this.x = x; this.y = y; }
+    int getAction() { return ACTION_DOWN; }
+    int getX() { return x; }
+    int getY() { return y; }
 }
 class BaseView {
     void dispatchDraw(Canvas canvas) {}
+    public boolean onTouchEvent(MotionEvent event) { return false; }
 }
 class Probe extends BaseView {
     boolean drawInputBackground = true, needDrawInAppKeyboard;
@@ -74,7 +87,7 @@ class Probe extends BaseView {
     int dp(int v) { return v; }
     int getMeasuredHeight() { return 700; }
     int getMeasuredWidth() { return 360; }
-''' + draw.replace('@NonNull ', '') + '''
+''' + draw.replace('@NonNull ', '') + touch + '''
     public static void main(String[] args) {
         Probe p = new Probe();
         Canvas c = new Canvas();
@@ -89,6 +102,8 @@ class Probe extends BaseView {
         p.needDrawInAppKeyboard = false;
         p.dispatchDraw(c);
         assert p.underKeyboardBackgroundDrawable.bounds.isEmpty() && p.underKeyboardBackgroundDrawable.draws == 1;
+        assert p.onTouchEvent(new MotionEvent(100, 460));
+        assert !p.onTouchEvent(new MotionEvent(100, 600));
     }
 }
 ''')

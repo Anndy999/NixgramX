@@ -254,10 +254,7 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
     protected void dispatchDraw(@NonNull Canvas canvas) {
         // The glass engine uses these bounds to decide what it needs to capture.
         if (drawInputBackground) {
-            tmpRect.set(Math.round(inputBubbleOffsetLeft), 0,
-                getMeasuredWidth() - Math.round(inputBubbleOffsetRight), inputBubbleHeightRound);
-            tmpRect.inset(0, -dp(7));
-            tmpRect.offset(0, getMeasuredHeight() - currentBlurredHeight + (int) bubbleInputTranlationY);
+            getInputBubbleBounds(tmpRect);
             blurredBackgroundDrawable.setBounds(tmpRect);
             blurredBackgroundDrawable.draw(canvas);
         } else {
@@ -274,6 +271,13 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
         }
 
         super.dispatchDraw(canvas);
+    }
+
+    private void getInputBubbleBounds(Rect bounds) {
+        bounds.set(Math.round(inputBubbleOffsetLeft), 0,
+            getMeasuredWidth() - Math.round(inputBubbleOffsetRight), inputBubbleHeightRound);
+        bounds.inset(0, -dp(7));
+        bounds.offset(0, getMeasuredHeight() - currentBlurredHeight + (int) bubbleInputTranlationY);
     }
 
     @Override
@@ -349,9 +353,11 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
             final int x = (int) event.getX();
             final int y = (int) event.getY();
 
-            captured = blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && blurredBackgroundDrawable.getBounds().contains(x, y)
-                || underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y);
-
+            captured = underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y);
+            if (!captured && blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255) {
+                getInputBubbleBounds(tmpRect);
+                captured = tmpRect.contains(x, y);
+            }
         }
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             captured = false;
