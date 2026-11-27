@@ -815,7 +815,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         @Override
         public void setValue(View object, float value) {
             searchViewPagerTranslationY = value;
-            object.setTranslationY(panTranslationY + searchViewPagerTranslationY);
+            applySearchPagerTranslation(object);
             checkUi_searchFiltersVisibility();
         }
 
@@ -1223,7 +1223,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     child.measure(contentWidthSpec, View.MeasureSpec.makeMeasureSpec(Math.max(dp(10), h), View.MeasureSpec.EXACTLY));
                     child.setPivotX(child.getMeasuredWidth() / 2f);
                 } else if (child == searchViewPager) {
-                    searchViewPager.setTranslationY(searchViewPagerTranslationY);
+                    applySearchPagerTranslation(searchViewPager);
                     searchViewPager.postsSearchContainer.setKeyboardHeight(keyboardSize);
                     final int contentWidthSpec = MeasureSpec.makeMeasureSpec(widthSize, View.MeasureSpec.EXACTLY);
                     final int h = MeasureSpec.getSize(heightMeasureSpec) + dp(ADDITIONAL_LIST_HEIGHT_DP);
@@ -4143,11 +4143,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         iBlur3Capture = new IBlur3Capture() {
             @Override
             public void capture(Canvas canvas, RectF position) {
-                final int searchViewAlpha = searchViewPager != null ? (int) (searchViewPager.getAlpha() * 255) : 0;
+                final int searchViewAlpha = getSearchCaptureAlpha();
 
-                if (viewPages != null) {
+                if (viewPages != null && searchViewAlpha < 255) {
                     for (ViewPage viewPage : viewPages) {
-                        if (viewPage != null && viewPage.getVisibility() == View.VISIBLE && viewPage.getAlpha() > 0f) {
+                        if (viewPage != null && viewPage.getVisibility() == View.VISIBLE && viewPage.getAlpha() > 0f
+                                && viewPage.listView != null && viewPage.listView.getVisibility() == View.VISIBLE) {
                             float rp = getRightSlidingProgress();
                             if (viewPage.animationSupportListView != null && rp > 0) {
                                 if (!ViewPositionWatcher.computeCoordinatesInParent(viewPage.listView, contentView, tmpPoint)) {
@@ -4165,14 +4166,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         }
                     }
                 }
-                if (searchViewPager != null && searchViewPager.getVisibility() == View.VISIBLE && searchViewPager.getAlpha() > 0f) {
+                if (searchViewAlpha > 0) {
                     Blur3Utils.captureRelativeParent(searchViewPager, canvas, position, searchViewPager, contentView, searchViewAlpha);
                 }
             }
 
             @Override
             public void captureCalculateHash(IBlur3Hash builder, RectF position) {
-                hashDialogsBlurCapture(builder, position);
+                hashDialogsBlurCapture(builder, position, contentView);
             }
         };
 
@@ -7158,9 +7159,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     topBulletin.updatePosition();
                 }
             }
-            if (searchViewPager != null) {
-                searchViewPager.setTranslationY(searchViewPagerTranslationY);
-            }
         } else {
             for (int a = 0; a < viewPages.length; a++) {
                 viewPages[a].setTranslationY(y);
@@ -7171,10 +7169,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     topBulletin.updatePosition();
                 }
             }
-            if (searchViewPager != null) {
-                searchViewPager.setTranslationY(panTranslationY + searchViewPagerTranslationY);
-            }
         }
+        if (searchViewPager != null) {
+            applySearchPagerTranslation(searchViewPager);
+        }
+    }
+
+    private void applySearchPagerTranslation(View pager) {
+        final boolean commentWindowPans = commentView != null && commentView.isPopupShowing();
+        pager.setTranslationY(searchViewPagerTranslationY + (commentWindowPans ? 0 : panTranslationY));
     }
 
     @Override
@@ -7728,9 +7731,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             setDialogsListFrozen(true);
             viewPages[0].listView.setVerticalScrollBarEnabled(false);
-            if (searchViewPager != null) {
-                ThemeBind.backgroundColor(searchViewPager, Theme.key_windowBackgroundWhite, getResourceProvider());
-            }
             searchAnimator = new AnimatorSet();
             ArrayList<Animator> animators = new ArrayList<>();
             animators.add(ObjectAnimator.ofFloat(viewPages[0], View.ALPHA, show ? 0.0f : 1.0f));
@@ -7821,9 +7821,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     setSearchAnimationProgress(show ? 1f : 0, false);
 
                     viewPages[0].listView.setVerticalScrollBarEnabled(true);
-                    if (searchViewPager != null) {
-                        searchViewPager.setBackground(null);
-                    }
                     searchAnimator = null;
                 }
 
@@ -13011,7 +13008,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             protected void dispatchDraw(@NonNull Canvas canvas) {
-                super.dispatchDraw(canvas);
+                if (searchIsShowed && searchAnimationProgress == 1f) {
+                    final int save = canvas.save();
+                    canvas.clipRect(0, getSearchPagesTopPadding(), getWidth(), getHeight());
+                    super.dispatchDraw(canvas);
+                    canvas.restoreToCount(save);
+                } else {
+                    super.dispatchDraw(canvas);
+                }
                 if (searchTabsView != null || communityId != 0) {
                     final int h = dp(36 + 7 + 7 + 4);
                     final int t = actionBar.getMeasuredHeight()
@@ -13039,6 +13043,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 glassEngine.invalidateScroll();
             }
         };
+        ThemeBind.backgroundColor(searchViewPager, Theme.key_windowBackgroundWhite, getResourceProvider());
         glassEngine.addScrolledView(searchViewPager);
         ((ContentView) fragmentView).addView(searchViewPager, searchViewPagerIndex);
 
@@ -14125,15 +14130,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
     }
 
+    private int getSearchPagesTopPadding() {
+        return dp(ADDITIONAL_LIST_HEIGHT_DP) + actionBar.getMeasuredHeight()
+            + (searchTabsView != null ? dp(SEARCH_TABS_HEIGHT) : 0)
+            + (topPanelLayout != null ? (int) topPanelLayout.getAnimatedHeightWithPadding(dp(7)) : 0);
+    }
+
     private void checkUi_searchPagesPaddings(boolean doNotRequestLayout) {
         if (searchViewPager != null && actionBar != null) {
-            final int bottom = AndroidUtilities.navigationBarHeight;
-            final int top = dp(ADDITIONAL_LIST_HEIGHT_DP)
-                + actionBar.getMeasuredHeight()
-                + (searchTabsView != null ? dp(50) : 0)
-                + (topPanelLayout != null ? (int) topPanelLayout.getAnimatedHeightWithPadding(dp(7)) : 0);
-
-            searchViewPager.setPagesPadding(top, bottom, doNotRequestLayout);
+            searchViewPager.setPagesPadding(getSearchPagesTopPadding(), AndroidUtilities.navigationBarHeight, doNotRequestLayout);
         }
     }
 
@@ -14332,14 +14337,23 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         iBlur3Positions.add(iBlur3PositionMainTabs);
     }
 
-    private void hashDialogsBlurCapture(IBlur3Hash builder, RectF position) {
+    private int getSearchCaptureAlpha() {
+        return searchViewPager != null && searchViewPager.getVisibility() == View.VISIBLE
+            ? Math.round(searchViewPager.getAlpha() * 255) : 0;
+    }
+
+    private void hashDialogsBlurCapture(IBlur3Hash builder, RectF position, ContentView contentView) {
         builder.addF(position.left);
         builder.addF(position.top);
         builder.addF(position.right);
         builder.addF(position.bottom);
-        builder.add(searchViewPager != null ? (int) (searchViewPager.getAlpha() * 255) : 0);
+        final int searchViewAlpha = getSearchCaptureAlpha();
+        builder.add(searchViewAlpha);
+        if (searchViewAlpha > 0) {
+            Blur3Utils.hashRelativeParent(searchViewPager, builder, position, searchViewPager, contentView, searchViewAlpha);
+        }
         builder.addF(getRightSlidingProgress());
-        if (viewPages == null) {
+        if (viewPages == null || searchViewAlpha >= 255) {
             return;
         }
         for (ViewPage viewPage : viewPages) {
@@ -14351,6 +14365,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             builder.addF(viewPage.getAlpha());
             builder.addF(viewPage.getTranslationX());
             RecyclerListView list = viewPage.listView;
+            builder.add(list.getVisibility());
             builder.add(list.computeVerticalScrollOffset());
             builder.add(list.getChildCount());
             if (viewPage.layoutManager != null) {

@@ -4,9 +4,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Path;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.os.Build;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -85,6 +83,7 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
 
     public void setUnderKeyboardBackgroundDrawable(BlurredBackgroundDrawable drawable) {
         underKeyboardBackgroundDrawable = drawable;
+        lastKeyboardBottomLeftRadius = lastKeyboardBottomRightRadius = -1;
         underKeyboardBackgroundDrawable.enableInAppKeyboardOptimization();
         underKeyboardBackgroundDrawable.setRadius(dp(INPUT_KEYBOARD_RADIUS), dp(INPUT_KEYBOARD_RADIUS), 0, 0);
         underKeyboardBackgroundDrawable.setThickness(dp(32));
@@ -135,8 +134,6 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
         }
     }
 
-    private final Path underKeyboardPath = new Path();
-
     private int currentBlurredHeight;
     private void checkBlurredHeight(boolean force) {
         checkViewsPositions();
@@ -144,12 +141,6 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
         final int blurredHeight = inputBubbleHeightRound + dp(INPUT_BUBBLE_BOTTOM) + Math.round(maxBottomInset);
         if (currentBlurredHeight != blurredHeight || force) {
             currentBlurredHeight = blurredHeight;
-
-            final int r = dp(INPUT_KEYBOARD_RADIUS);
-            tmpRectF.set(0, getMeasuredHeight() - imeBottomInset, getMeasuredWidth(), getMeasuredHeight());
-            underKeyboardPath.rewind();
-            underKeyboardPath.addRoundRect(tmpRectF, new float[] {r, r, r, r, 0, 0, 0, 0}, Path.Direction.CW);
-            underKeyboardPath.close();
             invalidate();
         }
     }
@@ -157,6 +148,8 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
     private float maxBottomInset;
     private float imeBottomInset;
     private boolean needDrawInAppKeyboard;
+    private int lastKeyboardBottomLeftRadius = -1;
+    private int lastKeyboardBottomRightRadius = -1;
 
     public void checkInsets() {
         maxBottomInset = windowInsetsProvider.getAnimatedMaxBottomInset();
@@ -172,7 +165,7 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
         checkBlurredHeight(false);
         checkInAppKeyboardChild();
 
-        if (underKeyboardBackgroundDrawable != null) {
+        if (needDrawInAppKeyboard && underKeyboardBackgroundDrawable != null) {
             int leftBottomRadius = 0;
             int rightBottomRadius = 0;
             if (Build.VERSION.SDK_INT >= 31) {
@@ -184,7 +177,11 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
                     rightBottomRadius = bottomRight == null ? 0 : bottomRight.getRadius();
                 }
             }
-            underKeyboardBackgroundDrawable.setRadius(dp(INPUT_KEYBOARD_RADIUS), dp(INPUT_KEYBOARD_RADIUS), rightBottomRadius, leftBottomRadius, true);
+            if (lastKeyboardBottomLeftRadius != leftBottomRadius || lastKeyboardBottomRightRadius != rightBottomRadius) {
+                lastKeyboardBottomLeftRadius = leftBottomRadius;
+                lastKeyboardBottomRightRadius = rightBottomRadius;
+                underKeyboardBackgroundDrawable.setRadius(dp(INPUT_KEYBOARD_RADIUS), dp(INPUT_KEYBOARD_RADIUS), rightBottomRadius, leftBottomRadius, true);
+            }
         }
     }
 
@@ -246,44 +243,41 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         checkBlurredHeight(true);
         checkDrawableBounds();
-        checkViewsPositions();
         checkInAppKeyboardChild();
     }
 
     /* Render */
 
     private final Rect tmpRect = new Rect();
-    private final RectF tmpRectF = new RectF();
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
-        underKeyboardBackgroundDrawable.setBounds(
-            0,
-            getMeasuredHeight() - (int) imeBottomInset,
-            getMeasuredWidth(),
-            Math.max(getMeasuredHeight(), getMeasuredHeight() - (int) imeBottomInset + dp(INPUT_KEYBOARD_RADIUS * 2))
-        );
-
-        final int blurTop = getMeasuredHeight() - currentBlurredHeight;
-
-        tmpRect.set(
-            Math.round(inputBubbleOffsetLeft),
-            0,
-            getMeasuredWidth() - Math.round(inputBubbleOffsetRight),
-            inputBubbleHeightRound
-        );
-        tmpRect.inset(0, -dp(7));
-        tmpRect.offset(0, blurTop + (int) bubbleInputTranlationY);
-
-        blurredBackgroundDrawable.setBounds(tmpRect);
-        if (drawInputBackground)
+        // The glass engine uses these bounds to decide what it needs to capture.
+        if (drawInputBackground) {
+            getInputBubbleBounds(tmpRect);
+            blurredBackgroundDrawable.setBounds(tmpRect);
             blurredBackgroundDrawable.draw(canvas);
+        } else {
+            blurredBackgroundDrawable.setBounds(0, 0, 0, 0);
+        }
 
         if (needDrawInAppKeyboard) {
+            final int keyboardTop = getMeasuredHeight() - (int) imeBottomInset;
+            underKeyboardBackgroundDrawable.setBounds(0, keyboardTop, getMeasuredWidth(),
+                Math.max(getMeasuredHeight(), keyboardTop + dp(INPUT_KEYBOARD_RADIUS * 2)));
             underKeyboardBackgroundDrawable.draw(canvas);
+        } else {
+            underKeyboardBackgroundDrawable.setBounds(0, 0, 0, 0);
         }
 
         super.dispatchDraw(canvas);
+    }
+
+    private void getInputBubbleBounds(Rect bounds) {
+        bounds.set(Math.round(inputBubbleOffsetLeft), 0,
+            getMeasuredWidth() - Math.round(inputBubbleOffsetRight), inputBubbleHeightRound);
+        bounds.inset(0, -dp(7));
+        bounds.offset(0, getMeasuredHeight() - currentBlurredHeight + (int) bubbleInputTranlationY);
     }
 
     @Override
@@ -359,9 +353,11 @@ public class ChatInputViewsContainer extends FrameLayout implements Theme.Colora
             final int x = (int) event.getX();
             final int y = (int) event.getY();
 
-            captured = blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255 && blurredBackgroundDrawable.getBounds().contains(x, y)
-                || underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y);
-
+            captured = underKeyboardBackgroundDrawable != null && underKeyboardBackgroundDrawable.getBounds().contains(x, y);
+            if (!captured && blurredBackgroundDrawable != null && blurredBackgroundDrawable.getAlpha() == 255) {
+                getInputBubbleBounds(tmpRect);
+                captured = tmpRect.contains(x, y);
+            }
         }
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             captured = false;
